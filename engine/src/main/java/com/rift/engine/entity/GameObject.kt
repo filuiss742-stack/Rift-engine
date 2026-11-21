@@ -78,6 +78,7 @@ open class GameObject(
     var movementProfile: MovementProfile? = null
     var movementInput: MovementInput = MovementInput()
     var active: Boolean = true
+    internal var physicsControlled: Boolean = false
 
     /**
      * Adds a component by object identity. The same instance cannot be attached
@@ -145,8 +146,10 @@ open class GameObject(
             deltaSeconds
         )
 
-        x += velocityX * deltaSeconds
-        y += velocityY * deltaSeconds
+        if (!physicsControlled) {
+            x += velocityX * deltaSeconds
+            y += velocityY * deltaSeconds
+        }
 
         traverseComponents { component ->
             component.update(this, deltaSeconds)
