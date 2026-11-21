@@ -182,7 +182,7 @@ class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),Surfac
   if(t!=null&&t!==Thread.currentThread())try{t.join(1000)}catch(_:InterruptedException){Thread.currentThread().interrupt()}
   synchronized(this){if(thread===t&&t?.isAlive!=true)thread=null}
  }
- fun stop()=pause()
+ fun stop(){pause();engine.close()}
  override fun onKeyDown(keyCode:Int,event:KeyEvent):Boolean{val key=mapKey(keyCode)?:return super.onKeyDown(keyCode,event);engine.onKey(key,true);return true}
  override fun onKeyUp(keyCode:Int,event:KeyEvent):Boolean{val key=mapKey(keyCode)?:return super.onKeyUp(keyCode,event);engine.onKey(key,false);return true}
  private fun mapKey(keyCode:Int):Int?=when(keyCode){
