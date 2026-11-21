@@ -101,6 +101,8 @@ open class GameObject(
     var movementInput: MovementInput = MovementInput()
     var active: Boolean = true
     var renderDefaultVisual: Boolean = true
+    /** Lower layers render first; equal layers preserve scene insertion order. */
+    var renderLayer: Int = 0
     internal var physicsControlled: Boolean = false
 
     init {
