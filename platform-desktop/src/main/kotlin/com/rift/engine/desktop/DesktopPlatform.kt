@@ -387,11 +387,13 @@ class DesktopGameWindow(
     init {
         engine.scenes.setInitialScene(game.createInitialScene())
 
-        defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
+        // Close runtime resources before disposing the native window.
+        defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
-            override fun windowClosed(event: WindowEvent) {
+            override fun windowClosing(event: WindowEvent) {
                 gameTimer.stop()
                 engine.close()
+                dispose()
             }
         })
         contentPane.add(panel)
