@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 private sealed interface InputEvent {
     data class Pointer(val event: PointerEvent) : InputEvent
     data class Key(val code: Int, val pressed: Boolean) : InputEvent
+    data class Axis(val axisId: String, val value: Float) : InputEvent
     data object ResetInput : InputEvent
 }
 
@@ -69,6 +70,14 @@ class GameEngine(
         }
     }
 
+    fun onAxis(axisId: String, value: Float) {
+        require(axisId.isNotBlank()) { "axisId must not be blank." }
+        require(value.isFinite()) { "Axis values must be finite." }
+        if (!diagnostics.hasFatalErrors()) {
+            inputs.offer(InputEvent.Axis(axisId, value.coerceIn(-1f, 1f)))
+        }
+    }
+
     /** Releases all held keys and pointer buttons after the host loses focus. */
     fun onFocusLost() {
         if (!diagnostics.hasFatalErrors()) {
@@ -87,6 +96,7 @@ class GameEngine(
                 when (val event = inputs.poll() ?: break) {
                     is InputEvent.Pointer -> scenes.onPointer(event.event)
                     is InputEvent.Key -> scenes.onKey(event.code, event.pressed)
+                    is InputEvent.Axis -> scenes.onAxis(event.axisId, event.value)
                     InputEvent.ResetInput -> scenes.resetInput()
                 }
                 if (diagnostics.hasFatalErrors()) break
