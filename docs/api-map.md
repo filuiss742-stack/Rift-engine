@@ -8,7 +8,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 |---|---|---|
 | GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, assets, audio, and diagnostics. |
 | SceneManager | com.rift.engine.core | Sets the first scene, queues safe transitions, and owns shared GameState, AssetManager, and AudioManager references. |
-| Scene | com.rift.engine.scene | Base class for game scenes; owns objects, camera, physics world, input map, UI, shared state, assets, and audio. |
+| Scene | com.rift.engine.scene | Base class for game scenes; owns objects, camera, physics and combat worlds, input map, UI, shared state, assets, and audio. |
 | FixedStepAccumulator | com.rift.engine.core | Runs update callbacks using a fixed time step. |
 
 ## Entities, state, and movement
@@ -38,6 +38,16 @@ This page lists APIs verified in the current development branch. It is a navigat
 | RaycastHit | com.rift.engine.physics | Nearest segment ray hit with point, normal, and normalized fraction. |
 
 Physics limitations: no polygon shapes, friction, restitution, joints, continuous collision detection, or begin/stay/end callbacks. Rotated boxes use enclosing AABBs. See the [physics guide](getting-started/physics.md).
+
+## Combat
+
+| API | Package | Purpose |
+|---|---|---|
+| HealthComponent | com.rift.engine.combat | Clamped health, damage, healing, death callback, and explicit reset. |
+| CombatWorld | com.rift.engine.combat | Scene-owned AABB hitbox/hurtbox overlap checks, team filtering, one-hit-per-target behavior, and timed hitboxes. |
+| CombatHitbox / CombatHurtbox | com.rift.engine.combat | Owner-bound damage volumes and health receivers. |
+
+Combat limitations: hitboxes use the owner's transformed AABB; no independent shapes, knockback, invulnerability frames, attack buffering, combo system, status effects, or rollback networking yet.
 
 ## Gameplay modules and narrative
 
