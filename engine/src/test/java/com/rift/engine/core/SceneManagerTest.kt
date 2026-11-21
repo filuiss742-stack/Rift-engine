@@ -113,6 +113,30 @@ class SceneManagerTest {
         assertTrue(!scene.input.isDown("move"))
     }
 
+
+    @Test
+    fun gameStateIsSharedAcrossSceneTransitions() {
+        val manager = SceneManager()
+        val first = object : Scene() {
+            override fun onEnter() {
+                gameState.putInt("coins", 7)
+            }
+        }
+        val second = object : Scene() {
+            override fun onEnter() {
+                assertEquals(7, gameState.int("coins"))
+                gameState.putInt("coins", 9)
+            }
+        }
+
+        manager.setInitialScene(first)
+        manager.changeScene(second)
+        manager.update(1f / 60f)
+
+        assertSame(manager.gameState, second.gameState)
+        assertEquals(9, manager.gameState.int("coins"))
+    }
+
     @Test
     fun sameSceneRequestDoesNotRepeatLifecycle() {
         val manager = SceneManager()
