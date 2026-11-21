@@ -1,9 +1,10 @@
 package com.rift.engine.input
 
 /**
- * Platform-independent identifiers for the keyboard keys currently supported
- * by the engine adapters. Bind them to game-owned named actions with
- * [InputActionMap]; this list is intentionally small and is not exhaustive.
+ * Platform-independent identifiers for common keyboard keys supported by
+ * the Android and desktop adapters. Bind them to game-owned named actions
+ * with [InputActionMap]. Platform-specific keys can still be forwarded through
+ * GameEngine.onKey() using game-owned integer identifiers.
  */
 object EngineKey {
     const val A = 1
