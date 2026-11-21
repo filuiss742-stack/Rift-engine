@@ -130,6 +130,11 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
         check(!androidTexture.isDisposed) { "Cannot draw a disposed texture." }
         require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
         require(
+            destinationLeft.isFinite() && destinationTop.isFinite() &&
+                destinationRight.isFinite() && destinationBottom.isFinite() &&
+                destinationRight > destinationLeft && destinationBottom > destinationTop
+        ) { "Texture destination rectangle must have positive finite dimensions." }
+        require(
             sourceLeft >= 0 && sourceTop >= 0 &&
                 sourceRight <= texture.width && sourceBottom <= texture.height &&
                 sourceLeft < sourceRight && sourceTop < sourceBottom
