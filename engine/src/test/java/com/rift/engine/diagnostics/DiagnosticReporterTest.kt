@@ -1,7 +1,9 @@
 package com.rift.engine.diagnostics
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticReporterTest {
@@ -34,6 +36,21 @@ class DiagnosticReporterTest {
         reporter.clear()
 
         assertEquals(emptyList<DiagnosticEntry>(), reporter.snapshot())
-        assertEquals(false, reporter.hasErrors())
+        assertFalse(reporter.hasErrors())
+        assertFalse(reporter.hasFatalErrors())
+    }
+
+    @Test
+    fun fatalSeverityIsDistinctFromRecoverableErrors() {
+        val reporter = DiagnosticReporter()
+
+        reporter.report(DiagnosticSeverity.ERROR, "RECOVERABLE", "test", "operation failed")
+
+        assertTrue(reporter.hasErrors())
+        assertFalse(reporter.hasFatalErrors())
+
+        reporter.report(DiagnosticSeverity.FATAL, "ENGINE_STOP", "test", "engine cannot continue")
+
+        assertTrue(reporter.hasFatalErrors())
     }
 }
