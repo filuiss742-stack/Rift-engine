@@ -66,6 +66,22 @@ class DiagnosticReporterTest {
     }
 
     @Test
+    fun fatalStateSurvivesHistoryEvictionUntilExplicitClear() {
+        val reporter = DiagnosticReporter(maxEntries = 2)
+
+        reporter.report(DiagnosticSeverity.FATAL, "FATAL_FIRST", "test", "stop")
+        repeat(5) { index ->
+            reporter.report(DiagnosticSeverity.INFO, "INFO_$index", "test", "info")
+        }
+
+        assertEquals(2, reporter.snapshot().size)
+        assertTrue(reporter.hasFatalErrors())
+
+        reporter.clear()
+        assertFalse(reporter.hasFatalErrors())
+    }
+
+    @Test
     fun fatalSeverityIsDistinctFromRecoverableErrors() {
         val reporter = DiagnosticReporter()
 
