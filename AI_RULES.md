@@ -6,7 +6,7 @@ These rules are mandatory for every AI agent and human contributor working on th
 
 Rift Engine is an AI-first, beginner-friendly 2D Android game engine. Prefer a small, explicit, predictable API over clever abstractions or unnecessary features.
 
-The engine must be easy for an AI to understand from the source, change safely, and verify. Do not optimize for maximum feature count.
+The engine must be easy for an AI to understand from the source, change safely, and verify. Do not optimize for maximum feature count. Its long-term direction is universal 2D composition: one game may combine top-down exploration, side-view platforming, action combat, and isometric presentation without duplicating shared game state.
 
 ## 2. Golden rules
 
@@ -22,6 +22,8 @@ The engine must be easy for an AI to understand from the source, change safely, 
 10. Never claim that code builds or tests pass unless a build/test actually ran successfully.
 11. Avoid spaghetti code: no tangled responsibilities, circular dependencies, unexplained shared state, or long methods that mix unrelated tasks.
 12. Every new or upgraded plugin must ship with clear, current documentation and usage instructions.
+13. Prefer universal, composable systems over genre-locked controllers or duplicated implementations.
+14. Classify detected problems honestly as confirmed errors, warnings, or unverified hypotheses. Never present a guess as a proven cause.
 
 ## 3. Kotlin style and maintainability
 
@@ -50,9 +52,12 @@ Keep the architecture small and separated:
 - `graphics/`: drawing, camera, sprites and animation.
 - `input/`: input state and touch controls.
 - `physics/`: collision and movement helpers.
+- `diagnostics/`: structured reports, runtime error history, and fallback UI.
 - `storage/`: save/load APIs.
 - `plugin/`: optional extensions.
 - `demo/`: examples and test scenes only.
+
+Keep shared game state separate from presentation, movement, physics, combat, and input profiles. A mode transition should change only the systems required for that mode; do not duplicate player progression or create separate engines for each genre. Avoid a giant controller full of mode flags. See `docs/architecture/engine-principles.md`.
 
 Do not put game-specific story, characters, quests, or content into the engine core. Demo code must demonstrate the API, not become a hidden dependency of it.
 
@@ -111,7 +116,20 @@ After editing:
 
 If the requested change is ambiguous or would require a major architecture decision, ask before making a breaking change.
 
-## 8. Testing and build safety
+## 8. Diagnostics requirements
+
+Rift Diagnostics is a core engine capability, not an optional plugin.
+
+- Report runtime exceptions at engine boundaries with a stable code, subsystem, readable message, and source location when available.
+- Detect known configuration problems and identity/dependency conflicts as early as practical.
+- Distinguish confirmed errors from warnings and hypotheses. Never invent a root cause.
+- Keep a bounded, thread-safe recent-event history.
+- When rendering fails after a caught exception, show a fallback diagnostics screen that does not depend on game assets.
+- Never silently rewrite project code. Provide evidence and suggested next steps instead.
+- Do not claim complete bug detection. Document what the current diagnostic layer cannot detect.
+- Add focused tests for deterministic diagnostic logic when a test setup exists.
+
+## 9. Testing and build safety
 
 - The Android project must continue to build with the configured Gradle and Android SDK versions.
 - Add tests for deterministic logic when practical.
@@ -119,7 +137,7 @@ If the requested change is ambiguous or would require a major architecture decis
 - Do not suppress compiler errors with broad `try/catch`, unchecked casts, or disabled lint/test settings.
 - Never change Gradle, Kotlin, Android SDK, or plugin versions casually. Explain the compatibility reason first.
 
-## 9. Documentation
+## 10. Documentation
 
 When adding or changing a feature, update:
 - the relevant API documentation;
@@ -128,7 +146,7 @@ When adding or changing a feature, update:
 
 Documentation must match the actual code. Do not document planned features as implemented.
 
-## 10. Definition of done
+## 11. Definition of done
 
 A task is complete only when:
 - the requested behavior is implemented;
