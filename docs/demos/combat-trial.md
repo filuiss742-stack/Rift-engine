@@ -7,8 +7,8 @@ The Android and Windows demo apps start in this playable trial.
 - Space / ATTACK: melee strike; move close to the stone golem.
 - Shift / DODGE: directional evade with a short invulnerability window.
 - Q / SKILL: close-range burst with cooldown.
-- E / INTERACT: speak to Mira nearby or enter the violet dungeon gate.
-- Dungeon: A/D or joystick to move; Space / JUMP to clear blockers; E near the exit returns to the hub.
+- E / USE: speak to Mira nearby or enter the violet dungeon gate. Touch players have a dedicated USE button.
+- Dungeon: A/D or joystick to move; Space / JUMP to clear blockers; E / USE near the exit returns to the hub.
 
 The golem pauses and displays a red attack-radius telegraph before its area strike. Leaving the marked radius or timing a dodge avoids damage.
 
