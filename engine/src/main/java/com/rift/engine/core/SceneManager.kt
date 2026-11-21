@@ -3,6 +3,7 @@ package com.rift.engine.core
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.InputActionMap
 import com.rift.engine.scene.Scene
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -19,14 +20,17 @@ class SceneManager(
         private set
 
     private val pendingScenes = ConcurrentLinkedQueue<Scene>()
+    private val heldKeys = mutableSetOf<Int>()
 
     @Synchronized
     fun setInitialScene(scene: Scene) {
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
+            scene.input.reset()
             safe("scene.onEnter") {
                 scene.onEnter()
             }
+            syncHeldKeys(scene)
         } else {
             diagnostics.report(
                 DiagnosticSeverity.WARNING,
@@ -48,8 +52,12 @@ class SceneManager(
     fun update(deltaSeconds: Float) {
         applyPendingTransitions()
         val activeScene = current ?: return
-        safe("scene.update") {
-            activeScene.update(deltaSeconds)
+        try {
+            safe("scene.update") {
+                activeScene.update(deltaSeconds)
+            }
+        } finally {
+            activeScene.input.endFrame()
         }
         applyPendingTransitions()
     }
@@ -92,7 +100,14 @@ class SceneManager(
         pressed: Boolean
     ) {
         applyPendingTransitions()
+        if (pressed) {
+            heldKeys.add(keyCode)
+        } else {
+            heldKeys.remove(keyCode)
+        }
+
         val activeScene = current ?: return
+        activeScene.input.onKey(keyCode, pressed)
         safe("scene.input.key") {
             activeScene.onKey(keyCode, pressed)
         }
@@ -115,9 +130,11 @@ class SceneManager(
             }
 
             current = nextScene
+            nextScene.input.reset()
             safe("scene.onEnter") {
                 nextScene.onEnter()
             }
+            syncHeldKeys(nextScene)
 
             applied += 1
             if (applied >= MAX_TRANSITIONS_PER_BOUNDARY && pendingScenes.isNotEmpty()) {
@@ -130,6 +147,12 @@ class SceneManager(
                 )
                 return
             }
+        }
+    }
+
+    private fun syncHeldKeys(scene: Scene) {
+        heldKeys.forEach { keyCode ->
+            scene.input.onKey(keyCode, true)
         }
     }
 
