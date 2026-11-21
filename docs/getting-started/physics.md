@@ -67,7 +67,7 @@ A raycast returns the nearest hit, including the hit body, point, surface normal
 ## Current physics scope and limitations
 
 - Box collision shapes use axis-aligned bounds derived from GameObject bounds. Circle shapes support circle/box and circle/circle overlap and response.
-- Broad phase currently uses a stable O(n²) pair scan; it is intended for small/medium scenes, not huge crowds.
+- Broad phase uses a spatial hash with stable, deduplicated candidate ordering. Very large bodies that span too many cells safely fall back to checking all bodies; queryAabb and raycast still scan registered bodies.
 - The solver performs basic positional separation and removes velocity into the contact normal. It does not yet model friction, restitution, angular velocity, joints, or full rigid-body impulses.
 - Substeps reduce tunneling for ordinary movement, but this is not continuous collision detection; very fast bodies can still pass through thin geometry.
 - Rotated box objects use their enclosing axis-aligned bounds, not exact polygon collision. Circle offsets follow the object's transform.
