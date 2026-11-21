@@ -82,6 +82,7 @@ abstract class Scene {
         audioManager: AudioManager
     ) {
         diagnostics = reporter
+        ui.diagnostics = reporter
         gameState = sharedState
         assets = assetManager
         audio = audioManager
