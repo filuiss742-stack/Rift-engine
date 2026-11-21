@@ -5,6 +5,8 @@ import com.rift.engine.core.GameEngine
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.graphics.ViewportRenderContext
+import com.rift.engine.graphics.ViewportTransform
 import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerButtons
 import com.rift.engine.input.PointerEvent
@@ -338,14 +340,14 @@ class DesktopSaveStore(
 
 class DesktopGameWindow(
     private val engine: GameEngine,
-    game: RiftGame
+    private val game: RiftGame
 ) : JFrame("Rift Engine") {
     private val clock = FixedStepAccumulator()
     private var previousFrameNanos = System.nanoTime()
 
     private val panel = object : JPanel() {
         override fun getPreferredSize(): Dimension {
-            return Dimension(960, 600)
+            return Dimension(game.viewportWidth, game.viewportHeight)
         }
 
         override fun paintComponent(graphics: Graphics) {
@@ -355,9 +357,19 @@ class DesktopGameWindow(
             // modified color, font, stroke, or rendering hints into Swing.
             val gameGraphics = graphics.create() as Graphics2D
             try {
-                engine.render(
-                    DesktopRenderContext(gameGraphics, width, height)
+                val baseContext = DesktopRenderContext(gameGraphics, width, height)
+                val viewport = ViewportTransform(
+                    game.viewportWidth,
+                    game.viewportHeight,
+                    width.coerceAtLeast(1),
+                    height.coerceAtLeast(1)
                 )
+                val renderContext = ViewportRenderContext(baseContext, viewport)
+                try {
+                    engine.render(renderContext)
+                } finally {
+                    renderContext.close()
+                }
             } finally {
                 gameGraphics.dispose()
             }
@@ -384,6 +396,7 @@ class DesktopGameWindow(
         })
         contentPane.add(panel)
         panel.isFocusable = true
+        panel.background = Color.BLACK
 
         panel.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
@@ -432,15 +445,23 @@ class DesktopGameWindow(
         event: MouseEvent,
         type: PointerEventType,
         button: Int = PointerButtons.NONE
-    ) = PointerEvent(
-        pointerId = 0,
-        type = type,
-        x = event.x.toFloat(),
-        y = event.y.toFloat(),
-        viewportWidth = panel.width.toFloat(),
-        viewportHeight = panel.height.toFloat(),
-        button = button
-    )
+    ): PointerEvent {
+        val viewport = ViewportTransform(
+            game.viewportWidth,
+            game.viewportHeight,
+            panel.width.coerceAtLeast(1),
+            panel.height.coerceAtLeast(1)
+        )
+        return PointerEvent(
+            pointerId = 0,
+            type = type,
+            x = viewport.screenToLogicalX(event.x.toFloat()),
+            y = viewport.screenToLogicalY(event.y.toFloat()),
+            viewportWidth = game.viewportWidth.toFloat(),
+            viewportHeight = game.viewportHeight.toFloat(),
+            button = button
+        )
+    }
 
     private fun mapPointerButton(button: Int): Int = when (button) {
         MouseEvent.BUTTON1 -> PointerButtons.PRIMARY
