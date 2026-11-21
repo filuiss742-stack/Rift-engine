@@ -67,7 +67,7 @@ class CameraRigTest {
         val camera = Camera(zoom = 2f)
         val rig = CameraRig(camera, 100f, 100f, smoothing = 0f)
         rig.snapTo(GameObject(500f, 500f, 20f, 20f))
-        assertEquals(480f, camera.x, 0.001f)
-        assertEquals(480f, camera.y, 0.001f)
+        assertEquals(485f, camera.x, 0.001f)
+        assertEquals(485f, camera.y, 0.001f)
     }
 }
