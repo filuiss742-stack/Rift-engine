@@ -1,6 +1,7 @@
 package com.rift.engine.desktop
 import com.rift.engine.core.*
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
 import com.rift.engine.storage.SaveStore
 import java.awt.*
@@ -37,8 +38,16 @@ class DesktopGameWindow(private val engine:GameEngine,scene:Scene):JFrame("Rift 
   engine.scenes.setInitialScene(scene);defaultCloseOperation=WindowConstants.EXIT_ON_CLOSE;contentPane.add(panel);panel.isFocusable=true
   panel.addMouseListener(object:MouseAdapter(){override fun mousePressed(e:MouseEvent){engine.onTouch(e.x.toFloat(),e.y.toFloat(),panel.width.toFloat(),panel.height.toFloat())}})
   panel.addMouseMotionListener(object:MouseAdapter(){override fun mouseDragged(e:MouseEvent){engine.onTouch(e.x.toFloat(),e.y.toFloat(),panel.width.toFloat(),panel.height.toFloat())}})
-  panel.addKeyListener(object:KeyAdapter(){override fun keyPressed(e:KeyEvent){engine.onKey(e.keyCode,true)};override fun keyReleased(e:KeyEvent){engine.onKey(e.keyCode,false)}})
+  panel.addKeyListener(object:KeyAdapter(){
+   override fun keyPressed(e:KeyEvent){mapKey(e.keyCode)?.let{engine.onKey(it,true)}}
+   override fun keyReleased(e:KeyEvent){mapKey(e.keyCode)?.let{engine.onKey(it,false)}}
+  })
   pack();setLocationRelativeTo(null)
   Timer(16){val now=System.nanoTime();clock.advance(((now-previous)/1e9).toFloat()){engine.update(it)};previous=now;panel.repaint()}.start()
+ }
+ private fun mapKey(code:Int):Int?=when(code){
+  KeyEvent.VK_A->EngineKey.A;KeyEvent.VK_D->EngineKey.D;KeyEvent.VK_W->EngineKey.W;KeyEvent.VK_S->EngineKey.S
+  KeyEvent.VK_LEFT->EngineKey.LEFT;KeyEvent.VK_RIGHT->EngineKey.RIGHT;KeyEvent.VK_UP->EngineKey.UP;KeyEvent.VK_DOWN->EngineKey.DOWN
+  else->null
  }
 }

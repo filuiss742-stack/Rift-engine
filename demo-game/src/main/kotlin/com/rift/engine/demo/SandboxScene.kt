@@ -1,8 +1,8 @@
 package com.rift.engine.demo
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
-import java.awt.event.KeyEvent
 /** Same demo scene is compiled into both platform applications. */
 class SandboxScene:Scene(){
  private val player=GameObject(140f,220f,64f,64f,0xFF6996FF.toInt())
@@ -15,8 +15,9 @@ class SandboxScene:Scene(){
   c.drawText("Touch / click to move",32f,86f,0xFFFFFFFF.toInt(),20f);c.drawText("WASD / arrows: move",32f,114f,0xFFFFFFFF.toInt(),16f)
  }
  override fun onTouch(x:Float,y:Float,screenWidth:Float,screenHeight:Float){player.x=x-player.width/2;player.y=y-player.height/2}
- override fun onKey(keyCode:Int,pressed:Boolean){if(!pressed)return;val d=5f;when(keyCode){
-  KeyEvent.VK_A,KeyEvent.VK_LEFT->player.x-=d;KeyEvent.VK_D,KeyEvent.VK_RIGHT->player.x+=d
-  KeyEvent.VK_W,KeyEvent.VK_UP->player.y-=d;KeyEvent.VK_S,KeyEvent.VK_DOWN->player.y+=d
- }}
+ override fun onKey(keyCode:Int,pressed:Boolean){
+  if(!pressed)return
+  val d=5f
+  when(keyCode){EngineKey.A,EngineKey.LEFT->player.x-=d;EngineKey.D,EngineKey.RIGHT->player.x+=d;EngineKey.W,EngineKey.UP->player.y-=d;EngineKey.S,EngineKey.DOWN->player.y+=d}
+ }
 }

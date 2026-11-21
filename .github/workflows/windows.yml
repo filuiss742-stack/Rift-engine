@@ -1,0 +1,27 @@
+name: Windows Desktop
+on:
+  push: { branches: [ main ] }
+  pull_request: { branches: [ main ] }
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.9' }
+      - name: Test shared engine
+        run: gradle :engine:test
+      - name: Build desktop distribution
+        run: gradle :desktop-app:installDist
+      - name: Package Windows app image
+        shell: pwsh
+        run: jpackage --type app-image --name RiftEngine --input desktop-app/build/install/desktop-app/lib --main-jar desktop-app.jar --main-class com.rift.engine.desktop.MainKt --dest build/windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rift-engine-windows
+          path: build/windows/RiftEngine
+          if-no-files-found: error
