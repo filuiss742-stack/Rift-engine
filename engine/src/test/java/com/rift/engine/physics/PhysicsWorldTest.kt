@@ -155,6 +155,41 @@ class PhysicsWorldTest {
         assertEquals(-1f, hit.normalX, 0.001f)
     }
 
+
+    @Test
+    fun spatialHashSkipsPairsInDistantCells() {
+        val world = PhysicsWorld(gravityY = 0f, broadPhaseCellSize = 64f)
+        repeat(40) { index ->
+            world.addBody(
+                GameObject(index * 500f, 0f, 10f, 10f),
+                PhysicsBodyType.STATIC
+            )
+        }
+
+        world.step(0.016f)
+
+        assertEquals(0, world.lastBroadPhaseCandidateCount)
+        assertTrue(world.contacts().isEmpty())
+    }
+
+    @Test
+    fun oversizedBodiesUseSafeFallbackAndRemainCollidable() {
+        val world = PhysicsWorld(
+            gravityY = 0f,
+            broadPhaseCellSize = 1f,
+            maxCellsPerBody = 4
+        )
+        val dynamic = GameObject(0f, 0f, 10f, 10f)
+        val ground = GameObject(5f, 0f, 10f, 10f)
+        world.addBody(dynamic, gravityScale = 0f)
+        world.addBody(ground, PhysicsBodyType.STATIC)
+
+        world.step(0.016f)
+
+        assertEquals(1, world.lastBroadPhaseCandidateCount)
+        assertEquals(1, world.contacts().size)
+    }
+
     @Test
     fun staticBodiesDoNotProduceStaticStaticContacts() {
         val world = PhysicsWorld(gravityY = 0f)
