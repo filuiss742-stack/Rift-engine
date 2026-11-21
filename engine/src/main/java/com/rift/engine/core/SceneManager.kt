@@ -1,6 +1,7 @@
 package com.rift.engine.core
 
 import com.rift.engine.assets.AssetManager
+import com.rift.engine.audio.AudioManager
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
@@ -17,7 +18,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  */
 class SceneManager(
     private val diagnostics: DiagnosticReporter = DiagnosticReporter(),
-    private val assets: AssetManager = AssetManager(diagnostics = diagnostics)
+    private val assets: AssetManager = AssetManager(diagnostics = diagnostics),
+    private val audio: AudioManager = AudioManager(diagnostics = diagnostics)
 ) {
     @Volatile
     var current: Scene? = null
@@ -34,6 +36,7 @@ class SceneManager(
             current = scene
             scene.gameState = gameState
             scene.assets = assets
+            scene.audio = audio
             scene.input.reset()
             safe("scene.onEnter") {
                 scene.onEnter()
@@ -164,6 +167,7 @@ class SceneManager(
             current = nextScene
             nextScene.gameState = gameState
             nextScene.assets = assets
+            nextScene.audio = audio
             nextScene.input.reset()
             safe("scene.onEnter") {
                 nextScene.onEnter()
