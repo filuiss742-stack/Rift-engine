@@ -125,6 +125,14 @@ class InputActionMap {
         }
     }
 
+    /**
+     * Synchronizes a held physical key after a scene transition without
+     * synthesizing a new just-pressed edge in the destination scene.
+     */
+    internal fun syncHeldKey(keyCode: Int) {
+        if (keyCode > 0) downKeys.add(keyCode)
+    }
+
     fun isDown(actionId: String): Boolean = isDownInternal(actionId)
 
     fun wasPressed(actionId: String): Boolean = actionId in justPressedActions
