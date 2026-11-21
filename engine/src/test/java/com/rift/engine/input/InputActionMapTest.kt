@@ -88,6 +88,91 @@ class InputActionMapTest {
         assertTrue(input.wasReleased("interact"))
     }
 
+
+    @Test
+    fun pointerButtonsCanDriveNamedActions() {
+        val input = InputActionMap()
+        input.bindPointerButton("attack", PointerButtons.PRIMARY)
+
+        input.onPointer(
+            PointerEvent(0, PointerEventType.DOWN, 10f, 20f, 100f, 100f, PointerButtons.PRIMARY)
+        )
+        assertTrue(input.isDown("attack"))
+        assertTrue(input.wasPressed("attack"))
+
+        input.endFrame()
+        input.onPointer(
+            PointerEvent(0, PointerEventType.UP, 10f, 20f, 100f, 100f, PointerButtons.PRIMARY)
+        )
+        assertFalse(input.isDown("attack"))
+        assertTrue(input.wasReleased("attack"))
+    }
+
+    @Test
+    fun keyboardAndPointerBindingsShareOneActionWithoutFalseRelease() {
+        val input = InputActionMap()
+        input.bindKey("confirm", 1)
+        input.bindPointerButton("confirm", PointerButtons.PRIMARY)
+
+        input.onKey(1, true)
+        input.endFrame()
+        input.onPointer(
+            PointerEvent(0, PointerEventType.DOWN, 1f, 1f, 20f, 20f, PointerButtons.PRIMARY)
+        )
+        input.onKey(1, false)
+
+        assertTrue(input.isDown("confirm"))
+        assertFalse(input.wasReleased("confirm"))
+    }
+
+    @Test
+    fun multipleTouchPointersKeepActionHeldUntilLastRelease() {
+        val input = InputActionMap()
+        input.bindPointerButton("touch", PointerButtons.TOUCH)
+
+        input.onPointer(
+            PointerEvent(10, PointerEventType.DOWN, 1f, 1f, 100f, 100f, PointerButtons.TOUCH)
+        )
+        input.endFrame()
+        input.onPointer(
+            PointerEvent(11, PointerEventType.DOWN, 2f, 2f, 100f, 100f, PointerButtons.TOUCH)
+        )
+        input.onPointer(
+            PointerEvent(10, PointerEventType.UP, 1f, 1f, 100f, 100f, PointerButtons.TOUCH)
+        )
+
+        assertTrue(input.isDown("touch"))
+        assertFalse(input.wasReleased("touch"))
+
+        input.onPointer(
+            PointerEvent(11, PointerEventType.UP, 2f, 2f, 100f, 100f, PointerButtons.TOUCH)
+        )
+        assertFalse(input.isDown("touch"))
+        assertTrue(input.wasReleased("touch"))
+    }
+
+    @Test
+    fun pointerCancelReleasesHeldButtonsAndTracksMovement() {
+        val input = InputActionMap()
+        input.bindPointerButton("touch", PointerButtons.TOUCH)
+        input.onPointer(
+            PointerEvent(3, PointerEventType.DOWN, 4f, 5f, 100f, 100f, PointerButtons.TOUCH)
+        )
+        input.onPointer(
+            PointerEvent(3, PointerEventType.MOVE, 9f, 12f, 100f, 100f)
+        )
+
+        assertTrue(input.isDown("touch"))
+        assertTrue(input.pointerDeltaX == 5f)
+        assertTrue(input.pointerDeltaY == 7f)
+
+        input.onPointer(
+            PointerEvent(3, PointerEventType.CANCEL, 9f, 12f, 100f, 100f)
+        )
+        assertFalse(input.isDown("touch"))
+        assertTrue(input.wasReleased("touch"))
+    }
+
     @Test
     fun resetClearsHeldKeysAndEdges() {
         val input = InputActionMap()
