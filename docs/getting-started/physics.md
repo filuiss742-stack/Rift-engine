@@ -62,7 +62,7 @@ val nearby = physics.queryAabb(Aabb(0f, 0f, 200f, 120f))
 val hit = physics.raycast(0f, 100f, 500f, 100f)
 ```
 
-A raycast returns the nearest hit, including the hit body, point, surface normal, and fraction along the segment.
+A raycast returns the nearest hit, including the hit body, point, surface normal, and fraction along the segment. If the segment starts inside a shape, it reports the first exit surface when that surface lies within the segment.
 
 ## Current physics scope and limitations
 
