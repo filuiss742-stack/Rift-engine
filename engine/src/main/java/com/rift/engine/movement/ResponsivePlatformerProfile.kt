@@ -7,10 +7,10 @@ import kotlin.math.sign
  * Side-view platform movement with acceleration, air control, coyote time,
  * jump buffering and optional variable jump height.
  *
- * This profile operates on MovementBody, not PhysicsBody. If a game copies its
- * vertical velocity into a GameObject controlled by PhysicsWorld, set this
- * profile's gravity to 0 so the physics world remains the only gravity source.
- * Use one profile instance per moving character because jump timers are stateful.
+ * The MovementBody marks itself as physics-controlled when its GameObject is
+ * registered with PhysicsWorld. In that case this profile leaves gravity to
+ * the world automatically. Use one profile instance per character because
+ * jump timers are stateful.
  */
 class ResponsivePlatformerProfile(
     private val maxSpeed: Float = 220f,
@@ -102,8 +102,10 @@ class ResponsivePlatformerProfile(
                 body.velocityY *= jumpCutMultiplier
                 jumping = false
             }
-            body.velocityY = (body.velocityY + gravity * deltaSeconds)
-                .coerceAtMost(maxFallSpeed)
+            if (!body.isPhysicsControlled) {
+                body.velocityY = (body.velocityY + gravity * deltaSeconds)
+                    .coerceAtMost(maxFallSpeed)
+            }
             if (body.velocityY >= 0f) jumping = false
         }
     }
