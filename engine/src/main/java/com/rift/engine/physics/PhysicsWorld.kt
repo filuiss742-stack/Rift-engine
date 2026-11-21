@@ -486,27 +486,15 @@ class PhysicsWorld(
             normalFromCircleY = dy / distance
             penetration = radius - distance
         } else {
-            val distances = listOf(
-                box.left to (1f to 0f),
-                box.right to (-1f to 0f),
-                box.top to (0f to 1f),
-                box.bottom to (0f to -1f)
-            )
-            val nearest = distances.minBy { (edge, _) ->
-                when {
-                    edge == box.left || edge == box.right -> abs(center.first - edge)
-                    else -> abs(center.second - edge)
-                }
-            }
-            val sideDistance = when (nearest.second) {
-                1f to 0f -> abs(center.first - box.left)
-                -1f to 0f -> abs(box.right - center.first)
-                0f to 1f -> abs(center.second - box.top)
-                else -> abs(box.bottom - center.second)
-            }
+            val nearest = listOf(
+                abs(center.first - box.left) to (1f to 0f),
+                abs(box.right - center.first) to (-1f to 0f),
+                abs(center.second - box.top) to (0f to 1f),
+                abs(box.bottom - center.second) to (0f to -1f)
+            ).minBy { it.first }
             normalFromCircleX = nearest.second.first
             normalFromCircleY = nearest.second.second
-            penetration = radius + sideDistance
+            penetration = radius + nearest.first
         }
 
         return if (circleIsFirst) {
