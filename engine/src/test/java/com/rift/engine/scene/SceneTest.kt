@@ -23,6 +23,30 @@ class SceneTest {
         assertEquals(listOf("back-a", "back-b", "middle", "front"), order)
     }
 
+    @Test
+    fun changingRenderLayerRebuildsCachedOrderOnNextFrame() {
+        val order = mutableListOf<String>()
+        val low = OrderedObject("low", 0, order)
+        val high = OrderedObject("high", 10, order)
+        val scene = object : Scene() {
+            init {
+                add(low)
+                add(high)
+            }
+        }
+        val renderer = RecordingRenderContext()
+
+        scene.render(renderer)
+        assertEquals(listOf("low", "high"), order)
+
+        order.clear()
+        low.renderLayer = 20
+        high.renderLayer = -5
+        scene.render(renderer)
+
+        assertEquals(listOf("high", "low"), order)
+    }
+
     private class OrderedObject(
         private val name: String,
         layer: Int,
