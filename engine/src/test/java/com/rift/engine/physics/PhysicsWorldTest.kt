@@ -170,6 +170,26 @@ class PhysicsWorldTest {
     }
 
     @Test
+    fun clearReleasesBodiesAndResetsContactState() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val first = GameObject(0f, 0f, 10f, 10f)
+        val second = GameObject(5f, 0f, 10f, 10f)
+        world.addBody(first, gravityScale = 0f)
+        world.addBody(second, PhysicsBodyType.STATIC)
+        world.step(0.016f)
+        assertTrue(world.contacts().isNotEmpty())
+
+        world.clear()
+
+        assertTrue(world.bodies().isEmpty())
+        assertTrue(world.contacts().isEmpty())
+        assertTrue(world.contactEvents().isEmpty())
+        assertFalse(first.physicsControlled)
+        assertFalse(second.physicsControlled)
+        assertEquals(0, world.lastBroadPhaseCandidateCount)
+    }
+
+    @Test
     fun removingBodyRestoresGameObjectOwnedIntegration() {
         val world = PhysicsWorld(gravityY = 0f)
         val objectUnderTest = GameObject(0f, 0f, 10f, 10f)
