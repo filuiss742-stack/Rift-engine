@@ -1,6 +1,7 @@
 package com.rift.engine.scene
 
 import com.rift.engine.assets.AssetManager
+import com.rift.engine.combat.CombatWorld
 import com.rift.engine.audio.AudioManager
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.entity.GameObject
@@ -21,6 +22,7 @@ abstract class Scene {
     val input = InputActionMap()
     val camera = Camera()
     val physics = PhysicsWorld()
+    val combat = CombatWorld()
     val ui = UiCanvas()
 
     var gameState: GameState = GameState()
@@ -51,6 +53,7 @@ abstract class Scene {
     protected fun remove(gameObject: GameObject) {
         if (pendingAdds.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
+            combat.removeOwner(gameObject)
             quarantinedObjects.remove(gameObject)
             gameObject.diagnostics = null
             return
@@ -85,6 +88,7 @@ abstract class Scene {
     ) {
         diagnostics = reporter
         ui.diagnostics = reporter
+        combat.diagnostics = reporter
         gameState = sharedState
         assets = assetManager
         audio = audioManager
@@ -144,6 +148,11 @@ abstract class Scene {
             physics.step(deltaSeconds)
         } catch (exception: Exception) {
             reportSceneFailure("scene.physics.update", exception)
+        }
+        try {
+            combat.step(deltaSeconds)
+        } catch (exception: Exception) {
+            reportSceneFailure("scene.combat.update", exception)
         }
         try {
             ui.update(deltaSeconds)
