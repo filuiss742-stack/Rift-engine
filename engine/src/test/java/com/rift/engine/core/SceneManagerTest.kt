@@ -1,6 +1,7 @@
 package com.rift.engine.core
 
 import com.rift.engine.entity.GameObject
+import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -57,6 +58,30 @@ class SceneManagerTest {
         assertTrue(nextEntered)
         assertSame(nextScene, manager.current)
         assertSame(manager.gameState, nextScene.gameState)
+    }
+
+
+    @Test
+    fun heldKeyRemainsDownAcrossTransitionWithoutNewPressEdge() {
+        val manager = SceneManager()
+        lateinit var nextScene: Scene
+        val firstScene = object : Scene() {
+            init { input.bindKey("switch", EngineKey.TAB) }
+            override fun update(deltaSeconds: Float) {
+                requestSceneChange(nextScene)
+            }
+        }
+        nextScene = object : Scene() {
+            init { input.bindKey("held", EngineKey.TAB) }
+        }
+
+        manager.setInitialScene(firstScene)
+        manager.onKey(EngineKey.TAB, true)
+        manager.update(1f / 60f)
+
+        assertSame(nextScene, manager.current)
+        assertTrue(nextScene.input.isDown("held"))
+        assertTrue(!nextScene.input.wasPressed("held"))
     }
 
     @Test
