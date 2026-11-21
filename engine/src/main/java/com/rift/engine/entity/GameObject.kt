@@ -82,8 +82,7 @@ open class GameObject(
         if (containsIdentity(components, component)) {
             return false
         }
-        components.add(component)
-        component.onAttach(this)
+        attachComponent(component)
         return true
     }
 
@@ -182,10 +181,15 @@ open class GameObject(
         if (pendingComponentRemovals.isNotEmpty()) {
             val removals = pendingComponentRemovals.toList()
             pendingComponentRemovals.clear()
-            removals.forEach { component ->
+            removals.forEachIndexed { index, component ->
                 val removed = components.removeAll { it === component }
                 if (removed) {
-                    component.onDetach(this)
+                    try {
+                        component.onDetach(this)
+                    } catch (exception: Exception) {
+                        pendingComponentRemovals.addAll(removals.drop(index + 1))
+                        throw exception
+                    }
                 }
             }
         }
@@ -193,12 +197,31 @@ open class GameObject(
         if (pendingComponentAdds.isNotEmpty()) {
             val additions = pendingComponentAdds.toList()
             pendingComponentAdds.clear()
-            additions.forEach { component ->
+            additions.forEachIndexed { index, component ->
                 if (!containsIdentity(components, component)) {
-                    components.add(component)
-                    component.onAttach(this)
+                    try {
+                        attachComponent(component)
+                    } catch (exception: Exception) {
+                        pendingComponentAdds.addAll(additions.drop(index + 1))
+                        throw exception
+                    }
                 }
             }
+        }
+    }
+
+    private fun attachComponent(component: GameComponent) {
+        components.add(component)
+        try {
+            component.onAttach(this)
+        } catch (exception: Exception) {
+            components.removeAll { it === component }
+            try {
+                component.onDetach(this)
+            } catch (cleanupException: Exception) {
+                exception.addSuppressed(cleanupException)
+            }
+            throw exception
         }
     }
 
