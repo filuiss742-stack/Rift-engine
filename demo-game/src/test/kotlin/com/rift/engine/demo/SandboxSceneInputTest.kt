@@ -3,6 +3,7 @@ package com.rift.engine.demo
 import com.rift.engine.core.SceneManager
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerButtons
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import org.junit.Assert.assertEquals
@@ -39,7 +40,8 @@ class SandboxSceneInputTest {
                 x = 700f,
                 y = 300f,
                 viewportWidth = 960f,
-                viewportHeight = 600f
+                viewportHeight = 600f,
+                button = PointerButtons.TOUCH
             )
         )
         manager.onPointer(
