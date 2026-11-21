@@ -12,6 +12,25 @@ enum class PhysicsBodyType {
     DYNAMIC
 }
 
+sealed interface CollisionShape {
+    data object Box : CollisionShape
+
+    data class Circle(
+        val radius: Float,
+        val offsetX: Float = 0f,
+        val offsetY: Float = 0f
+    ) : CollisionShape {
+        init {
+            require(radius.isFinite() && radius > 0f) {
+                "Circle radius must be finite and greater than zero."
+            }
+            require(offsetX.isFinite() && offsetY.isFinite()) {
+                "Circle offsets must be finite."
+            }
+        }
+    }
+}
+
 /** Collision category and mask filtering. Bits 0..30 are available. */
 data class CollisionFilter(
     val categoryBits: Int = 1,
@@ -43,7 +62,8 @@ class PhysicsBody internal constructor(
     mass: Float,
     gravityScale: Float,
     isSensor: Boolean,
-    collisionFilter: CollisionFilter
+    collisionFilter: CollisionFilter,
+    val shape: CollisionShape
 ) {
     var mass: Float = mass
         set(value) {
@@ -137,7 +157,8 @@ class PhysicsWorld(
         mass: Float = 1f,
         gravityScale: Float = 1f,
         isSensor: Boolean = false,
-        collisionFilter: CollisionFilter = CollisionFilter()
+        collisionFilter: CollisionFilter = CollisionFilter(),
+        shape: CollisionShape = CollisionShape.Box
     ): PhysicsBody {
         require(bodies.none { it.gameObject === gameObject }) {
             "This GameObject already has a body in this PhysicsWorld."
@@ -151,7 +172,8 @@ class PhysicsWorld(
             mass,
             gravityScale,
             isSensor,
-            collisionFilter
+            collisionFilter,
+            shape
         )
         bodies.add(body)
         gameObject.physicsControlled = true
@@ -260,7 +282,7 @@ class PhysicsWorld(
         return bodies.filter { body ->
             body.enabled &&
                 (filter == null || filter.allows(body.collisionFilter)) &&
-                Collision.intersects(area, body.gameObject.bounds())
+                Collision.intersects(area, bodyBounds(body))
         }
     }
 
@@ -284,9 +306,24 @@ class PhysicsWorld(
             if (!body.enabled || (filter != null && !filter.allows(body.collisionFilter))) {
                 return@forEach
             }
-            val bounds = body.gameObject.bounds()
-            val hit = intersectSegment(body, bounds, startX, startY, dx, dy)
-                ?: return@forEach
+            val hit = when (val shape = body.shape) {
+                CollisionShape.Box -> intersectSegment(
+                    body,
+                    bodyBounds(body),
+                    startX,
+                    startY,
+                    dx,
+                    dy
+                )
+                is CollisionShape.Circle -> intersectCircle(
+                    body,
+                    shape,
+                    startX,
+                    startY,
+                    dx,
+                    dy
+                )
+            } ?: return@forEach
             if (closest == null || hit.fraction < closest!!.fraction) {
                 closest = hit
             }
@@ -299,8 +336,26 @@ class PhysicsWorld(
         second: PhysicsBody
     ): CollisionContact? {
         if (first.inverseMass == 0f && second.inverseMass == 0f) return null
-        val a = first.gameObject.bounds()
-        val b = second.gameObject.bounds()
+        val sensor = first.isSensor || second.isSensor
+        return when (val firstShape = first.shape) {
+            CollisionShape.Box -> when (val secondShape = second.shape) {
+                CollisionShape.Box -> boxBoxContact(first, second, sensor)
+                is CollisionShape.Circle -> circleBoxContact(second, first, secondShape, sensor, circleIsFirst = false)
+            }
+            is CollisionShape.Circle -> when (val secondShape = second.shape) {
+                CollisionShape.Box -> circleBoxContact(first, second, firstShape, sensor, circleIsFirst = true)
+                is CollisionShape.Circle -> circleCircleContact(first, second, firstShape, secondShape, sensor)
+            }
+        }
+    }
+
+    private fun boxBoxContact(
+        first: PhysicsBody,
+        second: PhysicsBody,
+        sensor: Boolean
+    ): CollisionContact? {
+        val a = bodyBounds(first)
+        val b = bodyBounds(second)
         if (!Collision.intersects(a, b)) return null
 
         val overlapX = min(a.right, b.right) - max(a.left, b.left)
@@ -311,23 +366,135 @@ class PhysicsWorld(
         val centerBY = (b.top + b.bottom) * 0.5f
 
         return if (overlapX < overlapY) {
+            CollisionContact(first, second, if (centerBX >= centerAX) 1f else -1f, 0f, overlapX, sensor)
+        } else {
+            CollisionContact(first, second, 0f, if (centerBY >= centerAY) 1f else -1f, overlapY, sensor)
+        }
+    }
+
+    private fun circleCircleContact(
+        first: PhysicsBody,
+        second: PhysicsBody,
+        firstShape: CollisionShape.Circle,
+        secondShape: CollisionShape.Circle,
+        sensor: Boolean
+    ): CollisionContact? {
+        val firstCenter = circleCenter(first, firstShape)
+        val secondCenter = circleCenter(second, secondShape)
+        val dx = secondCenter.first - firstCenter.first
+        val dy = secondCenter.second - firstCenter.second
+        val distanceSquared = dx * dx + dy * dy
+        val radiusSum = circleRadius(first, firstShape) + circleRadius(second, secondShape)
+        if (distanceSquared >= radiusSum * radiusSum) return null
+        val distance = kotlin.math.sqrt(distanceSquared)
+        val normalX = if (distance > 0.000001f) dx / distance else 1f
+        val normalY = if (distance > 0.000001f) dy / distance else 0f
+        return CollisionContact(first, second, normalX, normalY, radiusSum - distance, sensor)
+    }
+
+    private fun circleBoxContact(
+        circleBody: PhysicsBody,
+        boxBody: PhysicsBody,
+        circleShape: CollisionShape.Circle,
+        sensor: Boolean,
+        circleIsFirst: Boolean
+    ): CollisionContact? {
+        val center = circleCenter(circleBody, circleShape)
+        val radius = circleRadius(circleBody, circleShape)
+        val box = bodyBounds(boxBody)
+        val closestX = center.first.coerceIn(box.left, box.right)
+        val closestY = center.second.coerceIn(box.top, box.bottom)
+        val dx = closestX - center.first
+        val dy = closestY - center.second
+        val distanceSquared = dx * dx + dy * dy
+
+        val normalFromCircleX: Float
+        val normalFromCircleY: Float
+        val penetration: Float
+
+        if (distanceSquared > 0.000001f) {
+            val distance = kotlin.math.sqrt(distanceSquared)
+            if (distance >= radius) return null
+            normalFromCircleX = dx / distance
+            normalFromCircleY = dy / distance
+            penetration = radius - distance
+        } else {
+            val distances = listOf(
+                box.left to (1f to 0f),
+                box.right to (-1f to 0f),
+                box.top to (0f to 1f),
+                box.bottom to (0f to -1f)
+            )
+            val nearest = distances.minBy { (edge, _) ->
+                when {
+                    edge == box.left || edge == box.right -> abs(center.first - edge)
+                    else -> abs(center.second - edge)
+                }
+            }
+            val sideDistance = when (nearest.second) {
+                1f to 0f -> abs(center.first - box.left)
+                -1f to 0f -> abs(box.right - center.first)
+                0f to 1f -> abs(center.second - box.top)
+                else -> abs(box.bottom - center.second)
+            }
+            normalFromCircleX = nearest.second.first
+            normalFromCircleY = nearest.second.second
+            penetration = radius + sideDistance
+        }
+
+        return if (circleIsFirst) {
             CollisionContact(
-                first,
-                second,
-                if (centerBX >= centerAX) 1f else -1f,
-                0f,
-                overlapX,
-                first.isSensor || second.isSensor
+                circleBody,
+                boxBody,
+                normalFromCircleX,
+                normalFromCircleY,
+                penetration,
+                sensor
             )
         } else {
             CollisionContact(
-                first,
-                second,
-                0f,
-                if (centerBY >= centerAY) 1f else -1f,
-                overlapY,
-                first.isSensor || second.isSensor
+                boxBody,
+                circleBody,
+                -normalFromCircleX,
+                -normalFromCircleY,
+                penetration,
+                sensor
             )
+        }
+    }
+
+    private fun circleCenter(
+        body: PhysicsBody,
+        shape: CollisionShape.Circle
+    ): Pair<Float, Float> {
+        val objectUnderTest = body.gameObject
+        val point = objectUnderTest.transform.transformPoint(
+            objectUnderTest.width * 0.5f + shape.offsetX,
+            objectUnderTest.height * 0.5f + shape.offsetY,
+            objectUnderTest.x,
+            objectUnderTest.y
+        )
+        return point.x to point.y
+    }
+
+    private fun circleRadius(
+        body: PhysicsBody,
+        shape: CollisionShape.Circle
+    ): Float = shape.radius * max(abs(body.gameObject.scaleX), abs(body.gameObject.scaleY))
+
+    private fun bodyBounds(body: PhysicsBody): Aabb {
+        return when (val shape = body.shape) {
+            CollisionShape.Box -> body.gameObject.bounds()
+            is CollisionShape.Circle -> {
+                val center = circleCenter(body, shape)
+                val radius = circleRadius(body, shape)
+                Aabb(
+                    center.first - radius,
+                    center.second - radius,
+                    center.first + radius,
+                    center.second + radius
+                )
+            }
         }
     }
 
@@ -343,23 +510,56 @@ class PhysicsWorld(
         second.gameObject.x += contact.normalX * correction * second.inverseMass
         second.gameObject.y += contact.normalY * correction * second.inverseMass
 
-        if (contact.normalX > 0f) {
-            if (first.gameObject.velocityX > 0f) first.gameObject.velocityX = 0f
-            if (second.gameObject.velocityX < 0f) second.gameObject.velocityX = 0f
-        } else if (contact.normalX < 0f) {
-            if (first.gameObject.velocityX < 0f) first.gameObject.velocityX = 0f
-            if (second.gameObject.velocityX > 0f) second.gameObject.velocityX = 0f
+        val relativeVelocityX = second.gameObject.velocityX - first.gameObject.velocityX
+        val relativeVelocityY = second.gameObject.velocityY - first.gameObject.velocityY
+        val velocityAlongNormal =
+            relativeVelocityX * contact.normalX + relativeVelocityY * contact.normalY
+        if (velocityAlongNormal < 0f) {
+            val impulse = -velocityAlongNormal / inverseMassTotal
+            first.gameObject.velocityX -= impulse * first.inverseMass * contact.normalX
+            first.gameObject.velocityY -= impulse * first.inverseMass * contact.normalY
+            second.gameObject.velocityX += impulse * second.inverseMass * contact.normalX
+            second.gameObject.velocityY += impulse * second.inverseMass * contact.normalY
         }
 
-        if (contact.normalY > 0f) {
-            if (first.gameObject.velocityY > 0f) first.gameObject.velocityY = 0f
-            if (second.gameObject.velocityY < 0f) second.gameObject.velocityY = 0f
-            if (first.type == PhysicsBodyType.DYNAMIC) first.gameObject.isGrounded = true
-        } else if (contact.normalY < 0f) {
-            if (first.gameObject.velocityY < 0f) first.gameObject.velocityY = 0f
-            if (second.gameObject.velocityY > 0f) second.gameObject.velocityY = 0f
-            if (second.type == PhysicsBodyType.DYNAMIC) second.gameObject.isGrounded = true
+        if (contact.normalY > 0.5f && first.type == PhysicsBodyType.DYNAMIC) {
+            first.gameObject.isGrounded = true
+        } else if (contact.normalY < -0.5f && second.type == PhysicsBodyType.DYNAMIC) {
+            second.gameObject.isGrounded = true
         }
+    }
+
+    private fun intersectCircle(
+        body: PhysicsBody,
+        shape: CollisionShape.Circle,
+        startX: Float,
+        startY: Float,
+        dx: Float,
+        dy: Float
+    ): RaycastHit? {
+        val center = circleCenter(body, shape)
+        val radius = circleRadius(body, shape)
+        val offsetX = startX - center.first
+        val offsetY = startY - center.second
+        val a = dx * dx + dy * dy
+        if (a <= 0.000001f) return null
+        val b = 2f * (offsetX * dx + offsetY * dy)
+        val c = offsetX * offsetX + offsetY * offsetY - radius * radius
+        val discriminant = b * b - 4f * a * c
+        if (discriminant < 0f) return null
+        val root = kotlin.math.sqrt(discriminant)
+        val first = (-b - root) / (2f * a)
+        val second = (-b + root) / (2f * a)
+        val fraction = when {
+            first in 0f..1f -> first
+            second in 0f..1f -> second
+            else -> return null
+        }
+        val pointX = startX + dx * fraction
+        val pointY = startY + dy * fraction
+        val normalX = (pointX - center.first) / radius
+        val normalY = (pointY - center.second) / radius
+        return RaycastHit(body, pointX, pointY, normalX, normalY, fraction)
     }
 
     private fun intersectSegment(
