@@ -33,4 +33,4 @@ You are the game developer for this Rift project. The human owns the project and
 
 ## Current limitations
 
-The manifest is currently validated as metadata only. It does not prove that entrypoint classes or assets exist. The engine's current runtime is still under development: check the API map and guides before relying on collision worlds, camera integration, sprite animation, audio, UI widgets, 3D rendering, scene serialization, or automatic asset loading. Do not invent those APIs.
+The manifest is currently validated as metadata only. It does not prove that entrypoint classes or assets exist. The engine's current runtime is still under development: check the API map and guides before relying on pointer/gamepad action bindings, virtual touch controls, collision worlds, camera integration, sprite animation, audio, UI widgets, 3D rendering, scene serialization, or automatic asset loading. Do not invent those APIs.
