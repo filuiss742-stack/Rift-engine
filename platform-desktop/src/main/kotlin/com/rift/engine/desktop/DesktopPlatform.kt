@@ -6,7 +6,7 @@ import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
-import com.rift.engine.scene.Scene
+import com.rift.engine.game.RiftGame
 import com.rift.engine.storage.SaveStore
 import java.awt.BasicStroke
 import java.awt.Color
@@ -247,7 +247,7 @@ class DesktopSaveStore(
 
 class DesktopGameWindow(
     private val engine: GameEngine,
-    scene: Scene
+    game: RiftGame
 ) : JFrame("Rift Engine") {
     private val clock = FixedStepAccumulator()
     private var previousFrameNanos = System.nanoTime()
@@ -274,7 +274,7 @@ class DesktopGameWindow(
     }
 
     init {
-        engine.scenes.setInitialScene(scene)
+        engine.scenes.setInitialScene(game.createInitialScene())
 
         defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
         contentPane.add(panel)
