@@ -27,6 +27,7 @@ class GameplayModuleManager(
             true
         } catch (exception: Exception) {
             diagnostics.reportException("module[" + descriptor.id + "].onInstall", exception)
+            attemptCleanup(module, descriptor.id, "failed install")
             false
         }
     }
@@ -66,6 +67,7 @@ class GameplayModuleManager(
             replacement.onInstall(GameplayModuleContext(diagnostics))
         } catch (exception: Exception) {
             diagnostics.reportException("module[" + id + "].replacement.onInstall", exception)
+            attemptCleanup(replacement, id, "failed replacement")
             try {
                 current.onInstall(GameplayModuleContext(diagnostics))
             } catch (restoreException: Exception) {
@@ -190,6 +192,21 @@ class GameplayModuleManager(
             return false
         }
         return true
+    }
+
+    private fun attemptCleanup(module: GameplayModule, id: String, operation: String) {
+        try {
+            module.onUninstall()
+        } catch (cleanupException: Exception) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "MODULE_CLEANUP_FAILED",
+                "GameplayModuleManager",
+                "Module '" + id + "' failed cleanup after " + operation + ".",
+                cleanupException.toString(),
+                "module[" + id + "]"
+            )
+        }
     }
 
     private fun report(code: String, message: String) {
