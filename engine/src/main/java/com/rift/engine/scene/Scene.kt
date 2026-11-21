@@ -7,6 +7,7 @@ import com.rift.engine.input.InputActionMap
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import com.rift.engine.physics.PhysicsWorld
+import com.rift.engine.state.GameState
 
 /**
  * A scene owns its game objects.
@@ -20,6 +21,8 @@ abstract class Scene {
     val input = InputActionMap()
     val camera = Camera()
     val physics = PhysicsWorld()
+    var gameState: GameState = GameState()
+        internal set
 
     protected val objects = mutableListOf<GameObject>()
 
