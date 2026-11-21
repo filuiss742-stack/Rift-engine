@@ -6,13 +6,24 @@ This is the short route for an AI agent with limited context. Read only the task
 
 1. AGENTS.md — mandatory entry rules.
 2. AI_RULES.md — architecture and change rules.
-3. docs/api-map.md — find the real public entry points.
-4. The matching guide under docs/getting-started/.
-5. The implementation and its callers only when the guide/API map is insufficient.
+3. docs/architecture/ai-native-architecture.md — AI-native product principles and planned agent workflow.
+4. docs/api-map.md — find the real public entry points.
+5. The matching guide under docs/getting-started/.
+6. The implementation and its callers only when the guide/API map is insufficient.
 
 Do not load every document or every source file by default.
 
-## 2. Choose the right module
+## 2. AI collaboration rules
+
+- Treat the human as project owner and decision-maker; explain consequential trade-offs before irreversible changes.
+- Use the same public APIs and validation rules as a human developer. Never bypass engine invariants for convenience.
+- Inspect only the task-relevant context; do not ingest or rewrite the whole repository by default.
+- Before editing, state the scope internally and identify the smallest affected file set. For broad changes, present a plan first.
+- Keep changes reviewable and reversible. Show exact files changed and commands actually run.
+- Never claim an operation, API, editor feature, or validation exists unless it is present in the current branch.
+- Do not silently change unrelated project data. Ask before destructive or hard-to-reverse actions.
+
+## 3. Choose the right module
 
 | Task | Module |
 |---|---|
@@ -25,7 +36,7 @@ Do not load every document or every source file by default.
 
 Keep dependencies flowing toward :engine. Never put Android, AWT, or Swing imports in it.
 
-## 3. Before editing
+## 4. Before editing
 
 1. Identify the smallest set of files needed.
 2. Read the relevant API and current callers.
@@ -33,7 +44,7 @@ Keep dependencies flowing toward :engine. Never put Android, AWT, or Swing impor
 4. Prefer a small change in a game module over a core change when the behavior is game-specific.
 5. If a public API changes, update its guide and example in the same change.
 
-## 4. After editing
+## 5. After editing
 
 Run the narrowest relevant checks first:
 
@@ -43,7 +54,7 @@ Run the narrowest relevant checks first:
 
 The CI workflows run shared tests, platform checks, and the architecture-boundary script. Report commands that actually ran and their results. Do not claim a Windows package was manually launched unless it was.
 
-## 5. Current capability boundaries
+## 6. Current capability boundaries
 
 The runtime includes scenes, simple entities, platform-neutral basic rendering, key/touch forwarding, basic top-down and platformer movement, key/value saves, plugins, diagnostics, a replaceable gameplay-module registry, and a headless branching-dialogue runtime.
 
