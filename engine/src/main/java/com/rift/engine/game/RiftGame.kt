@@ -9,5 +9,9 @@ import com.rift.engine.scene.Scene
  * Game-specific startup and scene construction stay in the game project.
  */
 interface RiftGame {
+    /** Logical game resolution, independent of the physical device/window size. */
+    val viewportWidth: Int get() = 960
+    val viewportHeight: Int get() = 600
+
     fun createInitialScene(): Scene
 }
