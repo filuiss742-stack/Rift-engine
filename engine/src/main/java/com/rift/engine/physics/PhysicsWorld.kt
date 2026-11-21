@@ -195,6 +195,12 @@ class PhysicsWorld(
             return
         }
 
+        activeBodies.forEach { body ->
+            if (body.type == PhysicsBodyType.DYNAMIC) {
+                body.gameObject.isGrounded = false
+            }
+        }
+
         val maxDistance = activeBodies
             .filter { it.type == PhysicsBodyType.DYNAMIC }
             .maxOfOrNull { body ->
@@ -279,9 +285,10 @@ class PhysicsWorld(
                 return@forEach
             }
             val bounds = body.gameObject.bounds()
-            val hit = intersectSegment(bounds, startX, startY, dx, dy) ?: return@forEach
+            val hit = intersectSegment(body, bounds, startX, startY, dx, dy)
+                ?: return@forEach
             if (closest == null || hit.fraction < closest!!.fraction) {
-                closest = hit.copy(body = body)
+                closest = hit
             }
         }
         return closest
@@ -356,6 +363,7 @@ class PhysicsWorld(
     }
 
     private fun intersectSegment(
+        body: PhysicsBody,
         bounds: Aabb,
         startX: Float,
         startY: Float,
@@ -403,7 +411,7 @@ class PhysicsWorld(
         if (tMin !in 0f..1f) return null
 
         return RaycastHit(
-            body = bodies.firstOrNull { it.gameObject.bounds() == bounds } ?: return null,
+            body = body,
             pointX = startX + dx * tMin,
             pointY = startY + dy * tMin,
             normalX = normalX,
