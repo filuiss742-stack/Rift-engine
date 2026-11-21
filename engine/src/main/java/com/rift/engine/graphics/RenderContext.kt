@@ -44,4 +44,48 @@ interface RenderContext {
     fun rotate(degrees: Float)
     fun scale(x: Float, y: Float)
     fun clipRect(left: Float, top: Float, right: Float, bottom: Float)
+
+    fun drawTexture(
+        texture: TextureResource,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        alpha: Float = 1f
+    ) {
+        drawTextureRegion(
+            texture,
+            0,
+            0,
+            texture.width,
+            texture.height,
+            left,
+            top,
+            right,
+            bottom,
+            alpha
+        )
+    }
+
+    fun drawTextureRegion(
+        texture: TextureResource,
+        sourceLeft: Int,
+        sourceTop: Int,
+        sourceRight: Int,
+        sourceBottom: Int,
+        destinationLeft: Float,
+        destinationTop: Float,
+        destinationRight: Float,
+        destinationBottom: Float,
+        alpha: Float = 1f
+    ) {
+        require(!texture.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(
+            sourceLeft >= 0 && sourceTop >= 0 &&
+                sourceRight <= texture.width && sourceBottom <= texture.height &&
+                sourceLeft < sourceRight && sourceTop < sourceBottom
+        ) { "Texture source rectangle is outside the texture bounds." }
+        throw UnsupportedOperationException("This RenderContext does not support texture drawing.")
+    }
 }
