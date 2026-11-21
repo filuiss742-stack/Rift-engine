@@ -49,6 +49,16 @@ class GameplayModuleManagerTest {
     }
 
     @Test
+    fun failedInstallationAttemptsCleanup() {
+        val manager = GameplayModuleManager()
+        val module = TestModule(descriptor("partial"), failInstall = true)
+
+        assertFalse(manager.install(module))
+        assertEquals(1, module.uninstallCount)
+        assertFalse(manager.isInstalled("partial"))
+    }
+
+    @Test
     fun replacesImplementationUsingSameStableId() {
         val manager = GameplayModuleManager()
         val original = TestModule(descriptor("combat"))
@@ -69,6 +79,7 @@ class GameplayModuleManagerTest {
 
         assertTrue(manager.install(original))
         assertFalse(manager.replace("combat", replacement))
+        assertEquals(1, replacement.uninstallCount)
         assertEquals(2, original.installCount)
         assertEquals("1.0.0", manager.installed().single().version)
     }

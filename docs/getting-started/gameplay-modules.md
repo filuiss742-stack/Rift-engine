@@ -55,7 +55,7 @@ engine.gameplayModules.replace(
 )
 ```
 
-The replacement is validated before the current implementation is touched. The old module is uninstalled before the new one is activated. If activation fails, the manager attempts to reactivate the previous implementation and reports a diagnostic if restoration also fails.
+The replacement is validated before the current implementation is touched. The old module is uninstalled before the new one is activated. If activation fails, the manager attempts cleanup of the failed candidate and reactivates the previous implementation. It reports diagnostics if cleanup or restoration also fails.
 
 ## Uninstall safely
 
@@ -77,7 +77,7 @@ A module cannot be removed while another installed module declares it as a depen
 
 ## Lifecycle and limitations
 
-- `onInstall` runs after validation and before the module is registered.
+- `onInstall` runs after validation and before the module is registered. If activation throws, the manager attempts `onUninstall` cleanup.
 - `onUpdate` is called by `GameEngine.update`; a failing module is reported without blocking unrelated modules.
 - `onUninstall` should release resources and unregister callbacks owned by the module.
 - If `onUninstall` throws, the manager keeps the module registered and reports the failure.
