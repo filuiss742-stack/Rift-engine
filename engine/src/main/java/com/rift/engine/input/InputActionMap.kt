@@ -258,10 +258,8 @@ class InputActionMap {
         val isDown = isDownInternal(actionId)
         if (!wasDown && isDown) {
             justPressedActions.add(actionId)
-            justReleasedActions.remove(actionId)
         } else if (wasDown && !isDown) {
             justReleasedActions.add(actionId)
-            justPressedActions.remove(actionId)
         }
     }
 }
