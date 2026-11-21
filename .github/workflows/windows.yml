@@ -36,6 +36,11 @@ jobs:
         run: gradle :engine:test :demo-game:test :platform-desktop:test :tools:project-validator:test
       - name: Validate sample project manifest
         run: gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
+      - name: Validate Kotlin game template manifest
+        run: gradle :tools:project-validator:run --args="templates/kotlin-game/rift.project.json"
+      - name: Test game template independently
+        working-directory: templates/kotlin-game
+        run: gradle test
       - name: Build desktop distribution
         run: gradle :desktop-app:installDist
       - name: Package Windows app image
