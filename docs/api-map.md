@@ -52,7 +52,8 @@ The registry is a runtime extension point, not a dynamic binary loader. Modules 
 |---|---|---|
 | RenderContext | com.rift.engine.graphics | Platform-neutral clear/draw/text/measurement contract. |
 | Camera | com.rift.engine.graphics | Basic world/screen coordinate offset conversions; not integrated into scene rendering. |
-| EngineKey | com.rift.engine.input | Small set of key identifiers used by the current demo; not an action-mapping system. |
+| EngineKey | com.rift.engine.input | Device-independent identifiers for common keyboard keys. |
+| InputActionMap | com.rift.engine.input | Maps named actions to one or more keys and exposes held/pressed/released state. Currently keyboard-only. |
 
 ## Storage, plugins, diagnostics
 
@@ -83,4 +84,4 @@ StoryState currently contains boolean-like flags and integer values. Save/load s
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: action-based input maps, collision world/ground detection, camera-follow integration, render layers, animation/assets manager, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: pointer/gamepad action bindings, virtual touch controls, collision world/ground detection, camera-follow integration, render layers, animation/assets manager, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
