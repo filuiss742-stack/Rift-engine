@@ -32,6 +32,20 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
+    if (manifestFile.length() > 1_048_576L) {
+        printIssues(
+            listOf(
+                ManifestIssue(
+                    severity = ManifestSeverity.ERROR,
+                    code = "RIFT_MANIFEST_TOO_LARGE",
+                    path = "$",
+                    message = "Manifest files must not exceed 1 MiB."
+                )
+            )
+        )
+        exitProcess(1)
+    }
+
     val manifest = try {
         outputJson.decodeFromString<RiftProjectManifest>(manifestFile.readText())
     } catch (exception: SerializationException) {
@@ -60,7 +74,10 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val issues = ManifestValidator.validate(manifest)
+    val issues = ManifestValidator.validate(
+        manifest,
+        projectRoot = manifestFile.absoluteFile.parentFile
+    )
     printIssues(issues)
 
     if (issues.any { it.severity == ManifestSeverity.ERROR }) {
