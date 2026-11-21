@@ -8,9 +8,14 @@ class GameplayModuleManager(
     private val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) {
     private val modules = linkedMapOf<String, GameplayModule>()
+    private var closed = false
 
     @Synchronized
     fun install(module: GameplayModule): Boolean {
+        if (closed) {
+            report("MODULE_MANAGER_CLOSED", "Cannot install a gameplay module after the manager has been closed.")
+            return false
+        }
         val descriptor = module.descriptor
         if (!validateDescriptor(descriptor)) return false
 
@@ -115,7 +120,9 @@ class GameplayModuleManager(
             "deltaSeconds must be finite and non-negative."
         }
 
-        val snapshot = synchronized(this) { modules.values.toList() }
+        val snapshot = synchronized(this) {
+            if (closed) emptyList() else modules.values.toList()
+        }
         snapshot.forEach { module ->
             val stillInstalled = synchronized(this) {
                 modules[module.descriptor.id] === module
@@ -128,6 +135,25 @@ class GameplayModuleManager(
                         "module[" + module.descriptor.id + "].onUpdate",
                         exception
                     )
+                }
+            }
+        }
+    }
+
+    /** Uninstalls all remaining modules exactly once, in reverse installation order. */
+    @Synchronized
+    fun close() {
+        if (closed) return
+        closed = true
+
+        modules.values.toList().asReversed().forEach { module ->
+            val id = module.descriptor.id
+            if (modules[id] === module) {
+                modules.remove(id)
+                try {
+                    module.onUninstall()
+                } catch (exception: Exception) {
+                    diagnostics.reportException("module[${id}].onUninstall", exception)
                 }
             }
         }
