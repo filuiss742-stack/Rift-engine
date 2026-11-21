@@ -10,7 +10,7 @@ import com.rift.engine.graphics.TextureResource
  * TextureLoader so the engine module never imports Android or AWT classes.
  */
 class AssetManager(
-    private val textureLoader: TextureLoader,
+    private val textureLoader: TextureLoader = TextureLoader { null },
     private val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) : AutoCloseable {
     private data class LoadedTexture(
