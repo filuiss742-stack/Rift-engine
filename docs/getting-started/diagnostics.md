@@ -12,10 +12,10 @@ Each DiagnosticEntry contains:
 ## Read diagnostics
 
 ```kotlin
-val recent = diagnostics.snapshot()
-val latestError = diagnostics.latestError()
+val recent = engine.diagnostics.snapshot()
+val latestError = engine.diagnostics.latestError()
 
-if (diagnostics.hasFatalErrors()) {
+if (engine.diagnostics.hasFatalErrors()) {
     // The runtime pauses simulation until the fatal condition is addressed.
 }
 ```
