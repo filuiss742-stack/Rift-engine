@@ -14,6 +14,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [Create your first scene](docs/getting-started/create-a-scene.md).
 - [GameObject components](docs/getting-started/components.md) — compose reusable behavior without genre-specific inheritance.
 - [2D transforms](docs/getting-started/transforms.md) — object rotation, scale, render state, and transformed bounds.
+- [2D camera](docs/getting-started/camera.md) — zoom, world/screen conversion, and screen-space overlays.
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
 - [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
