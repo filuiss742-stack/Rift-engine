@@ -127,7 +127,7 @@ class PhysicsWorld(
     gravityY: Float = 980f,
     private val maxSubstepDistance: Float = 16f,
     private val maxSubsteps: Int = 16,
-    private val solverIterations: Int = 6,
+    private val solverIterations: Int = 16,
     private val broadPhaseCellSize: Float = 128f,
     private val maxCellsPerBody: Int = 256
 ) {
