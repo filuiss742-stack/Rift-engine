@@ -42,6 +42,7 @@ abstract class Scene {
     )
     private var traversingObjects = false
     private var disposed = false
+    internal val isDisposed: Boolean get() = disposed
 
     protected fun add(gameObject: GameObject) {
         check(!disposed) { "Cannot add objects to a disposed Scene." }
