@@ -7,10 +7,36 @@ package com.rift.engine.movement
  * Collision systems or the game may update [isGrounded].
  */
 class MovementBody(
-    var x: Float = 0f,
-    var y: Float = 0f
+    x: Float = 0f,
+    y: Float = 0f
 ) {
+    var x: Float = x
+        set(value) {
+            require(value.isFinite()) { "x must be finite." }
+            field = value
+        }
+
+    var y: Float = y
+        set(value) {
+            require(value.isFinite()) { "y must be finite." }
+            field = value
+        }
+
     var velocityX: Float = 0f
+        set(value) {
+            require(value.isFinite()) { "velocityX must be finite." }
+            field = value
+        }
+
     var velocityY: Float = 0f
+        set(value) {
+            require(value.isFinite()) { "velocityY must be finite." }
+            field = value
+        }
+
     var isGrounded: Boolean = false
+
+    init {
+        require(x.isFinite() && y.isFinite()) { "Position must be finite." }
+    }
 }
