@@ -1,6 +1,7 @@
 package com.rift.engine.core
 
 import com.rift.engine.entity.GameObject
+import com.rift.engine.entity.GameComponent
 import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
 import org.junit.Assert.assertEquals
@@ -82,6 +83,46 @@ class SceneManagerTest {
         assertSame(nextScene, manager.current)
         assertTrue(nextScene.input.isDown("held"))
         assertTrue(!nextScene.input.wasPressed("held"))
+    }
+
+
+    @Test
+    fun managerDisposesEveryOwnedSceneAndComponentExactlyOnce() {
+        val manager = SceneManager()
+        var firstExit = 0
+        var firstDispose = 0
+        var secondExit = 0
+        var secondDispose = 0
+        var componentDetach = 0
+        val firstObject = GameObject(0f, 0f, 10f, 10f).apply {
+            addComponent(object : GameComponent {
+                override fun onDetach(owner: GameObject) {
+                    componentDetach += 1
+                }
+            })
+        }
+        val first = object : Scene() {
+            init { add(firstObject) }
+            override fun onExit() { firstExit += 1 }
+            override fun onDispose() { firstDispose += 1 }
+        }
+        val second = object : Scene() {
+            override fun onExit() { secondExit += 1 }
+            override fun onDispose() { secondDispose += 1 }
+        }
+
+        manager.setInitialScene(first)
+        manager.changeScene(second)
+        manager.update(1f / 60f)
+        manager.close()
+        manager.close()
+
+        assertEquals(1, firstExit)
+        assertEquals(1, firstDispose)
+        assertEquals(1, secondExit)
+        assertEquals(1, secondDispose)
+        assertEquals(1, componentDetach)
+        assertEquals(null, manager.current)
     }
 
     @Test
