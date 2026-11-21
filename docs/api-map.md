@@ -39,6 +39,15 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 Physics limitations: no polygon shapes, friction, restitution, joints, or continuous collision detection. Contact lifecycle is polled through `contactEvents()` rather than callbacks. Rotated boxes use enclosing AABBs. See the [physics guide](getting-started/physics.md).
 
+## Inventory
+
+| API | Package | Purpose |
+|---|---|---|
+| InventoryComponent | com.rift.engine.inventory | Slot-limited inventory with registered item definitions, stack limits, partial add acceptance, removal, and snapshots. |
+| ItemDefinition / InventoryStack | com.rift.engine.inventory | Stable item metadata and immutable stack snapshots. |
+
+Inventory limitations: no equipment slots, weight, crafting, item effects, UI, or save codec yet.
+
 ## Combat
 
 | API | Package | Purpose |
