@@ -38,6 +38,8 @@ jobs:
         run: gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
       - name: Validate Kotlin game template manifest
         run: gradle :tools:project-validator:run --args="templates/kotlin-game/rift.project.json"
+      - name: Publish engine to local Maven repository for template test
+        run: gradle :engine:publishToMavenLocal
       - name: Test game template independently
         working-directory: templates/kotlin-game
         run: gradle test
