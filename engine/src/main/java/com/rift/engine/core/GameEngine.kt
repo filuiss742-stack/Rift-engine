@@ -173,10 +173,12 @@ class GameEngine(
         closed = true
         inputs.clear()
 
-        // One failing cleanup must not prevent the remaining resources from closing.
-        safe("engine.close.plugins") { plugins.close() }
-        safe("engine.close.gameplayModules") { gameplayModules.close() }
+        // Scenes release their components while gameplay modules and plugins
+        // are still available. Modules/plugins may in turn release audio/assets,
+        // so shared resources are closed last.
         safe("engine.close.scenes") { scenes.close() }
+        safe("engine.close.gameplayModules") { gameplayModules.close() }
+        safe("engine.close.plugins") { plugins.close() }
         safe("engine.close.audio") { audio.close() }
         safe("engine.close.assets") { assets.close() }
     }
