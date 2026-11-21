@@ -74,9 +74,9 @@ StoryState currently contains boolean-like flags and integer values. Save/load s
 ## Ownership and lifecycle notes
 
 - GameEngine owns its SceneManager, PluginManager, and GameplayModuleManager; it receives SaveStore and DiagnosticReporter through its constructor.
-- SceneManager.setInitialScene(scene) sets the first scene. Use changeScene(scene) to replace it.
+- SceneManager.setInitialScene(scene) sets the first scene. changeScene(scene) queues a transition that is applied at a safe runtime boundary after the current update/render/input/lifecycle callback returns.
 - A Scene owns objects added through protected add/remove helpers. Mutations during traversal are deferred.
-- A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment.
+- A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment. Failed onAttach callbacks trigger rollback and a best-effort onDetach cleanup.
 - GameObject updates its movement profile and then integrates position.
 - Platform hosts own the game loop and concrete RenderContext / SaveStore implementations.
 - The current desktop host uses Swing scheduling; do not assume simulation already runs on a dedicated game thread.
