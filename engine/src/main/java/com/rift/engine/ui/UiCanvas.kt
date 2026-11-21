@@ -403,6 +403,7 @@ class UiCanvas {
             safely("ui.input.reset", element) { element.onRemoved() }
         }
         pressedTargets.clear()
+        handledUiKeys.clear()
     }
 
     fun elements(): List<UiElement> = elements.toList()
