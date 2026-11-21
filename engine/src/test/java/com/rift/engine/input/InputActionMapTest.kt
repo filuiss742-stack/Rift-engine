@@ -1,5 +1,6 @@
 package com.rift.engine.input
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -171,6 +172,48 @@ class InputActionMapTest {
         )
         assertFalse(input.isDown("touch"))
         assertTrue(input.wasReleased("touch"))
+    }
+
+
+    @Test
+    fun analogAxisBindingsApplyDeadZoneAndPressedReleasedEdges() {
+        val input = InputActionMap()
+        input.bindAxis("move.horizontal", "gamepad.left.x", deadZone = 0.2f)
+
+        input.onAxis("gamepad.left.x", 0.1f)
+        assertFalse(input.isDown("move.horizontal"))
+        assertFalse(input.wasPressed("move.horizontal"))
+
+        input.onAxis("gamepad.left.x", 0.6f)
+        assertTrue(input.isDown("move.horizontal"))
+        assertTrue(input.wasPressed("move.horizontal"))
+        assertTrue(kotlin.math.abs(input.axisValue("move.horizontal") - 0.5f) < 0.001f)
+
+        input.endFrame()
+        input.onAxis("gamepad.left.x", 0.8f)
+        assertFalse(input.wasPressed("move.horizontal"))
+        assertTrue(input.axisValue("move.horizontal") > 0.7f)
+
+        input.onAxis("gamepad.left.x", 0f)
+        assertFalse(input.isDown("move.horizontal"))
+        assertTrue(input.wasReleased("move.horizontal"))
+    }
+
+    @Test
+    fun multipleAnalogAxesCombineAndResetToNeutral() {
+        val input = InputActionMap()
+        input.bindAxis("move", "stick.x", deadZone = 0f)
+        input.bindAxis("move", "stick.y", deadZone = 0f, scale = -1f)
+        input.onAxis("stick.x", 0.7f)
+        input.onAxis("stick.y", -0.7f)
+
+        assertEquals(1f, input.axisValue("move"), 0.001f)
+        assertTrue(input.isDown("move"))
+
+        input.reset()
+
+        assertEquals(0f, input.axisValue("move"), 0.001f)
+        assertFalse(input.isDown("move"))
     }
 
     @Test
