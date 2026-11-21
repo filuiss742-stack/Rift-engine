@@ -38,6 +38,23 @@ class VirtualControlsTest {
         assertEquals(0f, joystick.axisY, 0.001f)
     }
 
+
+    @Test
+    fun additionalFingerOnJoystickIsConsumedWithoutTakingControl() {
+        val canvas = UiCanvas()
+        val joystick = VirtualJoystick(0f, 0f, 100f)
+        canvas.add(joystick)
+
+        assertTrue(canvas.dispatchPointer(event(1, PointerEventType.DOWN, 50f, 50f)))
+        assertTrue(canvas.dispatchPointer(event(1, PointerEventType.MOVE, 100f, 50f)))
+        assertTrue(canvas.dispatchPointer(event(2, PointerEventType.DOWN, 50f, 50f)))
+        assertTrue(canvas.dispatchPointer(event(2, PointerEventType.UP, 50f, 50f)))
+        assertEquals(1f, joystick.axisX, 0.001f)
+
+        canvas.dispatchPointer(event(1, PointerEventType.UP, 100f, 50f))
+        assertEquals(0f, joystick.axisX, 0.001f)
+    }
+
     @Test
     fun joystickAppliesDeadZone() {
         val joystick = VirtualJoystick(0f, 0f, 100f, deadZone = 0.2f)
