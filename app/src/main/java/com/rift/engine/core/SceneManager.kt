@@ -1,6 +1,7 @@
 package com.rift.engine.core
 
 import android.graphics.Canvas
+import com.rift.engine.scene.Scene
 
 class SceneManager {
     var current: Scene? = null
@@ -19,8 +20,13 @@ class SceneManager {
         scene.onEnter()
     }
 
-    fun update(deltaSeconds: Float) = current?.update(deltaSeconds) ?: Unit
-    fun render(canvas: Canvas) = current?.render(canvas) ?: Unit
+    fun update(deltaSeconds: Float) {
+        current?.update(deltaSeconds)
+    }
+
+    fun render(canvas: Canvas) {
+        current?.render(canvas)
+    }
 
     fun onTouch(x: Float, y: Float, screenWidth: Float, screenHeight: Float) {
         current?.onTouch(x, y, screenWidth, screenHeight)
