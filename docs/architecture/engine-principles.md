@@ -1,8 +1,8 @@
 # Rift Engine Architecture Principles
 
-Rift Engine is a modular 2D engine for mixed-style games. Top-down exploration, side-view platforming, action combat and isometric presentation should share world state and progression.
+Rift Engine is a modular, composable game engine. Its long-term direction is hybrid 2D/3D gameplay: top-down exploration, side-view platforming, real-time action combat, first-person sequences, racing, mech battles, and other modes should be combinable within one game and share persistent world state and progression.
 
-The first targets are Android and Windows. Linux/macOS are not current release targets.
+The first release targets are Android and Windows. Linux/macOS are not current release targets.
 
 ## Platform boundaries
 - `:engine` is pure Kotlin/JVM: no Android, AWT or Swing imports.
@@ -12,9 +12,17 @@ The first targets are Android and Windows. Linux/macOS are not current release t
 - Platform modules depend on core; core never depends on a platform.
 
 ## Composition
-Keep world state, presentation, movement, physics, combat, input and scene flow independent. Prefer small composable systems over genre-specific class hierarchies or controllers full of mode flags.
+A genre is not a permanent project template. Game modes are assembled from optional capabilities and systems. Keep world state, presentation, movement, physics, combat, input, camera, and scene flow independent. Prefer composition and replaceable implementations over genre-specific class hierarchies or controllers full of mode flags.
+
+A module pack is not automatically a complete genre implementation. Packs declare stable IDs, dependencies, conflicts, and capabilities. Games compose their actual behavior from installed modules and game-specific systems.
 
 ## Extensibility and diagnostics
-Optional systems must not become mandatory core dependencies. Plugins require complete docs in `docs/plugins/`. Diagnostics distinguish confirmed errors, warnings and hypotheses, provide actionable context, and never silently rewrite code or claim to detect every bug.
+Optional systems must not become mandatory core dependencies. Module installation, replacement, and removal must be explicit. Validate declared dependencies and conflicts before activation, prevent removal of required dependencies, and report actionable diagnostics. Metadata validation does not prove behavioral compatibility.
 
-Build small, testable layers. Update docs/examples with API changes and never describe planned features as implemented.
+Diagnostics distinguish confirmed errors, warnings and hypotheses, provide actionable context, and never silently rewrite code or claim to detect every bug.
+
+## Rendering direction
+The current platform renderers are basic 2D implementations. A hybrid 2D/3D renderer is a long-term architectural goal, not a current feature. Avoid locking the public rendering API to Canvas or AWT; introduce explicit render capabilities and backend boundaries before claiming 3D support.
+
+## Development rule
+Build small, working, testable systems. Each subsystem should unlock a real game-development capability. Update docs and examples with public API changes, and never describe planned features as implemented.

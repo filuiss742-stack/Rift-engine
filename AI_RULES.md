@@ -4,9 +4,9 @@ These rules are mandatory for every AI agent and human contributor working on th
 
 ## 1. Main goal
 
-Rift Engine is an AI-first, modular 2D game engine targeting Android and Windows. Prefer a small, explicit, predictable API over clever abstractions or unnecessary features.
+Rift Engine is an AI-first, modular Kotlin game engine targeting Android and Windows. Its long-term direction is a hybrid 2D/3D gameplay constructor: a single game may combine top-down exploration, platforming, real-time action combat, first-person sequences, racing, mech battles, and original modes while sharing world state and progression. These are design goals; do not claim unimplemented renderer or gameplay features exist.
 
-The engine must be easy for people and AI coding agents to understand, change safely, and verify. Its long-term direction is universal 2D composition: one game may combine top-down exploration, side-view platforming, action combat, and isometric presentation without duplicating shared game state. Linux and macOS are not current release targets.
+The engine must be easy for people and AI coding agents to understand, change safely, and verify. Prefer a small, explicit, predictable API over clever abstractions or unnecessary features. Linux and macOS are not current release targets.
 
 ## 2. Golden rules
 
@@ -22,8 +22,8 @@ The engine must be easy for people and AI coding agents to understand, change sa
 10. Never claim code builds or tests pass unless a build/test actually ran successfully.
 11. Avoid tangled responsibilities, circular dependencies, unexplained shared state, and long methods that mix unrelated tasks.
 12. Every new or upgraded plugin must ship with clear, current documentation and usage instructions.
-13. Prefer universal, composable systems over genre-locked controllers or duplicated implementations.
-14. Classify detected problems honestly as confirmed errors, warnings, or unverified hypotheses. Never present a guess as a proven cause.
+13. Prefer universal, composable systems over genre-locked class hierarchies or duplicated implementations.
+14. Classify detected problems honestly as confirmed errors, warnings, and hypotheses. Never present a guess as a proven cause.
 
 ## 3. Kotlin style and maintainability
 
@@ -38,31 +38,40 @@ The engine must be easy for people and AI coding agents to understand, change sa
 - Prefer composition over deep inheritance.
 - Keep dependencies flowing in one direction. Core systems must not depend on demo code or game-specific features.
 - Avoid circular dependencies between packages or modules.
-- Do not duplicate logic; extract a small shared helper only when there is a real repeated use case.
 - Do not create giant manager classes, god objects, or utility files that collect unrelated behavior.
 - Comment public behavior and non-obvious decisions, not every line.
 - Format Kotlin consistently. Do not compress multiple declarations or statements onto one line.
 
 ## 4. Engine and platform architecture
 
-Keep the architecture small and separated:
+Keep the architecture separated:
 
-- `:engine`: pure Kotlin/JVM lifecycle, scene management, entities, movement, physics, input contracts, diagnostics, plugin contracts, and storage/rendering abstractions.
-- `:platform-android`: Android lifecycle, SurfaceView, Canvas implementation, touch/gamepad integration, and SharedPreferences.
-- `:platform-desktop`: Windows windowing, desktop rendering, keyboard/mouse/gamepad integration, and filesystem storage.
+- `:engine`: pure Kotlin/JVM lifecycle, scenes, entities, movement, physics, input contracts, diagnostics, gameplay-module contracts, plugin contracts, and storage/rendering abstractions.
+- `:platform-android`: Android lifecycle, current Canvas renderer, touch/gamepad integration, and SharedPreferences.
+- `:platform-desktop`: Windows windowing, current AWT renderer, keyboard/mouse/gamepad integration, and filesystem storage.
 - `:demo-game`: shared example game code only.
-- `:app`: Android APK host.
-- `:desktop-app`: Windows desktop host and packaging.
+- `:app`: Android application entry point and APK.
+- `:desktop-app`: Windows application entry point and packaging.
 
 Platform dependencies must point toward the shared engine. The engine must not import Android, AWT, Swing, or other host-specific APIs. Shared game code must not depend on either platform adapter.
 
-Keep shared game state separate from presentation, movement, physics, combat, and input profiles. A mode transition should change only the systems required for that mode; do not duplicate player progression or create separate engines for each genre. Avoid a giant controller full of mode flags. See `docs/architecture/engine-principles.md` and `docs/architecture/platforms.md`.
+Keep shared game state separate from presentation, movement, physics, combat, input, camera, assets, and scene flow. A mode transition should change only the systems required for that mode; do not duplicate player progression or create separate engines for each genre. Avoid a giant controller full of mode flags.
 
-Do not put game-specific story, characters, quests, or content into the engine core. Demo code must demonstrate the API, not become a hidden dependency of it.
+## 5. Gameplay module requirements
 
-## 5. Public API rules
+- Gameplay packs are optional modules, not mandatory genre templates.
+- Every module has a stable ID and version and declares module-ID dependencies, conflicts, and provided capabilities.
+- Installation, replacement, and removal are explicit operations.
+- Validate declared dependencies and conflicts before activating a module.
+- Do not remove a module while installed modules depend on it.
+- A replacement must retain the same stable ID and should attempt to restore the old implementation if activation fails.
+- A module update failure must be diagnosed without automatically stopping unrelated modules.
+- Metadata validation does not prove behavioral compatibility. Document limitations honestly.
+- Dynamic downloading, arbitrary binary loading, sandboxing, semantic version resolution, and a graphical module hub are not current features.
 
-- Prefer explicit calls such as `scene.add(player)`, `sceneManager.changeScene(nextScene)`, and `camera.follow(player)`.
+## 6. Public API rules
+
+- Prefer explicit APIs and verify them against the current source before documenting examples.
 - Use consistent units and document them. Positions and sizes are measured in logical pixels unless a future API explicitly says otherwise.
 - Use seconds for time values; name them `deltaSeconds`.
 - Make object ownership and lifecycle clear.
@@ -71,93 +80,52 @@ Do not put game-specific story, characters, quests, or content into the engine c
 - Keep defaults safe and documented.
 - Do not expose Android, AWT, Swing, or other platform-specific types through shared public APIs.
 
-## 6. Plugin requirements (mandatory)
+## 7. Plugin requirements
 
 Every new plugin and every materially upgraded plugin must have its own documentation file, normally `docs/plugins/<plugin-id>.md`. Do not consider the plugin complete until its documentation is updated in the same change.
 
-Each plugin document must explain:
+Each plugin document must explain purpose, lifecycle, setup, configuration, usage, public API/events, dependencies, platform compatibility, limitations, troubleshooting, and migration notes where relevant.
 
-1. **Purpose:** what the plugin does and when to use it.
-2. **How it works:** its main classes, lifecycle, data flow, and interaction with the engine.
-3. **Installation/activation:** how to add, register, enable, disable, and remove it.
-4. **Configuration:** every supported setting, its default, valid values, and a short example.
-5. **Usage instructions:** minimal step-by-step instructions and copyable Kotlin examples based on the real current API.
-6. **Dependencies and compatibility:** required engine version, optional/required dependencies, platform compatibility, and limitations.
-7. **Events and public API:** exposed methods, callbacks, events, and expected behavior.
-8. **Troubleshooting:** common mistakes, symptoms, and fixes.
-9. **Change notes:** what changed when the plugin is upgraded, including migration steps if behavior or API changed.
+Keep plugins isolated from the engine core where practical. Use stable IDs, define ownership and cleanup, and never silently change existing behavior.
 
-Additional plugin rules:
-
-- Keep plugins isolated from the engine core where practical; the core must not depend on optional plugins.
-- Use stable, unique plugin IDs.
-- Define clear ownership and cleanup behavior when a plugin is disabled or uninstalled.
-- Do not silently change existing plugin behavior or public APIs.
-- When upgrading a plugin, update its documentation and examples to match the implementation; remove obsolete instructions.
-- If a plugin API changes, include a migration note and update affected examples and call sites.
-- Never describe planned or unsupported behavior as available.
-- If a plugin is too small to need every section, keep the headings and explicitly write "Not applicable" rather than leaving ambiguity.
-
-## 7. Change protocol
+## 8. Change protocol
 
 Before editing:
 1. Identify the exact files involved.
-2. Read their current contents and callers.
-3. State the intended change in one or two sentences.
+2. Read the relevant source and callers.
+3. State the intended change.
 4. Check whether the change can be made without breaking existing APIs.
 
 After editing:
 1. Review every changed file.
 2. Search for affected call sites and update them.
 3. Add or update a small example when a public API changes.
-4. Update plugin documentation whenever a plugin is added or materially changed.
+4. Update docs and examples where needed.
 5. Run available builds and tests.
 6. Report exactly what changed, what was tested, and what remains unverified.
 
-If a task is ambiguous or requires a major architecture decision, ask before making a breaking change.
-
-## 8. Diagnostics requirements
+## 9. Diagnostics requirements
 
 Rift Diagnostics is a core engine capability, not an optional plugin.
 
-- Report runtime exceptions at engine boundaries with a stable code, subsystem, readable message, and source location when available.
+- Report runtime exceptions at engine boundaries with stable codes, readable messages, and source locations when available.
 - Detect known configuration problems and identity/dependency conflicts as early as practical.
-- Distinguish confirmed errors from warnings and hypotheses. Never invent a root cause.
+- Distinguish confirmed errors, warnings, and hypotheses.
 - Keep a bounded, thread-safe recent-event history.
-- Separate recoverable `ERROR` events from `FATAL` states that make continued execution unsafe.
-- A failing optional plugin must not automatically stop unrelated game systems.
-- When rendering fails after a caught exception, show a fallback diagnostics screen that does not depend on game assets.
-- Never silently rewrite project code. Provide evidence and suggested next steps instead.
-- Do not claim complete bug detection. Document what the current diagnostic layer cannot detect.
-- Add focused tests for deterministic diagnostic logic when a test setup exists.
+- Separate recoverable errors from fatal states.
+- A failing optional module or plugin must not automatically stop unrelated systems.
+- Never silently rewrite project code or claim complete bug detection.
 
-## 9. Testing and build safety
+## 10. Testing and build safety
 
-- The Android APK and Windows desktop application must continue to build with configured Gradle and JDK versions.
-- Add tests for deterministic logic when practical, especially timing, movement, collision, input state, diagnostics, and scene lifecycle.
+- Android APK and Windows desktop application must continue to build with configured Gradle and JDK versions.
+- Add deterministic tests for module lifecycle, dependencies, conflicts, replacement, input, movement, collision, timing, and diagnostics when those systems exist.
 - Keep demo scenes usable as manual smoke tests on both supported platforms.
-- Do not suppress compiler errors with broad try/catch, unchecked casts, or disabled lint/test settings.
-- Never change Gradle, Kotlin, Android SDK, or plugin versions casually. Explain compatibility reasons first.
-- A successful package build is not a substitute for manually launching the desktop artifact when a smoke test is claimed.
+- A successful package build is not proof that the Windows artifact was manually launched.
+- Never change Gradle, Kotlin, Android SDK, or plugin versions casually.
 
-## 10. Documentation
+## 11. Documentation
 
-When adding or changing a feature, update:
-- relevant API documentation;
-- at least one minimal usage example;
-- platform compatibility notes where relevant;
-- the roadmap if priorities changed.
+When adding or changing a feature, update relevant API documentation, a minimal usage example, platform compatibility notes where relevant, and the roadmap when priorities change.
 
 Documentation must match actual code. Do not document planned features as implemented.
-
-## 11. Definition of done
-
-A task is complete only when:
-- requested behavior is implemented;
-- existing behavior remains intact;
-- code and documentation agree;
-- new or upgraded plugins have complete, current usage documentation;
-- relevant builds/tests have run when available;
-- remaining limitations are stated honestly.
-
-When unsure, choose the simpler implementation and explain the trade-off.

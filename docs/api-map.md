@@ -6,7 +6,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 | API | Package | Purpose |
 |---|---|---|
-| GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, saves, and diagnostics. |
+| GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, and diagnostics. |
 | SceneManager | com.rift.engine.core | Sets the first scene and switches the active scene. |
 | Scene | com.rift.engine.scene | Base class for game scenes; subclasses implement lifecycle, update, render, and input callbacks. |
 | FixedStepAccumulator | com.rift.engine.core | Runs update callbacks using a fixed time step. |
@@ -22,6 +22,17 @@ This page lists APIs verified in the current development branch. It is a navigat
 | TopDownMovementProfile | com.rift.engine.movement | Normalized free 2D movement. |
 | PlatformerMovementProfile | com.rift.engine.movement | Basic horizontal movement, gravity, and jump velocity; no collision detection. |
 | Aabb | com.rift.engine.physics | Axis-aligned bounds value used by GameObject.bounds(). |
+
+## Gameplay modules
+
+| API | Package | Purpose |
+|---|---|---|
+| GameplayModule | com.rift.engine.module | Lifecycle contract for an optional, replaceable gameplay pack. |
+| GameplayModuleDescriptor | com.rift.engine.module | Stable ID, version, dependencies, conflicts, and provided capabilities. |
+| GameplayModuleManager | com.rift.engine.module | Validates installation, replacement, removal, dependencies, conflicts, and capability queries. |
+| GameplayModuleContext | com.rift.engine.module | Services exposed to module lifecycle callbacks. |
+
+The registry is a runtime extension point, not a dynamic binary loader. Modules must be compiled into the application. Version strings are informational; semantic version resolution and external distribution are not implemented.
 
 ## Narrative and branching dialogue
 
@@ -57,11 +68,11 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 The dialogue runtime is headless: it stores dialogue data, current line, available choices, and story-state effects. It does not draw dialogue boxes, portraits, backgrounds, typewriter text, audio, or transitions. A game implements that presentation using its UI/rendering layer.
 
-StoryState currently contains boolean-like flags and integer values. Save/load serialization for StoryState is not built in; games can map its snapshots to their SaveStore keys or add a dedicated serializer later. The dialogue graph is currently authored in Kotlin code; there is no visual editor or JSON importer yet.
+StoryState currently contains boolean-like flags and integer values. Save/load serialization for StoryState is not built in; games can map its snapshots to SaveStore keys or add a dedicated serializer later. The dialogue graph is currently authored in Kotlin code; there is no visual editor or JSON importer yet.
 
 ## Ownership and lifecycle notes
 
-- GameEngine owns its SceneManager and PluginManager; it receives SaveStore and DiagnosticReporter through its constructor.
+- GameEngine owns its SceneManager, PluginManager, and GameplayModuleManager; it receives SaveStore and DiagnosticReporter through its constructor.
 - SceneManager.setInitialScene(scene) sets the first scene. Use changeScene(scene) to replace it.
 - A Scene owns objects added through protected add/remove helpers. Mutations during traversal are deferred.
 - GameObject updates its movement profile and then integrates position.
@@ -70,4 +81,4 @@ StoryState currently contains boolean-like flags and integer values. Save/load s
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: action-based input maps, collision world/ground detection, camera-follow integration, render layers, animation/assets manager, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer.
+Do not invent or use these as existing APIs: action-based input maps, collision world/ground detection, camera-follow integration, render layers, animation/assets manager, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.

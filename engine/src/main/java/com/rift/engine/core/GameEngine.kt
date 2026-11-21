@@ -4,6 +4,7 @@ import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticsOverlay
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.plugin.PluginManager
+import com.rift.engine.module.GameplayModuleManager
 import com.rift.engine.storage.InMemorySaveStore
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -33,6 +34,7 @@ class GameEngine(
     val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) {
     val plugins = PluginManager(diagnostics)
+    val gameplayModules = GameplayModuleManager(diagnostics)
     val scenes = SceneManager(diagnostics)
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
@@ -76,6 +78,12 @@ class GameEngine(
         if (!diagnostics.hasFatalErrors()) {
             safe("plugins.update") {
                 plugins.onUpdate(deltaSeconds)
+            }
+        }
+
+        if (!diagnostics.hasFatalErrors()) {
+            safe("gameplayModules.update") {
+                gameplayModules.update(deltaSeconds)
             }
         }
 

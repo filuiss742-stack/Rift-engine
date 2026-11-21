@@ -65,6 +65,21 @@ engine.plugins.install(ExamplePlugin())
 
 Give every plugin a stable non-empty ID and release plugin-owned resources in `onUninstall`. See [Saves and Plugins](getting-started/saves-plugins.md).
 
+## Install and replace a gameplay pack
+
+```kotlin
+engine.gameplayModules.install(InputActionsPack())
+engine.gameplayModules.install(TopDownPack())
+
+if (engine.gameplayModules.hasCapability("movement.top-down")) {
+    // Enable top-down-specific game behavior.
+}
+
+engine.gameplayModules.replace("rift.top-down", CustomTopDownPack())
+```
+
+Packs declare dependencies and conflicts. They must already be compiled into the game application; runtime downloading is not implemented. See [Gameplay Modules](getting-started/gameplay-modules.md).
+
 ## Inspect diagnostics
 
 ```kotlin
@@ -85,7 +100,6 @@ override fun render(context: RenderContext) {
 ```
 
 The concrete renderer is provided by the platform host. See [the API map](api-map.md).
-
 
 ## Branch a conversation with consequences
 

@@ -1,8 +1,10 @@
 # Rift Engine
 
-Rift Engine is a modular Kotlin 2D game engine targeting **Android (APK)** and **Windows (desktop application image with an EXE launcher)**. Linux and macOS are not current targets.
+Rift Engine is an AI-first, modular Kotlin game engine targeting **Android (APK)** and **Windows (desktop application image with an EXE launcher)**. Linux and macOS are not current targets.
 
-The same game logic, scenes, entities, movement profiles, plugins and save API are shared. Platform modules supply rendering, input, persistence and application hosting. The architecture is intended for mixed-style games combining top-down exploration, side-view platforming, action combat, isometric presentation, and branching story gameplay without duplicating game state.
+Its long-term direction is a hybrid 2D/3D gameplay constructor: one game can combine top-down exploration, side-view platforming, real-time action combat, first-person sequences, racing, mech battles, branching stories, and original modes without duplicating game state. These are design goals, not claims that every renderer or gameplay pack already exists.
+
+The same shared runtime is used by both platform hosts. Platform modules supply rendering, input, persistence and application hosting. Optional gameplay modules can be installed, replaced and removed through an explicit runtime registry.
 
 ## Start here
 
@@ -11,6 +13,7 @@ The same game logic, scenes, entities, movement profiles, plugins and save API a
 - [Create your first scene](docs/getting-started/create-a-scene.md).
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
+- [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
 - [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
 - [Saves and plugins](docs/getting-started/saves-plugins.md).
 - [Practical cookbook](docs/cookbook.md).
