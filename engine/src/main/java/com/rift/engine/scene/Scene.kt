@@ -159,11 +159,12 @@ abstract class Scene {
     open fun render(context: RenderContext) {
         camera.withTransform(context) {
             applyPendingMutations()
+            val renderOrder = objects.sortedBy { it.renderLayer }
             traversingObjects = true
             try {
                 var index = 0
-                while (index < objects.size) {
-                    val gameObject = objects[index]
+                while (index < renderOrder.size) {
+                    val gameObject = renderOrder[index]
                     if (gameObject !in quarantinedObjects) {
                         try {
                             gameObject.render(context)
