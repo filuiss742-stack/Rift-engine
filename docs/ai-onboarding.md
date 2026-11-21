@@ -16,7 +16,7 @@ Do not load every document or every source file by default.
 
 | Task | Module |
 |---|---|
-| Shared runtime, scenes, entities, movement, narrative runtime, diagnostics, plugin contracts | :engine |
+| Shared runtime, scenes, entities, movement, narrative runtime, gameplay-module registry, diagnostics | :engine |
 | Shared example gameplay and story content | :demo-game |
 | Android lifecycle, Canvas, touch, SharedPreferences | :platform-android |
 | Windows window, AWT, keyboard/mouse, file saves | :platform-desktop |
@@ -45,10 +45,12 @@ The CI workflows run shared tests, platform checks, and the architecture-boundar
 
 ## 5. Current capability boundaries
 
-The foundation includes scenes, simple entities, platform-neutral rendering, key/touch forwarding, basic top-down and platformer movement, key/value saves, plugins, diagnostics, and a headless branching-dialogue runtime with story flags, integer values, choice conditions, and choice effects.
+The runtime includes scenes, simple entities, platform-neutral basic rendering, key/touch forwarding, basic top-down and platformer movement, key/value saves, plugins, diagnostics, a replaceable gameplay-module registry, and a headless branching-dialogue runtime.
+
+Gameplay modules declare stable IDs, versions, module dependencies, conflicts, and capabilities. They can be installed, replaced, and removed through GameEngine.gameplayModules. Module code must already be compiled into the application; dynamic downloading/loading and semantic version resolution are not implemented. See docs/getting-started/gameplay-modules.md.
 
 The dialogue runtime does not include visual-novel presentation widgets, portrait/background management, typewriter effects, dialogue audio, a visual graph editor, or automatic story-state serialization. Games must implement presentation and persistence using existing game/UI and SaveStore facilities.
 
-The engine also does not yet provide a collision world, automatic ground detection, action-based input mapping, a complete camera/render-layer pipeline, scene serialization, or a full asset/animation pipeline.
+The engine also does not yet provide a collision world, automatic ground detection, action-based input mapping, a complete camera/render-layer pipeline, scene serialization, or a full asset/animation pipeline. A hybrid 2D/3D renderer is a long-term goal, not an existing feature.
 
 When unsure, choose the simpler implementation and state what remains unsupported.
