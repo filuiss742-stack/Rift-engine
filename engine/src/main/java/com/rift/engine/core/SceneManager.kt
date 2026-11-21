@@ -34,7 +34,7 @@ class SceneManager(
     fun setInitialScene(scene: Scene) {
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
-            scene.attachRuntime(diagnostics, gameState, assets, audio)
+            scene.attachRuntime(diagnostics, gameState, assets, audio, ::changeScene)
             scene.input.reset()
             safe("scene.onEnter") {
                 scene.onEnter()
@@ -163,7 +163,7 @@ class SceneManager(
             }
 
             current = nextScene
-            nextScene.attachRuntime(diagnostics, gameState, assets, audio)
+            nextScene.attachRuntime(diagnostics, gameState, assets, audio, ::changeScene)
             nextScene.input.reset()
             safe("scene.onEnter") {
                 nextScene.onEnter()
