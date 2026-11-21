@@ -96,11 +96,16 @@ class AssetManager(
     override fun close() {
         if (closed) return
         closed = true
-        textures.values.map { it.resource }.distinctBy { System.identityHashCode(it) }.forEach { resource ->
-            try {
-                resource.close()
-            } catch (exception: Exception) {
-                diagnostics.reportException("AssetManager.dispose", exception)
+        val disposed = java.util.Collections.newSetFromMap(
+            java.util.IdentityHashMap<TextureResource, Boolean>()
+        )
+        textures.values.forEach { loaded ->
+            if (disposed.add(loaded.resource)) {
+                try {
+                    loaded.resource.close()
+                } catch (exception: Exception) {
+                    diagnostics.reportException("AssetManager.dispose", exception)
+                }
             }
         }
         textures.clear()
