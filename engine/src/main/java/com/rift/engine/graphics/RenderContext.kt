@@ -53,6 +53,8 @@ interface RenderContext {
         bottom: Float,
         alpha: Float = 1f
     ) {
+        require(!texture.isDisposed) { "Cannot draw a disposed texture." }
+        require(right > left && bottom > top) { "Texture destination rectangle must have positive dimensions." }
         drawTextureRegion(
             texture,
             0,
@@ -81,6 +83,11 @@ interface RenderContext {
     ) {
         require(!texture.isDisposed) { "Cannot draw a disposed texture." }
         require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(
+            destinationRight.isFinite() && destinationBottom.isFinite() &&
+                destinationLeft.isFinite() && destinationTop.isFinite() &&
+                destinationRight > destinationLeft && destinationBottom > destinationTop
+        ) { "Texture destination rectangle must have positive finite dimensions." }
         require(
             sourceLeft >= 0 && sourceTop >= 0 &&
                 sourceRight <= texture.width && sourceBottom <= texture.height &&
