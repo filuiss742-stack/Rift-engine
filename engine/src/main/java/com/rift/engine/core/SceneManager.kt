@@ -87,7 +87,10 @@ class SceneManager(
     override fun close() {
         if (closed) return
         closed = true
-        pendingScenes.clear()
+        while (true) {
+            val queuedScene = pendingScenes.poll() ?: break
+            knownScenes.add(queuedScene)
+        }
         val activeScene = current
         if (activeScene != null) {
             activeScene.ui.resetInput()
