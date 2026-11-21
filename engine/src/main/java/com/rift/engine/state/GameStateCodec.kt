@@ -20,17 +20,16 @@ object GameStateCodec {
             "Game state contains more than $MAX_ENTRIES entries."
         }
         val result = StringBuilder(HEADER).append('\n')
+        var encodedBytes = HEADER.toByteArray(UTF_8).size + 1
         snapshot.forEach { (key, value) ->
             val (type, rawValue) = encodeValue(value)
-            result.append(type)
-                .append('\t')
-                .append(encodeText(key))
-                .append('\t')
-                .append(encodeText(rawValue))
-                .append('\n')
-            require(result.toString().toByteArray(UTF_8).size <= MAX_BYTES) {
+            val line = type + "\t" + encodeText(key) + "\t" +
+                encodeText(rawValue) + "\n"
+            encodedBytes += line.toByteArray(UTF_8).size
+            require(encodedBytes <= MAX_BYTES) {
                 "Encoded game state exceeds the 1 MiB limit."
             }
+            result.append(line)
         }
         return result.toString()
     }
