@@ -1,5 +1,7 @@
 package com.rift.tools.projectvalidator
 
+import java.io.File
+
 /**
  * Validates manifest structure and declared relationships.
  *
