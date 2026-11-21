@@ -3,19 +3,29 @@ package com.rift.engine.demo
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
-import com.rift.engine.input.PointerEvent
-import com.rift.engine.input.PointerEventType
 import com.rift.engine.movement.MovementInput
 import com.rift.engine.movement.PlatformerMovementProfile
 import com.rift.engine.physics.PhysicsBodyType
 import com.rift.engine.scene.Scene
 import com.rift.engine.ui.UiLabel
+import com.rift.engine.ui.VirtualButton
+import com.rift.engine.ui.VirtualJoystick
 
 /**
  * Side-view mode used to prove that a game can replace movement and physics
  * behavior while retaining the same SceneManager-owned progression state.
  */
 class PlatformerDemoScene : Scene() {
+    private var touchJumpPressed = false
+    private val joystick = VirtualJoystick(24f, 440f, 112f)
+    private val jumpButton = VirtualButton(
+        824f,
+        440f,
+        112f,
+        112f,
+        "JUMP",
+        onPressed = { touchJumpPressed = true }
+    )
     private val player = GameObject(
         x = 72f,
         y = 420f,
@@ -81,20 +91,23 @@ class PlatformerDemoScene : Scene() {
                 46f,
                 760f,
                 24f,
-                "A/D or arrows: move   SPACE/W/↑: jump   TAB: top-down   switches: $switches",
+                "A/D or arrows + joystick: move   SPACE / JUMP: jump   TAB: top-down   switches: $switches",
                 0xFFDCE1EB.toInt(),
                 14f
             )
         )
+        ui.add(joystick)
+        ui.add(jumpButton)
     }
 
     override fun update(deltaSeconds: Float) {
-        val horizontal = (if (input.isDown("move.right")) 1f else 0f) -
-            (if (input.isDown("move.left")) 1f else 0f)
+        val horizontal = ((if (input.isDown("move.right")) 1f else 0f) -
+            (if (input.isDown("move.left")) 1f else 0f) + joystick.axisX).coerceIn(-1f, 1f)
         player.movementInput = MovementInput(
             horizontal = horizontal,
-            jumpPressed = input.wasPressed("jump")
+            jumpPressed = input.wasPressed("jump") || touchJumpPressed
         )
+        touchJumpPressed = false
 
         super.update(deltaSeconds)
 
@@ -112,10 +125,4 @@ class PlatformerDemoScene : Scene() {
         super.render(context)
     }
 
-    override fun onPointer(event: PointerEvent) {
-        if (event.type == PointerEventType.DOWN && player.isGrounded) {
-            player.velocityY = -440f
-            player.isGrounded = false
-        }
-    }
 }
