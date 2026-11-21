@@ -60,6 +60,26 @@ class PhysicsWorldTest {
         assertTrue(upper.isGrounded)
     }
 
+
+    @Test
+    fun reportsBeginStayAndEndContactLifecycle() {
+        val world = PhysicsWorld(gravityY = 100f)
+        val player = GameObject(0f, 0f, 10f, 10f)
+        val ground = GameObject(0f, 10f, 100f, 10f)
+        world.addBody(player)
+        world.addBody(ground, PhysicsBodyType.STATIC)
+
+        world.step(0.1f)
+        assertEquals(ContactPhase.BEGIN, world.contactEvents().single().phase)
+
+        world.step(0.1f)
+        assertEquals(ContactPhase.STAY, world.contactEvents().single().phase)
+
+        world.removeBody(ground)
+        world.step(0.1f)
+        assertEquals(ContactPhase.END, world.contactEvents().single().phase)
+    }
+
     @Test
     fun sensorReportsOverlapWithoutResolvingIt() {
         val world = PhysicsWorld(gravityY = 0f)
