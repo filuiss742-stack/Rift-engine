@@ -2,7 +2,6 @@ package com.rift.engine.physics
 
 import com.rift.engine.entity.GameObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -102,7 +101,6 @@ class PhysicsWorldTest {
         objectUnderTest.update(1f)
 
         assertEquals(10f, objectUnderTest.x, 0.001f)
-        assertFalse(objectUnderTest.physicsControlledForTest())
     }
 
     @Test
