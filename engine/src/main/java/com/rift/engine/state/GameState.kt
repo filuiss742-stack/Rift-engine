@@ -1,6 +1,6 @@
 package com.rift.engine.state
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.LinkedHashMap
 
 /**
  * Small typed state bag shared by scenes and gameplay modes.
@@ -9,7 +9,12 @@ import java.util.concurrent.ConcurrentHashMap
  * runtime state only; serialization is handled by a later save/codec layer.
  */
 class GameState {
-    private val values = ConcurrentHashMap<String, Any>()
+    private val values = LinkedHashMap<String, Any>()
+
+    private companion object {
+        const val MAX_ENTRIES = 10_000
+        const val MAX_KEY_LENGTH = 4_096
+    }
 
     fun putBoolean(key: String, value: Boolean) = put(key, value)
     fun putInt(key: String, value: Int) = put(key, value)
@@ -24,30 +29,40 @@ class GameState {
     }
     fun putString(key: String, value: String) = put(key, value)
 
+    @Synchronized
     fun boolean(key: String, defaultValue: Boolean = false): Boolean =
         values[key] as? Boolean ?: defaultValue
 
+    @Synchronized
     fun int(key: String, defaultValue: Int = 0): Int =
         values[key] as? Int ?: defaultValue
 
+    @Synchronized
     fun long(key: String, defaultValue: Long = 0L): Long =
         values[key] as? Long ?: defaultValue
 
+    @Synchronized
     fun float(key: String, defaultValue: Float = 0f): Float =
         values[key] as? Float ?: defaultValue
 
+    @Synchronized
     fun double(key: String, defaultValue: Double = 0.0): Double =
         values[key] as? Double ?: defaultValue
 
+    @Synchronized
     fun string(key: String, defaultValue: String = ""): String =
         values[key] as? String ?: defaultValue
 
+    @Synchronized
     fun contains(key: String): Boolean = values.containsKey(key)
 
+    @Synchronized
     fun remove(key: String): Boolean = values.remove(key) != null
 
+    @Synchronized
     fun clear() = values.clear()
 
+    @Synchronized
     fun snapshot(): Map<String, Any> = values.toMap()
 
     /**
@@ -74,8 +89,14 @@ class GameState {
         values.putAll(snapshot)
     }
 
+    @Synchronized
     private fun put(key: String, value: Any) {
-        require(key.isNotBlank()) { "Game state keys must not be blank." }
+        require(key.isNotBlank() && key.length <= MAX_KEY_LENGTH) {
+            "Game-state keys must be non-blank and at most 4096 characters."
+        }
+        require(values.containsKey(key) || values.size < MAX_ENTRIES) {
+            "Game state may contain at most 10000 entries."
+        }
         values[key] = value
     }
 }
