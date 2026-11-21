@@ -103,6 +103,58 @@ class PhysicsWorldTest {
         assertEquals(10f, objectUnderTest.x, 0.001f)
     }
 
+
+    @Test
+    fun circleBodyResolvesAgainstStaticBox() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val ball = GameObject(0f, 0f, 10f, 10f)
+        val wall = GameObject(8f, 0f, 10f, 10f)
+        world.addBody(
+            ball,
+            gravityScale = 0f,
+            shape = CollisionShape.Circle(radius = 5f)
+        )
+        world.addBody(wall, PhysicsBodyType.STATIC)
+
+        world.step(0.016f)
+
+        assertEquals(-2f, ball.x, 0.001f)
+        assertEquals(1f, world.contacts().single().normalX, 0.001f)
+    }
+
+    @Test
+    fun circleCircleCollisionIsDetected() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val first = GameObject(0f, 0f, 10f, 10f)
+        val second = GameObject(8f, 0f, 10f, 10f)
+        world.addBody(first, gravityScale = 0f, shape = CollisionShape.Circle(5f))
+        world.addBody(second, PhysicsBodyType.STATIC, shape = CollisionShape.Circle(5f))
+
+        world.step(0.016f)
+
+        assertEquals(1, world.contacts().size)
+        assertEquals(-2f, first.x, 0.001f)
+    }
+
+    @Test
+    fun circleRaycastReturnsSurfacePointAndNormal() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val target = GameObject(5f, 0f, 10f, 10f)
+        world.addBody(
+            target,
+            PhysicsBodyType.STATIC,
+            shape = CollisionShape.Circle(5f)
+        )
+
+        val hit = world.raycast(0f, 5f, 20f, 5f)
+
+        assertNotNull(hit)
+        assertTrue(hit!!.body.gameObject === target)
+        assertEquals(5f, hit.pointX, 0.001f)
+        assertEquals(5f, hit.pointY, 0.001f)
+        assertEquals(-1f, hit.normalX, 0.001f)
+    }
+
     @Test
     fun staticBodiesDoNotProduceStaticStaticContacts() {
         val world = PhysicsWorld(gravityY = 0f)
