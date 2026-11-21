@@ -4,6 +4,7 @@ import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.Camera
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.InputActionMap
+import com.rift.engine.physics.PhysicsWorld
 
 /**
  * A scene owns its game objects.
@@ -16,6 +17,7 @@ abstract class Scene {
     /** Named actions bound by this scene; physical key events are forwarded by SceneManager. */
     val input = InputActionMap()
     val camera = Camera()
+    val physics = PhysicsWorld()
 
     protected val objects = mutableListOf<GameObject>()
 
@@ -37,6 +39,7 @@ abstract class Scene {
             pendingRemovals.add(gameObject)
         } else {
             objects.remove(gameObject)
+            physics.removeBody(gameObject)
         }
     }
 
@@ -58,6 +61,8 @@ abstract class Scene {
             traversingObjects = false
             applyPendingMutations()
         }
+
+        physics.step(deltaSeconds)
     }
 
     open fun render(context: RenderContext) {
@@ -92,6 +97,7 @@ abstract class Scene {
 
     private fun applyPendingMutations() {
         if (pendingRemovals.isNotEmpty()) {
+            pendingRemovals.forEach(physics::removeBody)
             objects.removeAll(pendingRemovals)
             pendingRemovals.clear()
         }
