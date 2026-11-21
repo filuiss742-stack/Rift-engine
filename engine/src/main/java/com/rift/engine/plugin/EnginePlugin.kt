@@ -52,6 +52,12 @@ class PluginManager(
             if (plugins[pluginId] === plugin) {
                 plugins.remove(pluginId)
             }
+            try {
+                plugin.onUninstall()
+            } catch (cleanupException: Exception) {
+                exception.addSuppressed(cleanupException)
+                diagnostics.reportException("plugin[" + pluginId + "].failedInstallCleanup", cleanupException)
+            }
             diagnostics.reportException("plugin[" + pluginId + "].onInstall", exception)
         }
     }
