@@ -72,7 +72,7 @@ A raycast returns the nearest hit, including the hit body, point, surface normal
 - Adaptive substeps and iterative contact solving improve ordinary fast movement and stacked-body stability, but this is not continuous collision detection; extreme velocities can still pass through thin geometry.
 - Rotated box objects use their enclosing axis-aligned bounds, not exact polygon collision. Circle offsets follow the object's transform.
 - Contacts and BEGIN/STAY/END lifecycle events are polled after each step; automatic collision callbacks are not implemented yet.
-- For a PlatformerMovementProfile that already applies gravity, set the PhysicsBody gravityScale to 0 to avoid applying gravity twice. The world still resolves contacts and updates grounded state.
+- Movement profiles automatically detect when their GameObject is registered with PhysicsWorld and leave gravity integration to the world. This applies to both PlatformerMovementProfile and ResponsivePlatformerProfile. Keep the PhysicsBody gravityScale above zero when you want world gravity; setting it to 0 disables world gravity for that body.
 
 The API is designed so a spatial-hash broad phase and more shape types can be added behind PhysicsWorld without changing game code.
 
