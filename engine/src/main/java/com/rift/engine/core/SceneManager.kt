@@ -3,6 +3,8 @@ package com.rift.engine.core
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.scene.Scene
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -86,12 +88,34 @@ class SceneManager(
         width: Float,
         height: Float
     ) {
+        onPointer(
+            PointerEvent(
+                pointerId = 0,
+                type = PointerEventType.MOVE,
+                x = x,
+                y = y,
+                viewportWidth = width,
+                viewportHeight = height
+            )
+        )
+    }
+
+    fun onPointer(event: PointerEvent) {
         applyPendingTransitions()
         val activeScene = current ?: return
+        activeScene.input.onPointer(event)
         safe("scene.input.pointer") {
-            activeScene.onTouch(x, y, width, height)
+            activeScene.onPointer(event)
         }
         applyPendingTransitions()
+    }
+
+    fun resetInput() {
+        heldKeys.clear()
+        current?.input?.reset()
+        safe("scene.input.reset") {
+            current?.onFocusLost()
+        }
     }
 
     fun onKey(
