@@ -20,6 +20,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
 - [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
+- [Multi-mode demo](docs/getting-started/multi-mode-demo.md) — switch between top-down and side-view gameplay while retaining shared progression.
 - [Assets and animation](docs/getting-started/assets-and-animation.md) — texture loading, sprites, sprite sheets, and frame animation.
 - [Screen-space UI](docs/getting-started/ui.md) — panels, labels, buttons, images, and pointer routing.
 - [Audio](docs/getting-started/audio.md) — sound effects, background music, volume, and resource lifetime.
