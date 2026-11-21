@@ -149,7 +149,7 @@ class SceneManagerTest {
     fun inactiveScenesCanBeExplicitlyDisposedDuringLongRunningTransitions() {
         val manager = SceneManager()
         var disposedCount = 0
-        var current = object : Scene() {
+        var current: Scene = object : Scene() {
             override fun onDispose() { disposedCount += 1 }
         }
         manager.setInitialScene(current)
