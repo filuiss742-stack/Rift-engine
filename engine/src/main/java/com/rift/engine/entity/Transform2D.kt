@@ -65,18 +65,26 @@ class Transform2D {
             "width and height must be finite."
         }
 
-        val corners = listOf(
-            transformPoint(0f, 0f, worldX, worldY),
-            transformPoint(width, 0f, worldX, worldY),
-            transformPoint(width, height, worldX, worldY),
-            transformPoint(0f, height, worldX, worldY)
-        )
+        val radians = Math.toRadians(rotationDegrees.toDouble())
+        val cosine = cos(radians).toFloat()
+        val sine = sin(radians).toFloat()
+        val scaledWidth = width * scaleX
+        val scaledHeight = height * scaleY
+
+        val x0 = worldX
+        val y0 = worldY
+        val x1 = worldX + scaledWidth * cosine
+        val y1 = worldY + scaledWidth * sine
+        val x2 = worldX + scaledWidth * cosine - scaledHeight * sine
+        val y2 = worldY + scaledWidth * sine + scaledHeight * cosine
+        val x3 = worldX - scaledHeight * sine
+        val y3 = worldY + scaledHeight * cosine
 
         return Aabb(
-            left = corners.minOf { it.x },
-            top = corners.minOf { it.y },
-            right = corners.maxOf { it.x },
-            bottom = corners.maxOf { it.y }
+            left = min(min(x0, x1), min(x2, x3)),
+            top = min(min(y0, y1), min(y2, y3)),
+            right = max(max(x0, x1), max(x2, x3)),
+            bottom = max(max(y0, y1), max(y2, y3))
         )
     }
 }
