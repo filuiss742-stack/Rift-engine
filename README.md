@@ -62,7 +62,7 @@ The core must not import Android, AWT, or Swing. Platform adapters depend on the
 
 The Windows CI workflow uses jpackage to bundle a Java runtime and an EXE launcher. The result is an application image, not native compilation or a single-file executable. Launching the packaged artifact manually remains a separate smoke-test step.
 
-The current Kotlin template is buildable inside this repository using a Gradle composite build against the local engine source. Publishing the engine artifact and producing independent Android/Windows launcher templates are still release gates; do not describe the template as fully standalone yet.
+The Kotlin game template is a separate Gradle project that consumes the versioned engine Maven artifact and does not depend on :demo-game or the engine source tree. For now, publish the engine to mavenLocal first with `gradle :engine:publishToMavenLocal`. Remote artifact publication and independent Android/Windows launcher templates remain release gates.
 
 ## License
 
