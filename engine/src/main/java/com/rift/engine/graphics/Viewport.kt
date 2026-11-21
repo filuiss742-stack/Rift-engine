@@ -74,6 +74,7 @@ class ViewportRenderContext(
     override fun clear(color: Int) {
         check(!closed) { "ViewportRenderContext is closed." }
         delegate.clear(color)
+        delegate.drawRect(0f, 0f, width.toFloat(), height.toFloat(), color)
     }
 
     override fun pushState() {
