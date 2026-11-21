@@ -51,7 +51,8 @@ class SandboxSceneInputTest {
                 x = 700f,
                 y = 300f,
                 viewportWidth = 960f,
-                viewportHeight = 600f
+                viewportHeight = 600f,
+                button = PointerButtons.TOUCH
             )
         )
         manager.update(1f / 60f)
