@@ -9,6 +9,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 ## Start here
 
 - [AI agent onboarding](docs/ai-onboarding.md) — short route for coding agents with limited context.
+- [AI-native architecture](docs/architecture/ai-native-architecture.md) — target project model, agent workflow, safe transactions, diagnostics and implementation sequence.
 - [Current API map](docs/api-map.md) — real APIs and their current limitations.
 - [Create your first scene](docs/getting-started/create-a-scene.md).
 - [Input guide](docs/getting-started/input.md).
