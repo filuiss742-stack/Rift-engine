@@ -178,7 +178,7 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
  override fun surfaceCreated(h:SurfaceHolder){resume()}
  override fun surfaceDestroyed(h:SurfaceHolder){pause()}
  override fun surfaceChanged(h:SurfaceHolder,f:Int,w:Int,hh:Int)=Unit
- fun resume(){synchronized(this){if(running||thread?.isAlive==true)return;clock.reset();running=true;thread=Thread({loop()},"Rift-Android").also{it.start()}}}
+ fun resume(){synchronized(this){if(running||thread?.isAlive==true)return;clock.reset();running=true;thread=Thread({loop()},"Rift-Android").also{it.start()}};engine.audio.resumeMusic()}
  private fun loop(){var prev=System.nanoTime();val target=1_000_000_000L/60
   while(running&&!Thread.currentThread().isInterrupted){val start=System.nanoTime()
    try{val dt=((start-prev)/1e9).toFloat();prev=start;clock.advance(dt){engine.update(it)}
