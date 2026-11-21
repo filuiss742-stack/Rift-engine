@@ -15,12 +15,28 @@ import com.rift.engine.physics.Aabb
 open class GameObject(
     x: Float,
     y: Float,
-    var width: Float,
-    var height: Float,
+    width: Float,
+    height: Float,
     var color: Int = 0xFFFFFFFF.toInt()
 ) {
     val movementBody = MovementBody(x, y)
     val transform = Transform2D()
+
+    var width: Float = width
+        set(value) {
+            require(value.isFinite() && value >= 0f) {
+                "width must be finite and non-negative."
+            }
+            field = value
+        }
+
+    var height: Float = height
+        set(value) {
+            require(value.isFinite() && value >= 0f) {
+                "height must be finite and non-negative."
+            }
+            field = value
+        }
 
     private val components = mutableListOf<GameComponent>()
     private val pendingComponentAdds = mutableListOf<GameComponent>()
@@ -80,6 +96,15 @@ open class GameObject(
     var active: Boolean = true
     internal var physicsControlled: Boolean = false
 
+    init {
+        require(width.isFinite() && width >= 0f) {
+            "width must be finite and non-negative."
+        }
+        require(height.isFinite() && height >= 0f) {
+            "height must be finite and non-negative."
+        }
+    }
+
     /**
      * Adds a component by object identity. The same instance cannot be attached
      * twice, but multiple components of the same class are allowed.
@@ -136,6 +161,9 @@ open class GameObject(
     }
 
     open fun update(deltaSeconds: Float) {
+        require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
+            "deltaSeconds must be finite and non-negative."
+        }
         if (!active) {
             return
         }
