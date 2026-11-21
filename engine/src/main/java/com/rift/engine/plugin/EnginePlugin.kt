@@ -21,9 +21,19 @@ class PluginManager(
     private val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) {
     private val plugins = linkedMapOf<String, EnginePlugin>()
+    private var closed = false
 
     @Synchronized
     fun install(plugin: EnginePlugin) {
+        if (closed) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "PLUGIN_MANAGER_CLOSED",
+                "PluginManager",
+                "Cannot install a plugin after the manager has been closed."
+            )
+            return
+        }
         val pluginId = plugin.id
         if (pluginId.isBlank()) {
             diagnostics.report(
@@ -78,6 +88,8 @@ class PluginManager(
             "deltaSeconds must be finite and non-negative."
         }
 
+        if (closed) return
+
         // Snapshot iteration permits a callback to uninstall itself re-entrantly.
         val snapshot = plugins.values.toList()
         snapshot.forEach { plugin ->
@@ -86,6 +98,24 @@ class PluginManager(
                     plugin.onUpdate(deltaSeconds)
                 } catch (exception: Exception) {
                     diagnostics.reportException("plugin[" + plugin.id + "].onUpdate", exception)
+                }
+            }
+        }
+    }
+
+    /** Uninstalls every remaining plugin exactly once, even if one cleanup fails. */
+    @Synchronized
+    fun close() {
+        if (closed) return
+        closed = true
+
+        plugins.values.toList().asReversed().forEach { plugin ->
+            if (plugins[plugin.id] === plugin) {
+                plugins.remove(plugin.id)
+                try {
+                    plugin.onUninstall()
+                } catch (exception: Exception) {
+                    diagnostics.reportException("plugin[${plugin.id}].onUninstall", exception)
                 }
             }
         }
