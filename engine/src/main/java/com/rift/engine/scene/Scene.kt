@@ -221,6 +221,7 @@ abstract class Scene {
             removals.forEach { gameObject ->
                 objects.removeAll { it === gameObject }
                 physics.removeBody(gameObject)
+                combat.removeOwner(gameObject)
                 quarantinedObjects.remove(gameObject)
                 gameObject.diagnostics = null
             }
