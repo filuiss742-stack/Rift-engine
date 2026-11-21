@@ -41,8 +41,10 @@ abstract class Scene {
         java.util.IdentityHashMap<GameObject, Boolean>()
     )
     private var traversingObjects = false
+    private var disposed = false
 
     protected fun add(gameObject: GameObject) {
+        check(!disposed) { "Cannot add objects to a disposed Scene." }
         if (objects.any { it === gameObject } || pendingAdds.any { it === gameObject }) return
         if (pendingRemovals.remove(gameObject)) return
         quarantinedObjects.remove(gameObject)
@@ -51,6 +53,7 @@ abstract class Scene {
     }
 
     protected fun remove(gameObject: GameObject) {
+        if (disposed) return
         if (pendingAdds.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
             combat.removeOwner(gameObject)
@@ -87,6 +90,7 @@ abstract class Scene {
         audioManager: AudioManager,
         transitionRequester: (Scene) -> Unit
     ) {
+        check(!disposed) { "Cannot attach a disposed Scene to a runtime." }
         diagnostics = reporter
         ui.diagnostics = reporter
         combat.diagnostics = reporter
@@ -103,6 +107,7 @@ abstract class Scene {
      * Shared GameState, assets, and audio services are retained by the manager.
      */
     fun requestSceneChange(nextScene: Scene) {
+        check(!disposed) { "Cannot request transitions from a disposed Scene." }
         val requester = sceneTransitionRequester
         if (requester == null) {
             diagnostics?.report(
@@ -118,6 +123,43 @@ abstract class Scene {
 
     open fun onEnter() = Unit
     open fun onExit() = Unit
+    open fun onDispose() = Unit
+
+    internal fun disposeRuntime() {
+        if (disposed) return
+        disposed = true
+        val reporter = diagnostics
+        try {
+            onDispose()
+        } catch (exception: Exception) {
+            reporter?.reportException(
+                "scene.dispose",
+                exception,
+                "Inspect the Scene.onDispose() cleanup and release only resources owned by this scene."
+            )
+        }
+
+        ui.clear()
+        val ownedObjects = java.util.Collections.newSetFromMap(
+            java.util.IdentityHashMap<GameObject, Boolean>()
+        )
+        ownedObjects.addAll(objects)
+        ownedObjects.addAll(pendingAdds)
+        objects.clear()
+        pendingAdds.clear()
+        pendingRemovals.clear()
+        quarantinedObjects.clear()
+        physics.clear()
+        combat.clear()
+        ownedObjects.forEach { gameObject ->
+            gameObject.disposeComponents(reporter)
+            gameObject.diagnostics = null
+        }
+        sceneTransitionRequester = null
+        assets = null
+        audio = null
+        diagnostics = null
+    }
 
     open fun update(deltaSeconds: Float) {
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
