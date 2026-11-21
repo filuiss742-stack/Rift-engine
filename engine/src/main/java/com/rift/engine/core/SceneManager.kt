@@ -3,7 +3,6 @@ package com.rift.engine.core
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
-import com.rift.engine.input.InputActionMap
 import com.rift.engine.scene.Scene
 import java.util.concurrent.ConcurrentLinkedQueue
 
