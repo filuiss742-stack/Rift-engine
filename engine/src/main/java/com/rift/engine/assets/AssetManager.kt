@@ -25,11 +25,11 @@ class AssetManager(
     fun loadTexture(id: String, path: String): TextureResource? {
         check(!closed) { "AssetManager is closed." }
         if (!validId(id)) {
-            report("RIFT_ASSET_ID_INVALID", "Texture ID must be a stable lowercase identifier.", id)
+            report("RIFT_ASSET_ID_INVALID", "Texture ID must be a stable lowercase identifier.", id, "Use lowercase letters, digits, dots, underscores, or hyphens; start with a letter.")
             return null
         }
         if (!validRelativePath(path)) {
-            report("RIFT_ASSET_PATH_UNSAFE", "Texture path must be a safe project-relative path.", path)
+            report("RIFT_ASSET_PATH_UNSAFE", "Texture path must be a safe project-relative path.", path, "Use a relative path below the configured assets root and remove '..' segments.")
             return null
         }
 
@@ -39,7 +39,8 @@ class AssetManager(
                 report(
                     "RIFT_ASSET_ID_CONFLICT",
                     "Texture ID '$id' is already loaded from '${existing.path}'.",
-                    id
+                    id,
+                    "Assign a new stable asset ID or keep the original source path."
                 )
                 return null
             }
@@ -49,17 +50,18 @@ class AssetManager(
         return try {
             val resource = textureLoader.load(path)
             if (resource == null) {
-                report("RIFT_ASSET_TEXTURE_NOT_FOUND", "Texture '$path' could not be loaded.", path)
+                report("RIFT_ASSET_TEXTURE_NOT_FOUND", "Texture '$path' could not be loaded.", path, "Check the file exists under the host asset root and matches the path's case.")
                 null
             } else if (resource.width <= 0 || resource.height <= 0 || resource.isDisposed) {
                 resource.close()
-                report("RIFT_ASSET_TEXTURE_INVALID", "Texture '$path' returned invalid dimensions or was already disposed.", path)
+                report("RIFT_ASSET_TEXTURE_INVALID", "Texture '$path' returned invalid dimensions or was already disposed.", path, "Use a decodable image with positive dimensions and return a fresh texture resource.")
                 null
             } else if (textures.values.any { it.resource === resource }) {
                 report(
                     "RIFT_ASSET_RESOURCE_REUSED",
                     "Texture loader returned a resource already owned by another asset ID.",
-                    path
+                    path,
+                    "Return a distinct texture handle for each asset ID."
                 )
                 null
             } else {
@@ -73,7 +75,8 @@ class AssetManager(
                 "AssetManager",
                 "Texture '$path' could not be decoded.",
                 exception.toString(),
-                path
+                path,
+                "Use a supported image format and inspect the platform decoder error."
             )
             null
         }
@@ -111,13 +114,19 @@ class AssetManager(
         textures.clear()
     }
 
-    private fun report(code: String, message: String, location: String) {
+    private fun report(
+        code: String,
+        message: String,
+        location: String,
+        suggestion: String
+    ) {
         diagnostics.report(
             DiagnosticSeverity.ERROR,
             code,
             "AssetManager",
             message,
-            location = location
+            location = location,
+            suggestion = suggestion
         )
     }
 
