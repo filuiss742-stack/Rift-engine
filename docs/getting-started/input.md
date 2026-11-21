@@ -59,6 +59,8 @@ Mouse buttons and touch contacts can also drive named actions:
 
 ```kotlin
 import com.rift.engine.input.PointerButtons
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 
 init {
     input.bindPointerButton("attack", PointerButtons.PRIMARY) // desktop mouse
