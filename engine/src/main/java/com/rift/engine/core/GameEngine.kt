@@ -29,9 +29,9 @@ private sealed interface InputEvent {
  * Only an explicitly reported FATAL diagnostic pauses engine updates.
  */
 class GameEngine(
-    val saves: SaveStore = InMemorySaveStore()
+    val saves: SaveStore = InMemorySaveStore(),
+    val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) {
-    val diagnostics = DiagnosticReporter()
     val plugins = PluginManager(diagnostics)
     val scenes = SceneManager(diagnostics)
 
