@@ -1,13 +1,37 @@
-# AI Game Example
+# Rift AI Game Acceptance Project
 
-This folder contains a sample version-1 project manifest, a concise GAME_AGENT.md, and minimal Kotlin source demonstrating the RiftGame entrypoint, Scene, GameObject, and named keyboard actions.
+This is an independent Kotlin game project used to exercise Rift's public APIs from outside the engine source tree. It is deliberately small, but it is a playable top-down action prototype rather than a documentation-only fixture.
 
-It is a documentation and validator fixture at this stage, not yet a standalone copy-and-build template. The standalone template and target-specific Gradle setup are separate 1.0 release gates.
+## Acceptance coverage
 
-Validate the manifest from the repository root:
+- Keyboard movement with named actions.
+- Virtual joystick and multi-touch action buttons.
+- A physics-controlled player and a camera follow rig.
+- A pursuing enemy with 30 health.
+- A short-range real-time attack that defeats the enemy.
+- A coin dropped on defeat and collected by the player.
+- A screen-space HUD.
+- Automated tests for movement, enemy pursuit, combat, dodge, touch input, and pickup collection.
+
+## Build and test
+
+Requirements: JDK 17 and Gradle 8.9.
+
+From a Rift Engine checkout, publish the engine artifact to Maven Local:
 
 ```shell
-gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
+gradle :engine:publishToMavenLocal
 ```
 
-The validator checks manifest metadata, source-file presence, declared module relationships, and asset-root directories. It does not compile the sample source or prove that the game runs on Android or Windows.
+Then, from this directory:
+
+```shell
+gradle test
+gradle build
+```
+
+The project consumes `com.rift.engine:engine:0.5.0-SNAPSHOT` from Maven Local. It does not include engine source code or depend on `:demo-game`.
+
+The acceptance tests validate gameplay logic through the public Scene, GameObject, input, physics, combat, camera, and UI APIs. They do not replace manual runtime smoke tests on an Android device or a packaged Windows application.
+
+The manifest validator checks project metadata and declared paths. It does not prove runtime behavior by itself.
