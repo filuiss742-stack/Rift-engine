@@ -1,5 +1,6 @@
 package com.rift.engine.scene
 
+import com.rift.engine.assets.AssetManager
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.Camera
 import com.rift.engine.graphics.RenderContext
@@ -22,6 +23,8 @@ abstract class Scene {
     val camera = Camera()
     val physics = PhysicsWorld()
     var gameState: GameState = GameState()
+        internal set
+    var assets: AssetManager? = null
         internal set
 
     protected val objects = mutableListOf<GameObject>()
