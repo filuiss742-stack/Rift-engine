@@ -1,9 +1,13 @@
 package com.rift.engine.core
 
 import android.graphics.Canvas
+import com.rift.engine.diagnostics.DiagnosticReporter
+import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.scene.Scene
 
-class SceneManager {
+class SceneManager(
+    private val diagnostics: DiagnosticReporter = DiagnosticReporter()
+) {
     var current: Scene? = null
         private set
 
@@ -11,6 +15,13 @@ class SceneManager {
         if (current == null) {
             current = scene
             scene.onEnter()
+        } else {
+            diagnostics.report(
+                DiagnosticSeverity.WARNING,
+                "SCENE_INITIAL_ALREADY_SET",
+                "SceneManager",
+                "An initial scene is already active. Use changeScene() to replace it."
+            )
         }
     }
 
@@ -25,7 +36,17 @@ class SceneManager {
     }
 
     fun render(canvas: Canvas) {
-        current?.render(canvas)
+        val scene = current
+        if (scene == null) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "SCENE_NOT_SET",
+                "SceneManager",
+                "No active scene is assigned. Call setInitialScene() before rendering."
+            )
+            return
+        }
+        scene.render(canvas)
     }
 
     fun onTouch(x: Float, y: Float, screenWidth: Float, screenHeight: Float) {
