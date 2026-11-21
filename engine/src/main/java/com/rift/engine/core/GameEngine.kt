@@ -3,6 +3,7 @@ package com.rift.engine.core
 import com.rift.engine.assets.AssetManager
 import com.rift.engine.audio.AudioManager
 import com.rift.engine.diagnostics.DiagnosticReporter
+import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.diagnostics.DiagnosticsOverlay
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.PointerEvent
@@ -11,6 +12,7 @@ import com.rift.engine.module.GameplayModuleManager
 import com.rift.engine.plugin.PluginManager
 import com.rift.engine.storage.InMemorySaveStore
 import com.rift.engine.storage.SaveStore
+import com.rift.engine.state.GameStateCodec
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private sealed interface InputEvent {
@@ -36,6 +38,10 @@ class GameEngine(
     val scenes = SceneManager(diagnostics, assets, audio)
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
+
+    private companion object {
+        const val SAVE_KEY_PREFIX = "rift.game-state."
+    }
 
     /** Legacy pointer-move callback retained for existing integrations. */
     fun onTouch(x: Float, y: Float, width: Float, height: Float) {
@@ -98,6 +104,55 @@ class GameEngine(
         }
     }
 
+    /**
+     * Saves the shared primitive GameState under a stable slot identifier.
+     * Call at a safe game-loop boundary, not from a background worker.
+     */
+    fun saveGameState(slot: String): Boolean {
+        require(validSaveSlot(slot)) {
+            "Save slot must contain 1..64 letters, digits, dots, underscores, or hyphens."
+        }
+        return try {
+            saves.putString(SAVE_KEY_PREFIX + slot, GameStateCodec.encode(scenes.gameState))
+            true
+        } catch (exception: Exception) {
+            diagnostics.reportException(
+                "save.game-state.write",
+                exception,
+                "Check the save slot and ensure the current game state contains supported primitive values."
+            )
+            false
+        }
+    }
+
+    /**
+     * Loads a previously saved primitive GameState. Returns false when the slot
+     * is empty or the data is invalid; malformed data is reported, not applied.
+     */
+    fun loadGameState(slot: String): Boolean {
+        require(validSaveSlot(slot)) {
+            "Save slot must contain 1..64 letters, digits, dots, underscores, or hyphens."
+        }
+        return try {
+            val encoded = saves.getString(SAVE_KEY_PREFIX + slot, "")
+            if (encoded.isEmpty()) return false
+            val decoded = GameStateCodec.decode(encoded)
+            scenes.gameState.replaceWith(decoded)
+            true
+        } catch (exception: Exception) {
+            diagnostics.report(
+                DiagnosticSeverity.WARNING,
+                "RIFT_SAVE_STATE_INVALID",
+                "GameEngine",
+                "Saved game state could not be loaded.",
+                exception.toString(),
+                slot,
+                "Keep a backup of the save and restore a valid slot or start a new game."
+            )
+            false
+        }
+    }
+
     /** Releases platform-owned assets when the host permanently shuts down. */
     fun close() {
         audio.close()
@@ -116,6 +171,9 @@ class GameEngine(
             DiagnosticsOverlay.render(context, diagnostics.snapshot())
         }
     }
+
+    private fun validSaveSlot(slot: String): Boolean =
+        slot.matches(Regex("^[A-Za-z0-9._-]{1,64}$"))
 
     private inline fun safe(
         subsystem: String,
