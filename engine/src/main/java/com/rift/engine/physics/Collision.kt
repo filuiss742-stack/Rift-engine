@@ -1,8 +1,34 @@
 package com.rift.engine.physics
-data class Aabb(val left:Float,val top:Float,val right:Float,val bottom:Float) {
- init { require(left<=right && top<=bottom) }
+
+data class Aabb(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+) {
+    init {
+        require(left <= right && top <= bottom) {
+            "AABB right/bottom edges must not precede left/top edges."
+        }
+    }
 }
+
 object Collision {
- fun intersects(a:Aabb,b:Aabb)=a.left<b.right && b.left<a.right && a.top<b.bottom && b.top<a.bottom
- fun clamp(value:Float,min:Float,max:Float)=value.coerceIn(min,max)
+    fun intersects(first: Aabb, second: Aabb): Boolean {
+        return first.left < second.right &&
+            second.left < first.right &&
+            first.top < second.bottom &&
+            second.top < first.bottom
+    }
+
+    fun clamp(
+        value: Float,
+        minimum: Float,
+        maximum: Float
+    ): Float {
+        require(minimum <= maximum) {
+            "minimum must not be greater than maximum."
+        }
+        return value.coerceIn(minimum, maximum)
+    }
 }
