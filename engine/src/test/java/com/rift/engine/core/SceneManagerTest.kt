@@ -115,6 +115,31 @@ class SceneManagerTest {
 
 
 
+
+    @Test
+    fun failingGameObjectDoesNotPreventOtherObjectsFromUpdating() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val manager = SceneManager(diagnostics)
+        val healthy = GameObject(0f, 0f, 10f, 10f).apply { velocityX = 10f }
+        val broken = object : GameObject(0f, 0f, 10f, 10f) {
+            override fun update(deltaSeconds: Float) {
+                error("broken entity")
+            }
+        }
+        val scene = object : Scene() {
+            init {
+                add(broken)
+                add(healthy)
+            }
+        }
+        manager.setInitialScene(scene)
+
+        manager.update(1f)
+
+        assertEquals(10f, healthy.x, 0.001f)
+        assertEquals("RIFT_RUNTIME_EXCEPTION", diagnostics.latestError()?.code)
+    }
+
     @Test
     fun sceneUiConsumesButtonPointerBeforeGameplayCallback() {
         val manager = SceneManager()
