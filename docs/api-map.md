@@ -93,7 +93,7 @@ Current asset limitations: synchronous texture loading only; no font pipeline, c
 |---|---|---|
 | UiCanvas | com.rift.engine.ui | Scene-owned screen-space layer with z-order, rendering, update, and pointer routing. |
 | UiElement | com.rift.engine.ui | Base bounds, visibility, enabled state, z-index, and pointer lifecycle. |
-| UiPanel / UiLabel / UiButton / UiImage | com.rift.engine.ui | Basic screen-space widgets; no automatic layout or focus navigation. |
+| UiPanel / UiLabel / UiButton / UiImage | com.rift.engine.ui | Basic screen-space widgets, nested panels with absolute/vertical/horizontal layout, pointer routing, and TAB/ENTER/SPACE keyboard focus. |
 | VirtualJoystick / VirtualButton | com.rift.engine.ui | Multi-touch virtual movement axes and press-and-hold touch actions. |
 
 ## Input
