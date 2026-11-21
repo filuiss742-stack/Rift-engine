@@ -3,27 +3,17 @@ package com.rift.engine.core
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticsOverlay
 import com.rift.engine.graphics.RenderContext
-import com.rift.engine.plugin.PluginManager
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.module.GameplayModuleManager
+import com.rift.engine.plugin.PluginManager
 import com.rift.engine.storage.InMemorySaveStore
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private sealed interface InputEvent {
-    data class Pointer(
-        val x: Float,
-        val y: Float,
-        val width: Float,
-        val height: Float
-    ) : InputEvent
-
-    data class Key(
-        val code: Int,
-        val pressed: Boolean
-    ) : InputEvent
-
     data class Pointer(val event: PointerEvent) : InputEvent
-
+    data class Key(val code: Int, val pressed: Boolean) : InputEvent
     data object ResetInput : InputEvent
 }
 
@@ -43,9 +33,23 @@ class GameEngine(
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
 
+    /** Legacy pointer-move callback retained for existing integrations. */
     fun onTouch(x: Float, y: Float, width: Float, height: Float) {
+        onPointer(
+            PointerEvent(
+                pointerId = 0,
+                type = PointerEventType.MOVE,
+                x = x,
+                y = y,
+                viewportWidth = width,
+                viewportHeight = height
+            )
+        )
+    }
+
+    fun onPointer(event: PointerEvent) {
         if (!diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.Pointer(x, y, width, height))
+            inputs.offer(InputEvent.Pointer(event))
         }
     }
 
@@ -55,12 +59,7 @@ class GameEngine(
         }
     }
 
-    fun onPointer(event: PointerEvent) {
-        if (!diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.Pointer(event))
-        }
-    }
-
+    /** Releases all held keys and pointer buttons after the host loses focus. */
     fun onFocusLost() {
         if (!diagnostics.hasFatalErrors()) {
             inputs.offer(InputEvent.ResetInput)
@@ -68,47 +67,30 @@ class GameEngine(
     }
 
     fun update(deltaSeconds: Float) {
-        if (diagnostics.hasFatalErrors()) {
-            return
+        require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
+            "deltaSeconds must be finite and non-negative."
         }
+        if (diagnostics.hasFatalErrors()) return
 
         safe("input.dispatch") {
             while (true) {
                 when (val event = inputs.poll() ?: break) {
-                    is InputEvent.Pointer -> scenes.onTouch(
-                        event.x,
-                        event.y,
-                        event.width,
-                        event.height
-                    )
-
-                    is InputEvent.Key -> scenes.onKey(event.code, event.pressed)
                     is InputEvent.Pointer -> scenes.onPointer(event.event)
+                    is InputEvent.Key -> scenes.onKey(event.code, event.pressed)
                     InputEvent.ResetInput -> scenes.resetInput()
                 }
-
-                if (diagnostics.hasFatalErrors()) {
-                    break
-                }
+                if (diagnostics.hasFatalErrors()) break
             }
         }
 
         if (!diagnostics.hasFatalErrors()) {
-            safe("plugins.update") {
-                plugins.onUpdate(deltaSeconds)
-            }
+            safe("plugins.update") { plugins.onUpdate(deltaSeconds) }
         }
-
         if (!diagnostics.hasFatalErrors()) {
-            safe("gameplayModules.update") {
-                gameplayModules.update(deltaSeconds)
-            }
+            safe("gameplayModules.update") { gameplayModules.update(deltaSeconds) }
         }
-
         if (!diagnostics.hasFatalErrors()) {
-            safe("scene.update") {
-                scenes.update(deltaSeconds)
-            }
+            safe("scene.update") { scenes.update(deltaSeconds) }
         }
     }
 
@@ -118,9 +100,7 @@ class GameEngine(
             return
         }
 
-        safe("scene.render") {
-            scenes.render(context)
-        }
+        safe("scene.render") { scenes.render(context) }
 
         if (diagnostics.hasErrors()) {
             DiagnosticsOverlay.render(context, diagnostics.snapshot())
