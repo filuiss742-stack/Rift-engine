@@ -6,26 +6,40 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 | API | Package | Purpose |
 |---|---|---|
-| GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, and diagnostics. |
-| SceneManager | com.rift.engine.core | Sets the first scene, queues safe transitions, and owns shared GameState. |
-| Scene | com.rift.engine.scene | Base class for game scenes; subclasses implement lifecycle, update, render, and input callbacks. |
+| GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, assets, and diagnostics. |
+| SceneManager | com.rift.engine.core | Sets the first scene, queues safe transitions, and owns shared GameState and AssetManager references. |
+| Scene | com.rift.engine.scene | Base class for game scenes; owns objects, camera, physics world, input map, shared state, and assets. |
 | FixedStepAccumulator | com.rift.engine.core | Runs update callbacks using a fixed time step. |
 
-## Entities and movement
+## Entities, state, and movement
 
 | API | Package | Purpose |
 |---|---|---|
-| GameState | com.rift.engine.state | Typed runtime state shared across all scenes managed by one SceneManager; not automatically persisted. |\n| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, rotation/scale transform, optional movement profile, and lifecycle-managed components. |
+| GameState | com.rift.engine.state | Typed runtime state shared across all scenes managed by one SceneManager; not automatically persisted. |
+| GameObject | com.rift.engine.entity | Entity with position, size, color, active flag, transform, optional movement profile, and lifecycle-managed components. |
 | Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
 | GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
-| MovementBody | com.rift.engine.movement | Position, velocity, and externally supplied grounded state. |
+| MovementBody | com.rift.engine.movement | Position, velocity, and grounded state. |
 | MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent and one-update jump press. |
-| MovementProfile | com.rift.engine.movement | Contract for converting movement intent into body velocity. |
+| MovementProfile | com.rift.engine.movement | Contract for converting input intent into body velocity. |
 | TopDownMovementProfile | com.rift.engine.movement | Normalized free 2D movement. |
-| PlatformerMovementProfile | com.rift.engine.movement | Basic horizontal movement, gravity, and jump velocity; ground state can now be supplied by a registered PhysicsWorld body. |
-| Aabb | com.rift.engine.physics | Validated axis-aligned bounds used by entities, collision tests, and spatial queries. |\n| PhysicsWorld | com.rift.engine.physics | Scene-owned 2D AABB physics with dynamic/static/kinematic bodies, gravity, basic positional collision response, sensors, filters, overlap queries, and raycasts. |\n| PhysicsBody / PhysicsBodyType | com.rift.engine.physics | Body configuration and STATIC/KINEMATIC/DYNAMIC behavior. |\n| CollisionFilter | com.rift.engine.physics | Category/mask and group filtering for collision pairs and queries. |\n| CollisionContact | com.rift.engine.physics | Contact pair, normal, penetration, and sensor flag from the latest physics step. |\n| RaycastHit | com.rift.engine.physics | Nearest AABB ray hit with point, normal, and normalized fraction. |
+| PlatformerMovementProfile | com.rift.engine.movement | Basic horizontal movement, gravity, and jump velocity; grounded state can be supplied by PhysicsWorld. |
 
-## Gameplay modules
+## Physics
+
+| API | Package | Purpose |
+|---|---|---|
+| Aabb | com.rift.engine.physics | Validated axis-aligned bounds used by entities, collision tests, and spatial queries. |
+| PhysicsWorld | com.rift.engine.physics | Scene-owned 2D box/circle physics with spatial-hash broad phase, dynamic/static/kinematic bodies, gravity, basic collision response, sensors, filters, overlap queries, and raycasts. |
+| PhysicsBody / PhysicsBodyType | com.rift.engine.physics | Body configuration and STATIC/KINEMATIC/DYNAMIC behavior. |
+| CollisionShape | com.rift.engine.physics | Box and circle collision shapes. |
+| CollisionFilter | com.rift.engine.physics | Category/mask and group filtering for collision pairs and queries. |
+| CollisionContact | com.rift.engine.physics | Contact pair, normal, penetration, and sensor flag from the latest physics step. |
+| RaycastHit | com.rift.engine.physics | Nearest segment ray hit with point, normal, and normalized fraction. |
+
+Physics limitations: no polygon shapes, friction, restitution, joints, continuous collision detection, or begin/stay/end callbacks. Rotated boxes use enclosing AABBs. See the [physics guide](getting-started/physics.md).
+
+## Gameplay modules and narrative
 
 | API | Package | Purpose |
 |---|---|---|
@@ -33,30 +47,36 @@ This page lists APIs verified in the current development branch. It is a navigat
 | GameplayModuleDescriptor | com.rift.engine.module | Stable ID, version, dependencies, conflicts, and provided capabilities. |
 | GameplayModuleManager | com.rift.engine.module | Validates installation, replacement, removal, dependencies, conflicts, and capability queries. |
 | GameplayModuleContext | com.rift.engine.module | Services exposed to module lifecycle callbacks. |
-
-The registry is a runtime extension point, not a dynamic binary loader. Modules must be compiled into the application. Version strings are informational; semantic version resolution and external distribution are not implemented.
-
-## Narrative and branching dialogue
-
-| API | Package | Purpose |
-|---|---|---|
 | DialogueGraph | com.rift.engine.narrative | Validated collection of dialogue nodes and branch targets. |
 | DialogueNode / DialogueChoice | com.rift.engine.narrative | Dialogue line data and player-selectable branches. |
 | DialogueSession | com.rift.engine.narrative | Runs a conversation, advances lines, and applies selected choice effects. |
-| StoryState | com.rift.engine.narrative | Shared story flags and integer values for quests, relationships, and route conditions. |
-| StoryCondition | com.rift.engine.narrative | Checks flags or numeric story values before showing a choice. |
-| StoryEffect | com.rift.engine.narrative | Changes flags or numeric story values after a choice is selected. |
+| StoryState | com.rift.engine.narrative | Story flags and integer values for quests, relationships, and route conditions. |
+| StoryCondition / StoryEffect | com.rift.engine.narrative | Conditions for showing choices and effects applied after selection. |
 
-## Rendering and input
+The gameplay-module registry is a runtime extension point, not a dynamic binary loader. Modules must be compiled into the application. Version strings are informational; semantic version resolution and external distribution are not implemented.
+
+## Rendering and assets
 
 | API | Package | Purpose |
 |---|---|---|
-| RenderContext | com.rift.engine.graphics | Platform-neutral primitive/text drawing plus scoped state, transforms, and rectangular clipping. |
-| Camera | com.rift.engine.graphics | Top-left anchored zoom camera applied automatically to Scene world-object rendering; exposes world/screen coordinate conversions. |
-| EngineKey | com.rift.engine.input | Device-independent identifiers for common keyboard keys. |
-| InputActionMap | com.rift.engine.input | Maps named actions to one or more keys and exposes held/pressed/released state. Currently keyboard-only. |
+| RenderContext | com.rift.engine.graphics | Platform-neutral primitive, text, and texture drawing plus scoped state, transforms, and clipping. |
+| Camera | com.rift.engine.graphics | Top-left anchored zoom camera applied to Scene world-object rendering; exposes world/screen coordinate conversions. |
+| TextureResource / TextureLoader | com.rift.engine.graphics | Platform-neutral texture handle and platform-supplied decoding contract. |
+| TextureRegion / Sprite / SpriteSheet | com.rift.engine.graphics | Atlas rectangles, drawable sprites, and regular grid indexing. |
+| SpriteAnimation / SpriteAnimationComponent | com.rift.engine.animation | Time-based frame animation and reusable GameObject component. |
+| AssetManager | com.rift.engine.assets | Validated ID-based synchronous texture cache with disposal and structured diagnostics. |
 
-## Storage, plugins, diagnostics
+Current asset limitations: synchronous texture loading only; no font or audio asset pipeline, compression, GPU batching, irregular atlas importer, or background streaming. See the [assets and animation guide](getting-started/assets-and-animation.md).
+
+## Input
+
+| API | Package | Purpose |
+|---|---|---|
+| EngineKey | com.rift.engine.input | Device-independent identifiers for common keyboard keys. |
+| PointerEvent / PointerEventType / PointerButtons | com.rift.engine.input | Device-independent mouse/touch pointer lifecycle and button identifiers, including multi-touch pointer IDs. |
+| InputActionMap | com.rift.engine.input | Maps named actions to keyboard keys and pointer buttons; exposes held/pressed/released state and pointer position/delta. Gamepad bindings are not implemented. |
+
+## Storage, plugins, and diagnostics
 
 | API | Package | Purpose |
 |---|---|---|
@@ -67,22 +87,17 @@ The registry is a runtime extension point, not a dynamic binary loader. Modules 
 | DiagnosticReporter | com.rift.engine.diagnostics | Bounded thread-safe diagnostic history and severity queries. |
 | DiagnosticEntry / DiagnosticSeverity | com.rift.engine.diagnostics | Diagnostic data and INFO/WARNING/ERROR/FATAL levels. |
 
-## Narrative system boundaries
-
-The dialogue runtime is headless: it stores dialogue data, current line, available choices, and story-state effects. It does not draw dialogue boxes, portraits, backgrounds, typewriter text, audio, or transitions. A game implements that presentation using its UI/rendering layer.
-
-StoryState currently contains boolean-like flags and integer values. Save/load serialization for StoryState is not built in; games can map its snapshots to SaveStore keys or add a dedicated serializer later. The dialogue graph is currently authored in Kotlin code; there is no visual editor or JSON importer yet.
-
 ## Ownership and lifecycle notes
 
-- GameEngine owns its SceneManager, PluginManager, and GameplayModuleManager; it receives SaveStore and DiagnosticReporter through its constructor.
+- GameEngine owns its SceneManager, PluginManager, GameplayModuleManager, and AssetManager; it receives SaveStore and DiagnosticReporter through its constructor.
 - SceneManager.setInitialScene(scene) sets the first scene. changeScene(scene) queues a transition that is applied at a safe runtime boundary after the current update/render/input/lifecycle callback returns.
+- Every activated scene receives the manager's shared GameState and AssetManager.
 - A Scene owns objects added through protected add/remove helpers. Mutations during traversal are deferred.
-- A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment. Failed onAttach callbacks trigger rollback and a best-effort onDetach cleanup.
+- A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment.
 - GameObject updates its movement profile and integrates position unless registered with a PhysicsWorld. A Scene steps its PhysicsWorld after entity updates.
-- Platform hosts own the game loop and concrete RenderContext / SaveStore / TextureLoader implementations. GameEngine owns the AssetManager and closes its cached textures on shutdown.
-- The current desktop host uses Swing scheduling; do not assume simulation already runs on a dedicated game thread.
+- Platform hosts own the game loop and concrete RenderContext, SaveStore, and TextureLoader implementations. GameEngine.close() releases cached textures.
+- The current desktop host uses Swing scheduling; simulation and rendering currently share the Swing event-dispatch thread.
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: gamepad action bindings, virtual touch controls, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font/audio assets, music and sound playback, UI widgets, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: gamepad action bindings, virtual joystick/button widgets, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font/audio assets, music and sound playback, UI widgets, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
