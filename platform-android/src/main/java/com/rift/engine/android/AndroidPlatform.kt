@@ -192,7 +192,10 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
    val wait=target-(System.nanoTime()-start);if(wait>0)LockSupport.parkNanos(wait)
   }
  }
- fun pause(){val t=synchronized(this){running=false;thread?.also{it.interrupt()}}
+ fun pause(){
+  val t=synchronized(this){running=false;thread?.also{it.interrupt()}}
+  engine.onFocusLost()
+  engine.audio.pauseMusic()
   if(t!=null&&t!==Thread.currentThread())try{t.join(1000)}catch(_:InterruptedException){Thread.currentThread().interrupt()}
   synchronized(this){if(thread===t&&t?.isAlive!=true)thread=null}
  }
