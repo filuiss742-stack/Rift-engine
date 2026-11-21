@@ -20,16 +20,24 @@ The engine must be easy for an AI to understand from the source, change safely, 
 8. Preserve existing behavior unless the task explicitly asks to change it.
 9. If a change affects public API, update the relevant docs and examples in the same change.
 10. Never claim that code builds or tests pass unless a build/test actually ran successfully.
+11. Avoid spaghetti code: no tangled responsibilities, circular dependencies, unexplained shared state, or long methods that mix unrelated tasks.
+12. Every new or upgraded plugin must ship with clear, current documentation and usage instructions.
 
-## 3. Kotlin style
+## 3. Kotlin style and maintainability
 
 - Use Kotlin and the existing package structure.
 - Use descriptive names: `player`, `sceneManager`, `deltaSeconds`.
-- Keep functions short and focused.
+- Keep functions short and focused; extract a helper when it makes the flow clearer.
 - Prefer explicit types for public API and non-obvious values.
 - Avoid clever one-line expressions when a normal block is easier to read.
 - Avoid unnecessary generics, inheritance layers, DSLs, annotations, and operator overloading.
-- Keep each main class responsible for one clear job.
+- Keep each class and function responsible for one clear job (single responsibility).
+- Separate input handling, game logic, rendering, persistence, and platform integration.
+- Prefer composition over deep inheritance.
+- Keep dependencies flowing in one clear direction. Core systems must not depend on demo code or game-specific features.
+- Avoid circular dependencies between packages or modules.
+- Do not duplicate logic; extract a small shared helper only when there is a real repeated use case.
+- Do not create giant manager classes, god objects, or "utility" files that collect unrelated behavior.
 - Comment public behavior and non-obvious decisions, not every line.
 
 ## 4. Engine architecture
@@ -58,7 +66,34 @@ Do not put game-specific story, characters, quests, or content into the engine c
 - Avoid methods that silently do nothing when the caller likely made a mistake.
 - Keep defaults safe and documented.
 
-## 6. Change protocol
+## 6. Plugin requirements (mandatory)
+
+Every new plugin and every materially upgraded plugin must have its own documentation file, normally `docs/plugins/<plugin-id>.md`. Do not consider the plugin complete until its documentation is updated in the same change.
+
+Each plugin document must explain, in plain language:
+
+1. **Purpose:** what the plugin does and when to use it.
+2. **How it works:** its main classes, lifecycle, data flow, and how it interacts with the engine.
+3. **Installation/activation:** how to add, register, enable, disable, and remove it.
+4. **Configuration:** every supported setting, its default, valid values, and a short example.
+5. **Usage instructions:** minimal step-by-step instructions and copyable Kotlin examples based on the real current API.
+6. **Dependencies and compatibility:** required engine version, optional/required dependencies, and limitations.
+7. **Events and public API:** exposed methods, callbacks, events, and expected behavior.
+8. **Troubleshooting:** common mistakes, symptoms, and fixes.
+9. **Change notes:** what changed when the plugin is upgraded, including migration steps if behavior or API changed.
+
+Additional plugin rules:
+
+- Keep plugins isolated from the engine core where practical; the core must not depend on optional plugins.
+- Use stable, unique plugin IDs.
+- Define clear ownership and cleanup behavior when a plugin is disabled or uninstalled.
+- Do not silently change existing plugin behavior or public APIs.
+- When upgrading a plugin, update its documentation and examples to match the new implementation; remove obsolete instructions.
+- If a plugin's API changes, include a migration note and update all affected examples and call sites.
+- Never describe planned or unsupported behavior as available.
+- If the plugin is too small to need every section, keep the same headings and explicitly write "Not applicable" rather than leaving important ambiguity.
+
+## 7. Change protocol
 
 Before editing:
 1. Identify the exact files involved.
@@ -70,12 +105,13 @@ After editing:
 1. Review every changed file.
 2. Search for affected call sites and update them.
 3. Add or update a small example when a public API changes.
-4. Run the available build and tests.
-5. Report exactly what changed, what was tested, and what remains unverified.
+4. Update plugin documentation whenever a plugin is added or materially changed.
+5. Run the available build and tests.
+6. Report exactly what changed, what was tested, and what remains unverified.
 
 If the requested change is ambiguous or would require a major architecture decision, ask before making a breaking change.
 
-## 7. Testing and build safety
+## 8. Testing and build safety
 
 - The Android project must continue to build with the configured Gradle and Android SDK versions.
 - Add tests for deterministic logic when practical.
@@ -83,7 +119,7 @@ If the requested change is ambiguous or would require a major architecture decis
 - Do not suppress compiler errors with broad `try/catch`, unchecked casts, or disabled lint/test settings.
 - Never change Gradle, Kotlin, Android SDK, or plugin versions casually. Explain the compatibility reason first.
 
-## 8. Documentation
+## 9. Documentation
 
 When adding or changing a feature, update:
 - the relevant API documentation;
@@ -92,12 +128,13 @@ When adding or changing a feature, update:
 
 Documentation must match the actual code. Do not document planned features as implemented.
 
-## 9. Definition of done
+## 10. Definition of done
 
 A task is complete only when:
 - the requested behavior is implemented;
 - existing behavior remains intact;
 - code and documentation agree;
+- new or upgraded plugins have complete, current usage documentation;
 - build/tests have been run when available;
 - remaining limitations are stated honestly.
 
