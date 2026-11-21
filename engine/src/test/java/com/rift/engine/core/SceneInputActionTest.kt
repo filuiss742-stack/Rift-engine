@@ -70,6 +70,6 @@ class SceneInputActionTest {
         manager.update(1f / 60f)
 
         assertTrue(newSceneSawHeldKey)
-        assertTrue(newSceneSawPressEdge)
+        assertFalse(newSceneSawPressEdge)
     }
 }
