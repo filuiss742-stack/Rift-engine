@@ -30,6 +30,7 @@ abstract class Scene {
     var audio: AudioManager? = null
         internal set
     internal var diagnostics: DiagnosticReporter? = null
+    private var sceneTransitionRequester: ((Scene) -> Unit)? = null
 
     protected val objects = mutableListOf<GameObject>()
     private val pendingAdds = mutableListOf<GameObject>()
@@ -79,15 +80,35 @@ abstract class Scene {
         reporter: DiagnosticReporter,
         sharedState: GameState,
         assetManager: AssetManager,
-        audioManager: AudioManager
+        audioManager: AudioManager,
+        transitionRequester: (Scene) -> Unit
     ) {
         diagnostics = reporter
         ui.diagnostics = reporter
         gameState = sharedState
         assets = assetManager
         audio = audioManager
+        sceneTransitionRequester = transitionRequester
         objects.forEach { it.diagnostics = reporter }
         pendingAdds.forEach { it.diagnostics = reporter }
+    }
+
+    /**
+     * Requests a safe transition after the current scene callback completes.
+     * Shared GameState, assets, and audio services are retained by the manager.
+     */
+    fun requestSceneChange(nextScene: Scene) {
+        val requester = sceneTransitionRequester
+        if (requester == null) {
+            diagnostics?.report(
+                com.rift.engine.diagnostics.DiagnosticSeverity.WARNING,
+                "SCENE_TRANSITION_RUNTIME_UNAVAILABLE",
+                "Scene",
+                "Scene changes can only be requested after the scene is attached to a SceneManager."
+            )
+            return
+        }
+        requester(nextScene)
     }
 
     open fun onEnter() = Unit
