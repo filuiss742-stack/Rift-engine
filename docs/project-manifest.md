@@ -46,6 +46,8 @@ The validator currently checks:
 - project, scene, module, and entrypoint identifiers;
 - duplicate scene/module/target declarations;
 - missing module dependencies, contradictory relationships, and dependency cycles;
-- unsafe asset-root paths, canonical-path escapes, and missing asset-root directories;\n- source-file presence for the declared game and scene entrypoint class names;\n- manifest files larger than 1 MiB are rejected before parsing.
+- unsafe asset-root paths, canonical-path escapes, and missing asset-root directories;
+- source-file presence for the declared game and scene entrypoint class names;
+- manifest files larger than 1 MiB are rejected before parsing.
 
 The validator does not yet prove that Kotlin entrypoint classes compile or implement RiftGame/Scene correctly, that every referenced asset file exists, that a module is behaviorally compatible, or that Android/Windows packaging will succeed. Those checks belong to later build, asset, and runtime validation stages. Do not treat a valid manifest as proof that the game is buildable.
