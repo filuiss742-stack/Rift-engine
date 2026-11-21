@@ -1,6 +1,10 @@
 package com.rift.engine.core
 
 import com.rift.engine.diagnostics.DiagnosticSeverity
+import com.rift.engine.module.GameplayModule
+import com.rift.engine.module.GameplayModuleContext
+import com.rift.engine.module.GameplayModuleDescriptor
+import com.rift.engine.plugin.EnginePlugin
 import com.rift.engine.scene.Scene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -64,6 +68,31 @@ class GameEngineTest {
         assertEquals(1, scene.updateCount)
     }
 
+
+    @Test
+    fun closeCleansPluginsAndGameplayModulesExactlyOnce() {
+        val engine = GameEngine()
+        var pluginCleanupCount = 0
+        var moduleCleanupCount = 0
+
+        engine.plugins.install(object : EnginePlugin {
+            override val id = "test.shutdown-plugin"
+            override fun onUninstall() { pluginCleanupCount += 1 }
+        })
+        assertTrue(engine.gameplayModules.install(object : GameplayModule {
+            override val descriptor = GameplayModuleDescriptor("test.shutdown-module", "1.0.0")
+            override fun onInstall(context: GameplayModuleContext) = Unit
+            override fun onUninstall() { moduleCleanupCount += 1 }
+        }))
+
+        engine.close()
+        engine.close()
+
+        assertEquals(1, pluginCleanupCount)
+        assertEquals(1, moduleCleanupCount)
+        assertTrue(engine.plugins.all().isEmpty())
+        assertTrue(engine.gameplayModules.installed().isEmpty())
+    }
 
     @Test
     fun savesAndLoadsTypedSharedGameState() {
