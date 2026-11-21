@@ -141,6 +141,46 @@ class SceneManagerTest {
         assertEquals("RIFT_RUNTIME_EXCEPTION", diagnostics.latestError()?.code)
     }
 
+
+    @Test
+    fun failingGameObjectIsQuarantinedUntilExplicitRetry() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val manager = SceneManager(diagnostics)
+        var shouldFail = true
+        var attempts = 0
+        val broken = object : GameObject(0f, 0f, 10f, 10f) {
+            override fun update(deltaSeconds: Float) {
+                attempts += 1
+                if (shouldFail) error("broken entity")
+                super.update(deltaSeconds)
+            }
+        }
+        val healthy = GameObject(0f, 0f, 10f, 10f).apply { velocityX = 10f }
+        val scene = object : Scene() {
+            init {
+                add(broken)
+                add(healthy)
+            }
+        }
+        manager.setInitialScene(scene)
+
+        manager.update(1f)
+        manager.update(1f)
+
+        assertEquals(1, attempts)
+        assertEquals(20f, healthy.x, 0.001f)
+        assertTrue(scene.isObjectQuarantined(broken))
+        assertEquals("RIFT_RUNTIME_EXCEPTION", diagnostics.latestError()?.code)
+
+        shouldFail = false
+        assertTrue(scene.retryObject(broken))
+        manager.update(1f)
+
+        assertEquals(2, attempts)
+        assertEquals(30f, healthy.x, 0.001f)
+        assertTrue(!scene.isObjectQuarantined(broken))
+    }
+
     @Test
     fun sceneUiConsumesButtonPointerBeforeGameplayCallback() {
         val manager = SceneManager()
