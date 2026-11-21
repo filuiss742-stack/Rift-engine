@@ -7,6 +7,7 @@ interface AudioResource : AutoCloseable {
 
     fun play(looping: Boolean = false)
     fun pause()
+    fun resume()
     fun stop()
 
     override fun close()
