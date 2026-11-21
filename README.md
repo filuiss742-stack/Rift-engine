@@ -16,7 +16,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [2D transforms](docs/getting-started/transforms.md) — object rotation, scale, render state, and transformed bounds.
 - [2D camera](docs/getting-started/camera.md) — zoom, world/screen conversion, and screen-space overlays.
 - [Input guide](docs/getting-started/input.md).
-- [Movement guide](docs/getting-started/movement.md).\n- [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
+- [Movement guide](docs/getting-started/movement.md).\n- [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.\n- [Assets and animation](docs/getting-started/assets-and-animation.md) — texture loading, sprites, sprite sheets, and frame animation.
 - [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.\n- [Shared game state](docs/getting-started/shared-game-state.md) — retain progression across scenes and gameplay modes.
 - [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
 - [Saves and plugins](docs/getting-started/saves-plugins.md).
