@@ -14,7 +14,8 @@ data class DiagnosticEntry(
     val message: String,
     val cause: String? = null,
     val location: String? = null,
-    val timestampMillis: Long = System.currentTimeMillis()
+    val timestampMillis: Long = System.currentTimeMillis(),
+    val suggestion: String? = null
 )
 
 /**
@@ -39,13 +40,15 @@ class DiagnosticReporter(
         subsystem: String,
         message: String,
         cause: String? = null,
-        location: String? = null
+        location: String? = null,
+        suggestion: String? = null
     ): DiagnosticEntry = synchronized(lock) {
         val duplicate = entries.lastOrNull {
             it.severity == severity &&
                 it.code == code &&
                 it.subsystem == subsystem &&
-                it.message == message
+                it.message == message &&
+                it.suggestion == suggestion
         }
         if (duplicate != null) {
             return@synchronized duplicate
@@ -57,7 +60,8 @@ class DiagnosticReporter(
             subsystem = subsystem,
             message = message,
             cause = cause,
-            location = location
+            location = location,
+            suggestion = suggestion
         )
         entries += entry
 
@@ -70,7 +74,8 @@ class DiagnosticReporter(
 
     fun reportException(
         subsystem: String,
-        exception: Exception
+        exception: Exception,
+        suggestion: String? = "Inspect the failing subsystem and the reported source location."
     ): DiagnosticEntry {
         val frame = exception.stackTrace.firstOrNull()
         val location = frame?.let {
@@ -83,7 +88,8 @@ class DiagnosticReporter(
             subsystem = subsystem,
             message = "${exception.javaClass.simpleName}: ${exception.message ?: "The operation failed without an error message."}",
             cause = exception.cause?.toString(),
-            location = location
+            location = location,
+            suggestion = suggestion
         )
     }
 
