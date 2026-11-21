@@ -1,5 +1,6 @@
 package com.rift.engine.core
 
+import com.rift.engine.assets.AssetManager
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
@@ -15,7 +16,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * they are applied between callbacks, never halfway through one.
  */
 class SceneManager(
-    private val diagnostics: DiagnosticReporter = DiagnosticReporter()
+    private val diagnostics: DiagnosticReporter = DiagnosticReporter(),
+    private val assets: AssetManager = AssetManager(diagnostics = diagnostics)
 ) {
     @Volatile
     var current: Scene? = null
@@ -31,6 +33,7 @@ class SceneManager(
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
             scene.gameState = gameState
+            scene.assets = assets
             scene.input.reset()
             safe("scene.onEnter") {
                 scene.onEnter()
@@ -158,6 +161,7 @@ class SceneManager(
 
             current = nextScene
             nextScene.gameState = gameState
+            nextScene.assets = assets
             nextScene.input.reset()
             safe("scene.onEnter") {
                 nextScene.onEnter()
