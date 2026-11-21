@@ -95,6 +95,9 @@ class CombatTrialScene : Scene() {
         loadSprites()
         playerHealth.reset(gameState.int("player.hp", 100).coerceIn(1, 100).toFloat())
         story.setValue("relationship", gameState.int("story.relationship"))
+        story.setFlag("mira_helped", gameState.boolean("story.mira_helped"))
+        story.setFlag("mira_dismissed", gameState.boolean("story.mira_dismissed"))
+        if (gameState.boolean("trial.golem_defeated") && !enemyDefeated) enemyHealth.applyDamage(enemyHealth.maxHealth)
         endingLabel.text = gameState.string("story.ending")
         endingLabel.visible = endingLabel.text.isNotBlank()
     }
@@ -190,8 +193,11 @@ class CombatTrialScene : Scene() {
     }
 
     private fun openDialogue() {
-        dialogueOpen = true; dialogue.start("meet"); line.text = dialogue.currentNode?.text ?: ""
-        help.visible = true; dismiss.visible = true; close.visible = false; panel.visible = true
+        dialogueOpen = true
+        val alreadyAnswered = story.hasFlag("mira_helped") || story.hasFlag("mira_dismissed")
+        dialogue.start(if (story.hasFlag("mira_helped")) "trusted" else if (story.hasFlag("mira_dismissed")) "distant" else "meet")
+        line.text = dialogue.currentNode?.text ?: ""
+        help.visible = !alreadyAnswered; dismiss.visible = !alreadyAnswered; close.visible = alreadyAnswered; panel.visible = true
         stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false
     }
 
