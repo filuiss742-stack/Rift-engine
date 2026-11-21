@@ -75,6 +75,31 @@ class GameObjectComponentTest {
         assertEquals(1, replacementUpdates)
     }
 
+
+    @Test
+    fun failedAttachmentRollsBackComponentOwnershipAndAttemptsCleanup() {
+        val owner = GameObject(0f, 0f, 10f, 10f)
+        var cleanupCalled = false
+        val broken = object : GameComponent {
+            override fun onAttach(owner: GameObject) {
+                error("attach failed")
+            }
+
+            override fun onDetach(owner: GameObject) {
+                cleanupCalled = true
+            }
+        }
+
+        try {
+            owner.addComponent(broken)
+        } catch (_: IllegalStateException) {
+            // Expected: the component activation failed.
+        }
+
+        assertTrue(cleanupCalled)
+        assertTrue(owner.components().isEmpty())
+    }
+
     @Test
     fun readdingComponentCancelsPendingRemoval() {
         val owner = GameObject(0f, 0f, 10f, 10f)
