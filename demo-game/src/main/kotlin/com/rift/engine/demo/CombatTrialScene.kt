@@ -33,6 +33,7 @@ class CombatTrialScene : Scene() {
     private var dodgeRemaining = 0f
     private var dodgeCooldown = 0f
     private var attackCooldown = 0f
+    private var attackAnimRemaining = 0f
     private var abilityCooldown = 0f
     private var dirX = 1f
     private var dirY = 0f
@@ -107,6 +108,7 @@ class CombatTrialScene : Scene() {
         if (mx != 0f || my != 0f) { dirX = mx; dirY = my }
 
         attackCooldown = (attackCooldown - deltaSeconds).coerceAtLeast(0f)
+        attackAnimRemaining = (attackAnimRemaining - deltaSeconds).coerceAtLeast(0f)
         dodgeCooldown = (dodgeCooldown - deltaSeconds).coerceAtLeast(0f)
         abilityCooldown = (abilityCooldown - deltaSeconds).coerceAtLeast(0f)
         val doAttack = input.wasPressed("attack") || touchAttack
@@ -122,6 +124,7 @@ class CombatTrialScene : Scene() {
             player.movementInput = if (evading) MovementInput(dirX, dirY) else MovementInput(mx, my)
             dodgeRemaining = (dodgeRemaining - deltaSeconds).coerceAtLeast(0f)
             if (evading) playerAnim?.play("dodge", false)
+            else if (attackAnimRemaining > 0f) playerAnim?.play("attack", false)
             else if (mx != 0f || my != 0f) playerAnim?.play("walk", false)
             else playerAnim?.play("idle", false)
             if (doAttack && attackCooldown <= 0f) attack()
@@ -201,13 +204,13 @@ class CombatTrialScene : Scene() {
         if (enemyDefeated) return
         if (distance(player, enemy) <= 58f) {
             combat.addHitbox(player, 12f, "player", setOf("enemy"), 0.12f)
-            playerAnim?.play("attack"); attackCooldown = 0.38f
+            playerAnim?.play("attack"); attackAnimRemaining = 0.32f; attackCooldown = 0.38f
         } else attackCooldown = 0.12f
     }
 
     private fun skill() {
         if (!enemyDefeated && distance(player, enemy) <= 132f) {
-            enemyHealth.applyDamage(24f); enemyAnim?.play("hit"); rig.shake(4f, 0.12f)
+            enemyHealth.applyDamage(24f); enemyAnim?.play("hit"); playerAnim?.play("attack"); attackAnimRemaining = 0.32f; rig.shake(4f, 0.12f)
         }
         abilityCooldown = 4.8f
     }
