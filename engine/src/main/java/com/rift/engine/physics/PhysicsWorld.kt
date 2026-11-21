@@ -35,11 +35,12 @@ sealed interface CollisionShape {
 /** Collision category and mask filtering. Bits 0..30 are available. */
 data class CollisionFilter(
     val categoryBits: Int = 1,
-    val maskBits: Int = -1,
+    val maskBits: Int = Int.MAX_VALUE,
     val groupIndex: Int = 0
 ) {
     init {
-        require(categoryBits != 0) { "categoryBits must contain at least one bit." }
+        require(categoryBits > 0) { "categoryBits must use one or more of bits 0..30." }
+        require(maskBits >= 0) { "maskBits must use only bits 0..30." }
     }
 
     fun allows(other: CollisionFilter): Boolean {
@@ -288,7 +289,7 @@ class PhysicsWorld(
         filter: CollisionFilter? = null
     ): List<PhysicsBody> {
         return bodies.filter { body ->
-            body.enabled &&
+            body.enabled && body.gameObject.active &&
                 (filter == null || filter.allows(body.collisionFilter)) &&
                 Collision.intersects(area, bodyBounds(body))
         }
@@ -311,7 +312,9 @@ class PhysicsWorld(
         var closest: RaycastHit? = null
 
         bodies.forEach { body ->
-            if (!body.enabled || (filter != null && !filter.allows(body.collisionFilter))) {
+            if (!body.enabled || !body.gameObject.active ||
+                (filter != null && !filter.allows(body.collisionFilter))
+            ) {
                 return@forEach
             }
             val hit = when (val shape = body.shape) {
