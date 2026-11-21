@@ -2,7 +2,16 @@
 
 **Rift Engine** is an experimental, modular 2D game engine for Android, written in Kotlin.
 
-It is an independent engine. Games made with it will live in separate projects.
+It is an independent, **AI-first** engine. Games made with it live in separate projects. The main design goal is a small, explicit API that both people and AI coding agents can understand and modify safely.
+
+## AI contributors
+
+Before changing code, read:
+
+- [AGENTS.md](AGENTS.md) — short mandatory instructions for AI agents.
+- [AI_RULES.md](AI_RULES.md) — full architecture, coding, change and testing rules.
+
+Keep changes small. Inspect callers before editing. Do not rewrite unrelated systems. Update docs with API changes and report only builds/tests that actually ran.
 
 ## Current foundation (0.1.0)
 
