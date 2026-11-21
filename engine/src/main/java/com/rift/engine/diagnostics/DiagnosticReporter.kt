@@ -22,13 +22,15 @@ data class DiagnosticEntry(
  * Thread-safe, bounded diagnostic history shared by engine systems.
  *
  * Reports are evidence, not automatic fixes. Exact duplicate reports are
- * coalesced so a recurring failure cannot flood the history.
+ * coalesced so a recurring failure cannot flood the history. FATAL state is
+ * sticky and independent of the bounded history until clear() is called.
  */
 class DiagnosticReporter(
     private val maxEntries: Int = 100
 ) {
     private val lock = Any()
     private val entries = mutableListOf<DiagnosticEntry>()
+    private var fatalErrorReported = false
 
     init {
         require(maxEntries > 0) { "maxEntries must be greater than zero." }
@@ -43,6 +45,10 @@ class DiagnosticReporter(
         location: String? = null,
         suggestion: String? = null
     ): DiagnosticEntry = synchronized(lock) {
+        if (severity == DiagnosticSeverity.FATAL) {
+            fatalErrorReported = true
+        }
+
         val duplicate = entries.lastOrNull {
             it.severity == severity &&
                 it.code == code &&
@@ -112,12 +118,13 @@ class DiagnosticReporter(
     }
 
     fun hasFatalErrors(): Boolean = synchronized(lock) {
-        entries.any { it.severity == DiagnosticSeverity.FATAL }
+        fatalErrorReported
     }
 
     fun clear() {
         synchronized(lock) {
             entries.clear()
+            fatalErrorReported = false
         }
     }
 }
