@@ -10,4 +10,4 @@ Validate the manifest from the repository root:
 gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
 ```
 
-The validator checks manifest metadata and declared module relationships. It does not compile the sample source or prove that the game runs on Android or Windows.
+The validator checks manifest metadata, source-file presence, declared module relationships, and asset-root directories. It does not compile the sample source or prove that the game runs on Android or Windows.
