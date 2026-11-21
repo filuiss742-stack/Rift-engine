@@ -13,7 +13,10 @@ object ManifestValidator {
     private val moduleIdPattern = Regex("^[a-z][a-z0-9._-]{0,127}$")
     private val classNamePattern = Regex("^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
-    fun validate(manifest: RiftProjectManifest): List<ManifestIssue> {
+    fun validate(
+        manifest: RiftProjectManifest,
+        projectRoot: File? = null
+    ): List<ManifestIssue> {
         val issues = mutableListOf<ManifestIssue>()
 
         fun error(code: String, path: String, message: String) {
@@ -22,6 +25,16 @@ object ManifestValidator {
 
         fun warning(code: String, path: String, message: String) {
             issues += ManifestIssue(ManifestSeverity.WARNING, code, path, message)
+        }
+
+        if (manifest.modules.size > 256) {
+            error("RIFT_MODULE_LIMIT_EXCEEDED", "modules", "A project may declare at most 256 modules.")
+        }
+        if (manifest.scenes.size > 512) {
+            error("RIFT_SCENE_LIMIT_EXCEEDED", "scenes", "A project may declare at most 512 scenes.")
+        }
+        if (manifest.assetRoots.size > 64) {
+            error("RIFT_ASSET_ROOT_LIMIT_EXCEEDED", "assetRoots", "A project may declare at most 64 asset roots.")
         }
 
         if (manifest.formatVersion != 1) {
@@ -68,6 +81,12 @@ object ManifestValidator {
                 "entrypoint",
                 "Entrypoint must be a fully qualified Kotlin class name."
             )
+        } else if (projectRoot != null && !sourceExists(projectRoot, manifest.entrypoint)) {
+            error(
+                "RIFT_ENTRYPOINT_SOURCE_MISSING",
+                "entrypoint",
+                "No Kotlin/Java source file was found for entrypoint '" + manifest.entrypoint + "'."
+            )
         }
 
         if (manifest.scenes.isEmpty()) {
@@ -86,6 +105,12 @@ object ManifestValidator {
                     "RIFT_SCENE_ENTRYPOINT_INVALID",
                     "scenes[" + index + "].entrypoint",
                     "Scene entrypoint must be a fully qualified Kotlin class name."
+                )
+            } else if (projectRoot != null && !sourceExists(projectRoot, scene.entrypoint)) {
+                error(
+                    "RIFT_SCENE_SOURCE_MISSING",
+                    "scenes[" + index + "].entrypoint",
+                    "No Kotlin/Java source file was found for scene '" + scene.entrypoint + "'."
                 )
             }
         }
@@ -187,17 +212,33 @@ object ManifestValidator {
         manifest.assetRoots.forEachIndexed { index, root ->
             val normalized = root.replace('\\', '/')
             val segments = normalized.split('/')
-            if (root.isBlank() ||
-                normalized.startsWith("/") ||
-                Regex("^[A-Za-z]:").containsMatchIn(normalized) ||
-                segments.any { it == ".." } ||
-                segments.any { it.isBlank() }
-            ) {
+            val safe = root.isNotBlank() &&
+                !normalized.startsWith("/") &&
+                !Regex("^[A-Za-z]:").containsMatchIn(normalized) &&
+                segments.none { it == ".." || it.isBlank() }
+            if (!safe) {
                 error(
                     "RIFT_ASSET_ROOT_UNSAFE",
                     "assetRoots[" + index + "]",
                     "Asset root must be a non-empty relative path and must not traverse outside the project."
                 )
+            } else if (projectRoot != null) {
+                val canonicalProject = projectRoot.canonicalFile
+                val candidate = File(canonicalProject, normalized).canonicalFile
+                val rootPrefix = canonicalProject.path + File.separator
+                if (!(candidate.path.startsWith(rootPrefix) || candidate == canonicalProject)) {
+                    error(
+                        "RIFT_ASSET_ROOT_UNSAFE",
+                        "assetRoots[" + index + "]",
+                        "Asset root resolves outside the project directory."
+                    )
+                } else if (!candidate.isDirectory) {
+                    error(
+                        "RIFT_ASSET_ROOT_MISSING",
+                        "assetRoots[" + index + "]",
+                        "Asset root directory does not exist: " + normalized + "."
+                    )
+                }
             }
         }
         duplicateValues(manifest.assetRoots).forEach { root ->
@@ -205,6 +246,20 @@ object ManifestValidator {
         }
 
         return issues
+    }
+
+    private fun sourceExists(projectRoot: File, className: String): Boolean {
+        val relativeSource = className.replace('.', File.separatorChar) + ".kt"
+        val javaSource = className.replace('.', File.separatorChar) + ".java"
+        val canonicalRoot = projectRoot.canonicalFile
+        val rootPrefix = canonicalRoot.path + File.separator
+        return listOf(
+            File(canonicalRoot, "src/main/kotlin" + File.separator + relativeSource),
+            File(canonicalRoot, "src/main/java" + File.separator + javaSource)
+        ).any { source ->
+            val canonicalSource = source.canonicalFile
+            canonicalSource.path.startsWith(rootPrefix) && canonicalSource.isFile
+        }
     }
 
     private fun duplicateValues(values: List<String>): Set<String> {
