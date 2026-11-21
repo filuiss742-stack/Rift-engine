@@ -1,13 +1,12 @@
 # Handle Input
 
-Rift routes physical key events from the platform host to the active scene. A scene can bind those keys to named gameplay actions, so game logic does not need to depend on specific physical keys.
+Rift routes keyboard, pointer, touch, and analog-axis events through the active scene's `InputActionMap`. Bind device-independent named actions so game logic does not depend on physical key names.
 
-## Bind named actions
-
-Bind one or more keys to an action, usually when the scene is created:
+## Bind keyboard and pointer actions
 
 ```kotlin
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerButtons
 
 init {
     input.bindKey("move.left", EngineKey.A)
@@ -15,58 +14,62 @@ init {
     input.bindKey("move.right", EngineKey.D)
     input.bindKey("move.right", EngineKey.RIGHT)
     input.bindKey("jump", EngineKey.SPACE)
-}
-```
-
-Use the action state during update:
-
-```kotlin
-override fun update(deltaSeconds: Float) {
-    val horizontal = when {
-        input.isDown("move.left") -> -1f
-        input.isDown("move.right") -> 1f
-        else -> 0f
-    }
-
-    if (input.wasPressed("jump")) {
-        // Start one jump; do not trigger this every frame.
-    }
+    input.bindPointerButton("attack", PointerButtons.PRIMARY)
 }
 ```
 
 Available queries:
-- isDown(action): at least one bound keyboard key or pointer button is held.
-- wasPressed(action): a bound key began the action during this update frame.
-- wasReleased(action): the last held key for the action was released during this update frame.
+- `isDown(action)`: at least one bound key, pointer button, or analog axis is active.
+- `wasPressed(action)`: an action crossed from inactive to active during this frame.
+- `wasReleased(action)`: an action crossed from active to inactive during this frame.
+- `axisValue(action)`: combined normalized analog value in the range -1..1.
 
-The runtime clears one-frame pressed/released edges after the scene update. Held state persists. If a key remains held during a scene transition, the new scene receives the held-key state after its onEnter callback.
+One-frame edges are cleared after the scene update. Held state persists. If a key remains held during a scene transition, the new scene receives its held state without a synthetic just-pressed event.
 
-## Raw key events
+## Analog axes and gamepads
 
-For low-level cases, a scene can still override onKey:
+Bind analog axes to actions:
 
 ```kotlin
-override fun onKey(keyCode: Int, pressed: Boolean) {
-    // Handle a device-independent EngineKey directly.
+input.bindAxis(
+    actionId = "move.horizontal",
+    axisId = "gamepad.left.x",
+    deadZone = 0.18f
+)
+input.bindAxis(
+    actionId = "move.vertical",
+    axisId = "gamepad.left.y",
+    deadZone = 0.18f
+)
+
+override fun update(deltaSeconds: Float) {
+    player.movementInput = MovementInput(
+        horizontal = input.axisValue("move.horizontal"),
+        vertical = input.axisValue("move.vertical")
+    )
+    super.update(deltaSeconds)
 }
 ```
 
-The current EngineKey set includes WASD, arrow keys, Space, Enter, Escape, Tab, E, Q, F, R, Shift, Ctrl, and Alt. Android hardware keyboards and Windows keyboard input are forwarded by their platform adapters.
+The Android host forwards common joystick axes under these IDs:
+- `gamepad.left.x`, `gamepad.left.y`
+- `gamepad.right.x`, `gamepad.right.y`
+- `gamepad.left.trigger`, `gamepad.right.trigger`
+- `gamepad.dpad.x`, `gamepad.dpad.y`
 
-## Pointer and touch input
+Android gamepad buttons map common A/B/X/Y, shoulder, Start, and Select controls to the device-independent EngineKey set. The Windows host does not currently include native XInput/DirectInput enumeration; an external Windows controller adapter can feed `GameEngine.onAxis(axisId, value)` and `GameEngine.onKey(code, pressed)`. Steam Input keyboard emulation also works through the normal key bindings.
 
-Mouse buttons and touch contacts can also drive named actions:
+Axis values are clamped to -1..1. A configurable dead zone is removed and the remaining range is normalized. Multiple bindings for one action are summed and clamped.
+
+## Virtual touch controls
+
+Use `VirtualJoystick` and `VirtualButton` from the UI package for Android touch controls. See the [virtual controls guide](virtual-controls.md) for complete examples.
+
+## Pointer events
+
+`PointerEvent` reports pointer ID, event type (DOWN/MOVE/UP/CANCEL), coordinates, and viewport size. Android forwards simultaneous touch pointers; desktop forwards mouse press, release, drag, and movement.
 
 ```kotlin
-import com.rift.engine.input.PointerButtons
-import com.rift.engine.input.PointerEvent
-import com.rift.engine.input.PointerEventType
-
-init {
-    input.bindPointerButton("attack", PointerButtons.PRIMARY) // desktop mouse
-    input.bindPointerButton("touch", PointerButtons.TOUCH)    // Android touch
-}
-
 override fun onPointer(event: PointerEvent) {
     if (event.type == PointerEventType.DOWN && input.wasPressed("attack")) {
         val worldX = camera.screenToWorldX(event.x)
@@ -76,14 +79,10 @@ override fun onPointer(event: PointerEvent) {
 }
 ```
 
-`PointerEvent` reports pointer ID, event type (DOWN/MOVE/UP/CANCEL), coordinates, and viewport size. Android forwards simultaneous touch pointers; desktop forwards mouse press, release, drag, and movement. `input.pointerX/Y` and `pointerDeltaX/Y` expose the most recent pointer position and movement. Focus loss clears held input so keys or buttons cannot remain stuck.
+`input.pointerX/Y` and `pointerDeltaX/Y` expose the most recent pointer position and movement. Focus loss clears held keys, pointer buttons, and analog axes so controls cannot remain stuck.
 
-The legacy `onTouch(x, y, width, height)` callback remains available and receives non-cancel pointer events. New projects should prefer `onPointer` when they need press/release semantics.
+## Coordinate system
 
-## Current limitations
-
-- Named action mapping supports keyboard and pointer buttons; gamepad bindings, saved remapping, and input-profile UI are not implemented.
-- Virtual joystick and virtual button widgets are not implemented yet.
-- Pointer coordinates are view/screen coordinates. Use Camera.screenToWorldX/Y for the current top-left anchored camera; automatic viewport scaling and rotated-camera conversion are not implemented.
+Pointer coordinates are transformed by the same FIT logical viewport used for rendering. Use the game viewport coordinate system for UI. Use `Camera.screenToWorldX/Y` to convert screen-space coordinates to world coordinates.
 
 See [the API map](../api-map.md), [movement guide](movement.md), and [0.5.0 release gates](../roadmap/0.5.0-release-gates.md).
