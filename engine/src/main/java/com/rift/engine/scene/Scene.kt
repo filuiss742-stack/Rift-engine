@@ -35,6 +35,9 @@ abstract class Scene {
     private var sceneTransitionRequester: ((Scene) -> Unit)? = null
 
     protected val objects = mutableListOf<GameObject>()
+    private val renderOrder = mutableListOf<GameObject>()
+    private var renderOrderDirty = true
+    private val markRenderOrderDirty: () -> Unit = { renderOrderDirty = true }
     private val pendingAdds = mutableListOf<GameObject>()
     private val pendingRemovals = mutableSetOf<GameObject>()
     private val quarantinedObjects = java.util.Collections.newSetFromMap(
@@ -50,7 +53,12 @@ abstract class Scene {
         if (pendingRemovals.remove(gameObject)) return
         quarantinedObjects.remove(gameObject)
         gameObject.diagnostics = diagnostics
-        if (traversingObjects) pendingAdds.add(gameObject) else objects.add(gameObject)
+        if (traversingObjects) {
+            pendingAdds.add(gameObject)
+        } else {
+            objects.add(gameObject)
+            attachRenderLayerListener(gameObject)
+        }
     }
 
     protected fun remove(gameObject: GameObject) {
@@ -65,6 +73,7 @@ abstract class Scene {
         if (traversingObjects) {
             if (objects.any { it === gameObject }) pendingRemovals.add(gameObject)
         } else if (objects.removeAll { it === gameObject }) {
+            detachRenderLayerListener(gameObject)
             physics.removeBody(gameObject)
             combat.removeOwner(gameObject)
             quarantinedObjects.remove(gameObject)
@@ -153,9 +162,11 @@ abstract class Scene {
         physics.clear()
         combat.clear()
         ownedObjects.forEach { gameObject ->
+            detachRenderLayerListener(gameObject)
             gameObject.disposeComponents(reporter)
             gameObject.diagnostics = null
         }
+        renderOrder.clear()
         sceneTransitionRequester = null
         assets = null
         audio = null
@@ -212,7 +223,12 @@ abstract class Scene {
     open fun render(context: RenderContext) {
         camera.withTransform(context) {
             applyPendingMutations()
-            val renderOrder = objects.sortedBy { it.renderLayer }
+            if (renderOrderDirty) {
+                renderOrder.clear()
+                renderOrder.addAll(objects)
+                renderOrder.sortBy { it.renderLayer }
+                renderOrderDirty = false
+            }
             traversingObjects = true
             try {
                 var index = 0
@@ -253,6 +269,16 @@ abstract class Scene {
     open fun onKey(keyCode: Int, pressed: Boolean) = Unit
     open fun onAxis(axisId: String, value: Float) = Unit
 
+    private fun attachRenderLayerListener(gameObject: GameObject) {
+        gameObject.addRenderLayerListener(markRenderOrderDirty)
+        renderOrderDirty = true
+    }
+
+    private fun detachRenderLayerListener(gameObject: GameObject) {
+        gameObject.removeRenderLayerListener(markRenderOrderDirty)
+        renderOrderDirty = true
+    }
+
     private fun reportSceneFailure(subsystem: String, exception: Exception) {
         val reporter = diagnostics
         if (reporter == null) throw exception
@@ -264,7 +290,9 @@ abstract class Scene {
             val removals = pendingRemovals.toList()
             pendingRemovals.clear()
             removals.forEach { gameObject ->
-                objects.removeAll { it === gameObject }
+                if (objects.removeAll { it === gameObject }) {
+                    detachRenderLayerListener(gameObject)
+                }
                 physics.removeBody(gameObject)
                 combat.removeOwner(gameObject)
                 quarantinedObjects.remove(gameObject)
@@ -280,6 +308,7 @@ abstract class Scene {
                     quarantinedObjects.remove(gameObject)
                     gameObject.diagnostics = diagnostics
                     objects.add(gameObject)
+                    attachRenderLayerListener(gameObject)
                 }
             }
         }
