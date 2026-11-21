@@ -3,7 +3,8 @@ package com.rift.engine.diagnostics
 enum class DiagnosticSeverity {
     INFO,
     WARNING,
-    ERROR
+    ERROR,
+    FATAL
 }
 
 data class DiagnosticEntry(
@@ -17,10 +18,10 @@ data class DiagnosticEntry(
 )
 
 /**
- * Small thread-safe diagnostic store shared by engine systems.
+ * Thread-safe, bounded diagnostic history shared by engine systems.
  *
- * It keeps recent events, removes exact duplicate reports, and never attempts
- * to modify user code automatically.
+ * Reports are evidence, not automatic fixes. Exact duplicate reports are
+ * coalesced so a recurring failure cannot flood the history.
  */
 class DiagnosticReporter(
     private val maxEntries: Int = 100
@@ -46,7 +47,9 @@ class DiagnosticReporter(
                 it.subsystem == subsystem &&
                 it.message == message
         }
-        if (duplicate != null) return@synchronized duplicate
+        if (duplicate != null) {
+            return@synchronized duplicate
+        }
 
         val entry = DiagnosticEntry(
             severity = severity,
@@ -57,17 +60,23 @@ class DiagnosticReporter(
             location = location
         )
         entries += entry
+
         while (entries.size > maxEntries) {
             entries.removeAt(0)
         }
+
         entry
     }
 
-    fun reportException(subsystem: String, exception: Exception): DiagnosticEntry {
+    fun reportException(
+        subsystem: String,
+        exception: Exception
+    ): DiagnosticEntry {
         val frame = exception.stackTrace.firstOrNull()
         val location = frame?.let {
             "${it.className}.${it.methodName} (${it.fileName ?: "unknown"}:${it.lineNumber})"
         }
+
         return report(
             severity = DiagnosticSeverity.ERROR,
             code = "RIFT_RUNTIME_EXCEPTION",
@@ -83,10 +92,22 @@ class DiagnosticReporter(
     }
 
     fun latestError(): DiagnosticEntry? = synchronized(lock) {
-        entries.lastOrNull { it.severity == DiagnosticSeverity.ERROR }
+        entries.lastOrNull {
+            it.severity == DiagnosticSeverity.ERROR ||
+                it.severity == DiagnosticSeverity.FATAL
+        }
     }
 
-    fun hasErrors(): Boolean = latestError() != null
+    fun hasErrors(): Boolean = synchronized(lock) {
+        entries.any {
+            it.severity == DiagnosticSeverity.ERROR ||
+                it.severity == DiagnosticSeverity.FATAL
+        }
+    }
+
+    fun hasFatalErrors(): Boolean = synchronized(lock) {
+        entries.any { it.severity == DiagnosticSeverity.FATAL }
+    }
 
     fun clear() {
         synchronized(lock) {
