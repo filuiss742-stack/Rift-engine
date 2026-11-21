@@ -345,7 +345,13 @@ class UiCanvas {
         element: UiElement,
         exception: Exception
     ) {
-        failedElements.add(element)
+        if (!failedElements.add(element)) return
+        pressedTargets.entries.removeAll { it.value === element }
+        try {
+            element.onRemoved()
+        } catch (cleanupException: Exception) {
+            exception.addSuppressed(cleanupException)
+        }
         val reporter = diagnostics
         if (reporter == null) throw exception
         reporter.reportException(
