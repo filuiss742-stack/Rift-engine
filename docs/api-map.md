@@ -85,4 +85,4 @@ StoryState currently contains boolean-like flags and integer values. Save/load s
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: pointer/gamepad action bindings, virtual touch controls, collision callbacks, continuous collision detection, arbitrary polygon/circle shapes, camera-follow smoothing/bounds, render layers, sprite/texture assets, animation, audio, UI widgets, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: gamepad action bindings, virtual touch controls, collision callbacks, continuous collision detection, arbitrary polygon/circle shapes, camera-follow smoothing/bounds, render layers, sprite/texture assets, animation, audio, UI widgets, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
