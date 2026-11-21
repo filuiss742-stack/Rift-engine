@@ -3,6 +3,7 @@ import android.content.Context
 import android.graphics.*
 import android.view.*
 import com.rift.engine.assets.AssetManager
+import com.rift.engine.audio.AudioManager
 import com.rift.engine.core.*
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.graphics.RenderContext
@@ -167,7 +168,8 @@ class AndroidSaveStore(context:Context):SaveStore {
 class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
  private val diagnostics=DiagnosticReporter()
  private val assets=AssetManager(AndroidTextureLoader(context),diagnostics)
- private val engine=GameEngine(AndroidSaveStore(context),diagnostics,assets)
+ private val audio=AudioManager(AndroidAudioLoader(context),diagnostics)
+ private val engine=GameEngine(AndroidSaveStore(context),diagnostics,assets,audio)
  private val clock=FixedStepAccumulator()
  @Volatile private var running=false;private var thread:Thread?=null
  init{holder.addCallback(this);isFocusable=true;isFocusableInTouchMode=true;engine.scenes.setInitialScene(game.createInitialScene());requestFocus()}
