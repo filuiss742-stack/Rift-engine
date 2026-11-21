@@ -100,6 +100,34 @@ class GameObjectComponentTest {
         assertTrue(owner.components().isEmpty())
     }
 
+
+    @Test
+    fun failingComponentIsQuarantinedAndHealthyComponentsContinue() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val owner = GameObject(0f, 0f, 10f, 10f)
+        owner.diagnostics = diagnostics
+        var failingUpdates = 0
+        var healthyUpdates = 0
+        owner.addComponent(object : GameComponent {
+            override fun update(owner: GameObject, deltaSeconds: Float) {
+                failingUpdates += 1
+                error("broken component")
+            }
+        })
+        owner.addComponent(object : GameComponent {
+            override fun update(owner: GameObject, deltaSeconds: Float) {
+                healthyUpdates += 1
+            }
+        })
+
+        owner.update(1f / 60f)
+        owner.update(1f / 60f)
+
+        assertEquals(1, failingUpdates)
+        assertEquals(2, healthyUpdates)
+        assertEquals("RIFT_RUNTIME_EXCEPTION", diagnostics.latestError()?.code)
+    }
+
     @Test
     fun readdingComponentCancelsPendingRemoval() {
         val owner = GameObject(0f, 0f, 10f, 10f)
