@@ -96,6 +96,11 @@ class GameEngine(
         }
     }
 
+    /** Releases platform-owned assets when the host permanently shuts down. */
+    fun close() {
+        assets.close()
+    }
+
     fun render(context: RenderContext) {
         if (diagnostics.hasFatalErrors()) {
             DiagnosticsOverlay.render(context, diagnostics.snapshot())
