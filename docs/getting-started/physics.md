@@ -19,7 +19,7 @@ physics.addBody(floor, PhysicsBodyType.STATIC)
 
 Dynamic bodies receive world gravity and integrate velocity. Static bodies never move. Kinematic bodies move using their assigned velocity but are not accelerated by gravity. A registered body is integrated by PhysicsWorld rather than GameObject.update.
 
-## Sensors and filtering
+## Collision shapes\n\nBodies use AABB boxes by default. A body can instead use a circle shape with an optional local offset:\n\n```kotlin\nimport com.rift.engine.physics.CollisionShape\n\nphysics.addBody(\n    ball,\n    shape = CollisionShape.Circle(radius = 16f)\n)\n```\n\nCircle radius follows the largest absolute GameObject scale. Circle/box and circle/circle contacts are supported; rotated boxes still use enclosing AABBs.\n\n## Sensors and filtering
 
 ```kotlin
 import com.rift.engine.physics.CollisionFilter
@@ -66,11 +66,11 @@ A raycast returns the nearest hit, including the hit body, point, surface normal
 
 ## Current physics scope and limitations
 
-- Collision shapes are axis-aligned bounding boxes derived from GameObject bounds.
+- Box collision shapes use axis-aligned bounds derived from GameObject bounds. Circle shapes support circle/box and circle/circle overlap and response.
 - Broad phase currently uses a stable O(n²) pair scan; it is intended for small/medium scenes, not huge crowds.
 - The solver performs basic positional separation and removes velocity into the contact normal. It does not yet model friction, restitution, angular velocity, joints, or full rigid-body impulses.
 - Substeps reduce tunneling for ordinary movement, but this is not continuous collision detection; very fast bodies can still pass through thin geometry.
-- Rotated objects use their enclosing axis-aligned bounds, not exact polygon collision.
+- Rotated box objects use their enclosing axis-aligned bounds, not exact polygon collision. Circle offsets follow the object's transform.
 - Contacts are polled after each step; begin/stay/end events and collision callbacks are not implemented yet.
 - For a PlatformerMovementProfile that already applies gravity, set the PhysicsBody gravityScale to 0 to avoid applying gravity twice. The world still resolves contacts and updates grounded state.
 
