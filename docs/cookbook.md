@@ -85,3 +85,32 @@ override fun render(context: RenderContext) {
 ```
 
 The concrete renderer is provided by the platform host. See [the API map](api-map.md).
+
+
+## Branch a conversation with consequences
+
+```kotlin
+val graph = DialogueGraph(listOf(
+    DialogueNode("start", "Mira", "Will you help me?", choices = listOf(
+        DialogueChoice(
+            id = "yes",
+            text = "Of course",
+            targetNodeId = "thanks",
+            effects = listOf(
+                SetStoryFlag("mira_helped"),
+                AddStoryValue("mira_trust", 1)
+            )
+        ),
+        DialogueChoice("no", "Not now", "later")
+    )),
+    DialogueNode("thanks", "Mira", "I will remember this."),
+    DialogueNode("later", "Mira", "Maybe another time.")
+))
+val storyState = StoryState()
+val dialogue = DialogueSession(graph, storyState)
+dialogue.start("start")
+val choicesToShow = dialogue.availableChoices()
+dialogue.choose("yes")
+```
+
+The same StoryState can be read by later dialogue, quest, relationship, or ending logic. See [Branching Dialogue and Story Choices](getting-started/dialogue-and-choices.md).
