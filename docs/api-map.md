@@ -100,7 +100,7 @@ Current asset limitations: synchronous texture loading only; no font pipeline, c
 
 | API | Package | Purpose |
 |---|---|---|
-| EngineKey | com.rift.engine.input | Device-independent identifiers for common keyboard keys. |
+| EngineKey | com.rift.engine.input | Device-independent identifiers for letters, digits, navigation keys, modifiers, and F1–F12 on Android and desktop adapters. |
 | PointerEvent / PointerEventType / PointerButtons | com.rift.engine.input | Device-independent mouse/touch pointer lifecycle and button identifiers, including multi-touch pointer IDs. |
 | InputActionMap | com.rift.engine.input | Maps named actions to keyboard keys, pointer buttons, and normalized analog axes with dead zones; exposes held/pressed/released state and pointer position/delta. |
 
