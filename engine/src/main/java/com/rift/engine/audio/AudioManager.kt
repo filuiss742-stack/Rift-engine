@@ -60,6 +60,13 @@ class AudioManager(
     }
 
     @Synchronized
+    fun resumeMusic(): Boolean {
+        val id = currentMusicId ?: return false
+        val resource = music[id]?.resource ?: return false
+        return safePlayback("music.resume", id) { resource.resume() }
+    }
+
+    @Synchronized
     fun stopMusic(): Boolean {
         val id = currentMusicId ?: return false
         val resource = music[id]?.resource ?: return false
