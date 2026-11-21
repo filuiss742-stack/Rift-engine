@@ -28,6 +28,47 @@ class UiCanvasTest {
         }
     )
 
+
+    @Test
+    fun failingUiElementIsQuarantinedWithoutStoppingOtherElements() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val canvas = UiCanvas().apply { this.diagnostics = diagnostics }
+        var shouldFail = true
+        var failingUpdates = 0
+        var healthyUpdates = 0
+        val failing = object : UiElement(0f, 0f, 10f, 10f) {
+            override fun update(deltaSeconds: Float) {
+                failingUpdates += 1
+                if (shouldFail) error("broken UI element")
+            }
+            override fun render(context: com.rift.engine.graphics.RenderContext) = Unit
+        }
+        val healthy = object : UiElement(20f, 0f, 10f, 10f) {
+            override fun update(deltaSeconds: Float) {
+                healthyUpdates += 1
+            }
+            override fun render(context: com.rift.engine.graphics.RenderContext) = Unit
+        }
+        canvas.add(failing)
+        canvas.add(healthy)
+
+        canvas.update(1f / 60f)
+        canvas.update(1f / 60f)
+
+        assertEquals(1, failingUpdates)
+        assertEquals(2, healthyUpdates)
+        assertTrue(canvas.isElementQuarantined(failing))
+        assertEquals("RIFT_RUNTIME_EXCEPTION", diagnostics.latestError()?.code)
+
+        shouldFail = false
+        assertTrue(canvas.retryElement(failing))
+        canvas.update(1f / 60f)
+
+        assertEquals(2, failingUpdates)
+        assertEquals(3, healthyUpdates)
+        assertFalse(canvas.isElementQuarantined(failing))
+    }
+
     @Test
     fun buttonFiresOnlyAfterPressAndReleaseInside() {
         val canvas = UiCanvas()
