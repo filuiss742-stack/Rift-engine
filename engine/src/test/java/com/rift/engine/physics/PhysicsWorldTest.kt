@@ -24,6 +24,42 @@ class PhysicsWorldTest {
         assertEquals(1, world.contacts().size)
     }
 
+
+    @Test
+    fun highSpeedDynamicBodyDoesNotPassThroughThinStaticWallWithinSubstepBudget() {
+        val world = PhysicsWorld(gravityY = 0f, maxSubstepDistance = 12f, maxSubsteps = 16)
+        val runner = GameObject(0f, 20f, 10f, 10f).apply { velocityX = 1000f }
+        val wall = GameObject(100f, 0f, 8f, 80f)
+        world.addBody(runner, gravityScale = 0f)
+        world.addBody(wall, PhysicsBodyType.STATIC)
+
+        world.step(0.1f)
+
+        assertTrue(runner.x + runner.width <= wall.x + 0.001f)
+        assertEquals(0f, runner.velocityX, 0.001f)
+        assertTrue(world.contacts().isNotEmpty())
+    }
+
+    @Test
+    fun stackedDynamicBodiesSettleOnStaticGround() {
+        val world = PhysicsWorld(gravityY = 980f)
+        val lower = GameObject(20f, 80f, 20f, 10f)
+        val upper = GameObject(20f, 70f, 20f, 10f)
+        val ground = GameObject(0f, 100f, 100f, 20f)
+        world.addBody(lower)
+        world.addBody(upper)
+        world.addBody(ground, PhysicsBodyType.STATIC)
+
+        world.step(0.5f)
+
+        assertEquals(90f, lower.y, 0.05f)
+        assertEquals(80f, upper.y, 0.05f)
+        assertEquals(0f, lower.velocityY, 0.05f)
+        assertEquals(0f, upper.velocityY, 0.05f)
+        assertTrue(lower.isGrounded)
+        assertTrue(upper.isGrounded)
+    }
+
     @Test
     fun sensorReportsOverlapWithoutResolvingIt() {
         val world = PhysicsWorld(gravityY = 0f)
