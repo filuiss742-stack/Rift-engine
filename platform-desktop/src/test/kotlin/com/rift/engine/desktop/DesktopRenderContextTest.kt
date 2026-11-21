@@ -89,6 +89,53 @@ class DesktopRenderContextTest {
         }
     }
 
+
+    @Test
+    fun drawsTextureAndSourceRegionAtLogicalCoordinates() {
+        val source = BufferedImage(4, 2, BufferedImage.TYPE_INT_ARGB)
+        for (x in 0 until 2) {
+            for (y in 0 until 2) source.setRGB(x, y, 0xFFFF0000.toInt())
+        }
+        for (x in 2 until 4) {
+            for (y in 0 until 2) source.setRGB(x, y, 0xFF00FF00.toInt())
+        }
+        val texture = DesktopTexture(source)
+        val image = BufferedImage(20, 10, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val context = DesktopRenderContext(graphics, image.width, image.height)
+            context.drawTextureRegion(texture, 2, 0, 4, 2, 10f, 2f, 18f, 6f)
+
+            assertEquals(0xFF00FF00.toInt(), image.getRGB(11, 3))
+            assertEquals(0, image.getRGB(9, 3))
+            assertEquals(0, image.getRGB(18, 3))
+        } finally {
+            graphics.dispose()
+            texture.close()
+        }
+    }
+
+    @Test
+    fun textureDrawingHonorsAlpha() {
+        val source = BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB)
+        for (x in 0 until 2) {
+            for (y in 0 until 2) source.setRGB(x, y, 0xFFFF0000.toInt())
+        }
+        val texture = DesktopTexture(source)
+        val image = BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val context = DesktopRenderContext(graphics, image.width, image.height)
+            context.drawTexture(texture, 0f, 0f, 4f, 4f, 0.5f)
+
+            assertEquals(128, (image.getRGB(1, 1) ushr 24) and 0xFF)
+            assertEquals(0x00FF0000, image.getRGB(1, 1) and 0x00FFFFFF)
+        } finally {
+            graphics.dispose()
+            texture.close()
+        }
+    }
+
     @Test(expected = IllegalStateException::class)
     fun popStateRejectsUnbalancedStack() {
         val image = BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
