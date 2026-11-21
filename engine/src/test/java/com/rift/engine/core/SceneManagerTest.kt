@@ -114,6 +114,59 @@ class SceneManagerTest {
     }
 
 
+
+    @Test
+    fun sceneUiConsumesButtonPointerBeforeGameplayCallback() {
+        val manager = SceneManager()
+        var clicks = 0
+        var gameplayPointerEvents = 0
+        val scene = object : Scene() {
+            init {
+                ui.add(
+                    com.rift.engine.ui.UiButton(
+                        10f,
+                        10f,
+                        80f,
+                        40f,
+                        "Open",
+                        { clicks += 1 }
+                    )
+                )
+            }
+
+            override fun onPointer(event: com.rift.engine.input.PointerEvent) {
+                gameplayPointerEvents += 1
+            }
+        }
+        manager.setInitialScene(scene)
+
+        manager.onPointer(
+            com.rift.engine.input.PointerEvent(
+                0,
+                com.rift.engine.input.PointerEventType.DOWN,
+                20f,
+                20f,
+                100f,
+                100f,
+                com.rift.engine.input.PointerButtons.TOUCH
+            )
+        )
+        manager.onPointer(
+            com.rift.engine.input.PointerEvent(
+                0,
+                com.rift.engine.input.PointerEventType.UP,
+                20f,
+                20f,
+                100f,
+                100f,
+                com.rift.engine.input.PointerButtons.TOUCH
+            )
+        )
+
+        assertEquals(1, clicks)
+        assertEquals(0, gameplayPointerEvents)
+    }
+
     @Test
     fun gameStateIsSharedAcrossSceneTransitions() {
         val manager = SceneManager()
