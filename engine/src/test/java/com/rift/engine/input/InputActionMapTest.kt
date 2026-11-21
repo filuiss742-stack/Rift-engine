@@ -26,6 +26,23 @@ class InputActionMapTest {
     }
 
     @Test
+    fun quickTapBetweenFramesPreservesBothPressAndReleaseEdges() {
+        val input = InputActionMap()
+        input.bindKey("attack", 7)
+
+        input.onKey(7, true)
+        input.onKey(7, false)
+
+        assertFalse(input.isDown("attack"))
+        assertTrue(input.wasPressed("attack"))
+        assertTrue(input.wasReleased("attack"))
+
+        input.endFrame()
+        assertFalse(input.wasPressed("attack"))
+        assertFalse(input.wasReleased("attack"))
+    }
+
+    @Test
     fun multipleKeysCanBindToOneActionWithoutFalseRelease() {
         val input = InputActionMap()
         input.bindKey("move.left", 1)
