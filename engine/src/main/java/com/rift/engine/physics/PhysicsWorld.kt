@@ -203,6 +203,7 @@ class PhysicsWorld(
         )
         bodies.add(body)
         gameObject.physicsControlled = true
+        gameObject.movementBody.isPhysicsControlled = true
         if (type != PhysicsBodyType.DYNAMIC) {
             gameObject.velocityX = 0f
             gameObject.velocityY = 0f
@@ -213,7 +214,10 @@ class PhysicsWorld(
     fun removeBody(gameObject: GameObject): Boolean {
         val index = bodies.indexOfFirst { it.gameObject === gameObject }
         if (index < 0) return false
-        bodies.removeAt(index).gameObject.physicsControlled = false
+        bodies.removeAt(index).gameObject.apply {
+            physicsControlled = false
+            movementBody.isPhysicsControlled = false
+        }
         currentContacts = currentContacts.filterNot {
             it.bodyA.gameObject === gameObject || it.bodyB.gameObject === gameObject
         }
@@ -222,7 +226,10 @@ class PhysicsWorld(
 
     /** Removes every body and resets contact state when the owning scene is disposed. */
     fun clear() {
-        bodies.forEach { it.gameObject.physicsControlled = false }
+        bodies.forEach { body ->
+            body.gameObject.physicsControlled = false
+            body.gameObject.movementBody.isPhysicsControlled = false
+        }
         bodies.clear()
         currentContacts = emptyList()
         previousContactPairs.clear()
