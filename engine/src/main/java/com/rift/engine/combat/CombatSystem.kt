@@ -111,6 +111,12 @@ class CombatWorld(
             .also(hitboxes::add)
     }
 
+    fun addHurtbox(owner: GameObject, teamId: String): CombatHurtbox {
+        val health = owner.component<HealthComponent>()
+            ?: throw IllegalArgumentException("GameObject must have a HealthComponent before registering a hurtbox.")
+        return addHurtbox(owner, health, teamId)
+    }
+
     fun addHurtbox(
         owner: GameObject,
         health: HealthComponent,
