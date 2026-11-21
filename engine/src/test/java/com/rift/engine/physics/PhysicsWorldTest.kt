@@ -3,7 +3,6 @@ package com.rift.engine.physics
 import com.rift.engine.entity.GameObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -122,7 +121,7 @@ class PhysicsWorldTest {
     @Test
     fun staticBodyHasNoGravityAndDynamicGroundStateCanClear() {
         val world = PhysicsWorld(gravityY = 0f)
-        val dynamic = GameObject(0f, 0f, 10f, 10f)
+        val dynamic = GameObject(0f, 1f, 10f, 10f)
         val ground = GameObject(0f, 10f, 10f, 10f)
         world.addBody(dynamic, gravityScale = 0f)
         world.addBody(ground, PhysicsBodyType.STATIC)
