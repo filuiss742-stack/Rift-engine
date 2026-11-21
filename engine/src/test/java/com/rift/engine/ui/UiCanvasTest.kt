@@ -1,5 +1,6 @@
 package com.rift.engine.ui
 
+import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerButtons
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
@@ -67,6 +68,62 @@ class UiCanvasTest {
         assertEquals(2, failingUpdates)
         assertEquals(3, healthyUpdates)
         assertFalse(canvas.isElementQuarantined(failing))
+    }
+
+
+    @Test
+    fun panelVerticalLayoutPositionsChildrenInLocalCoordinates() {
+        val panel = UiPanel(100f, 50f, 200f, 140f).apply {
+            layout = UiLayout.VERTICAL
+            padding = 10f
+            gap = 5f
+        }
+        val first = UiButton(0f, 0f, 60f, 20f, "First", {})
+        val second = UiLabel(0f, 0f, 80f, 15f, "Second")
+        panel.add(first)
+        panel.add(second)
+
+        assertEquals(10f, first.x, 0.001f)
+        assertEquals(10f, first.y, 0.001f)
+        assertEquals(10f, second.x, 0.001f)
+        assertEquals(35f, second.y, 0.001f)
+    }
+
+    @Test
+    fun nestedPanelRoutesPointerToLocalChildCoordinates() {
+        val canvas = UiCanvas()
+        var clicks = 0
+        val panel = UiPanel(100f, 100f, 120f, 80f)
+        panel.add(UiButton(10f, 10f, 60f, 30f, "Nested", { clicks += 1 }))
+        canvas.add(panel)
+
+        assertTrue(canvas.dispatchPointer(event(PointerEventType.DOWN, x = 115f, y = 115f)))
+        assertTrue(canvas.dispatchPointer(event(PointerEventType.UP, x = 115f, y = 115f)))
+        assertEquals(1, clicks)
+    }
+
+    @Test
+    fun tabCyclesFocusAndEnterActivatesFocusedButton() {
+        val canvas = UiCanvas()
+        var firstClicks = 0
+        var secondClicks = 0
+        val first = UiButton(0f, 0f, 60f, 30f, "First", { firstClicks += 1 })
+        val second = UiButton(0f, 40f, 60f, 30f, "Second", { secondClicks += 1 })
+        canvas.add(first)
+        canvas.add(second)
+
+        assertTrue(canvas.dispatchKey(EngineKey.TAB, true))
+        assertTrue(first.isFocused)
+        canvas.dispatchKey(EngineKey.TAB, false)
+        assertTrue(canvas.dispatchKey(EngineKey.ENTER, true))
+        canvas.dispatchKey(EngineKey.ENTER, false)
+        assertEquals(1, firstClicks)
+
+        assertTrue(canvas.dispatchKey(EngineKey.TAB, true))
+        assertTrue(second.isFocused)
+        canvas.dispatchKey(EngineKey.TAB, false)
+        canvas.dispatchKey(EngineKey.ENTER, true)
+        assertEquals(1, secondClicks)
     }
 
     @Test
