@@ -1,4 +1,7 @@
-plugins { id("org.jetbrains.kotlin.jvm") }
+plugins { id("org.jetbrains.kotlin.jvm") version "2.0.21" }
+
+group = "com.rift.engine"
+version = "0.5.0-SNAPSHOT"
 kotlin {
  jvmToolchain(17)
  sourceSets { main { kotlin.srcDir("src/main/java") }; test { kotlin.srcDir("src/test/java") } }
