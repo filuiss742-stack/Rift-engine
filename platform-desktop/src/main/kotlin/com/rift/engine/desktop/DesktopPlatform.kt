@@ -340,6 +340,17 @@ class DesktopGameWindow(
             KeyEvent.VK_RIGHT -> EngineKey.RIGHT
             KeyEvent.VK_UP -> EngineKey.UP
             KeyEvent.VK_DOWN -> EngineKey.DOWN
+            KeyEvent.VK_SPACE -> EngineKey.SPACE
+            KeyEvent.VK_ENTER -> EngineKey.ENTER
+            KeyEvent.VK_ESCAPE -> EngineKey.ESCAPE
+            KeyEvent.VK_TAB -> EngineKey.TAB
+            KeyEvent.VK_E -> EngineKey.E
+            KeyEvent.VK_Q -> EngineKey.Q
+            KeyEvent.VK_F -> EngineKey.F
+            KeyEvent.VK_R -> EngineKey.R
+            KeyEvent.VK_SHIFT -> EngineKey.SHIFT
+            KeyEvent.VK_CONTROL -> EngineKey.CTRL
+            KeyEvent.VK_ALT -> EngineKey.ALT
             else -> null
         }
     }
