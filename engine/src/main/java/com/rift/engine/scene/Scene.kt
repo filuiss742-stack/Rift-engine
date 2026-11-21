@@ -4,6 +4,8 @@ import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.Camera
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.InputActionMap
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.physics.PhysicsWorld
 
 /**
@@ -89,6 +91,19 @@ abstract class Scene {
         width: Float,
         height: Float
     ) = Unit
+
+    open fun onPointer(event: PointerEvent) {
+        if (event.type != PointerEventType.CANCEL) {
+            onTouch(
+                event.x,
+                event.y,
+                event.viewportWidth,
+                event.viewportHeight
+            )
+        }
+    }
+
+    open fun onFocusLost() = Unit
 
     open fun onKey(
         keyCode: Int,
