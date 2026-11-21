@@ -8,6 +8,7 @@
     "version": "0.5.0-SNAPSHOT"
   },
   "targets": [
+    "android",
     "windows"
   ],
   "entrypoint": "com.example.game.TemplateGame",
