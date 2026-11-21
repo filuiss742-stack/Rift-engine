@@ -9,6 +9,7 @@ import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import com.rift.engine.physics.PhysicsWorld
 import com.rift.engine.state.GameState
+import com.rift.engine.ui.UiCanvas
 
 /**
  * A scene owns its game objects.
@@ -22,6 +23,7 @@ abstract class Scene {
     val input = InputActionMap()
     val camera = Camera()
     val physics = PhysicsWorld()
+    val ui = UiCanvas()
     var gameState: GameState = GameState()
         internal set
     var assets: AssetManager? = null
@@ -71,6 +73,13 @@ abstract class Scene {
         }
 
         physics.step(deltaSeconds)
+        ui.update(deltaSeconds)
+    }
+
+    internal fun dispatchPointer(event: PointerEvent) {
+        if (!ui.dispatchPointer(event)) {
+            onPointer(event)
+        }
     }
 
     open fun render(context: RenderContext) {
