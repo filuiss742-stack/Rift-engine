@@ -21,6 +21,10 @@ private sealed interface InputEvent {
         val code: Int,
         val pressed: Boolean
     ) : InputEvent
+
+    data class Pointer(val event: PointerEvent) : InputEvent
+
+    data object ResetInput : InputEvent
 }
 
 /**
@@ -51,6 +55,18 @@ class GameEngine(
         }
     }
 
+    fun onPointer(event: PointerEvent) {
+        if (!diagnostics.hasFatalErrors()) {
+            inputs.offer(InputEvent.Pointer(event))
+        }
+    }
+
+    fun onFocusLost() {
+        if (!diagnostics.hasFatalErrors()) {
+            inputs.offer(InputEvent.ResetInput)
+        }
+    }
+
     fun update(deltaSeconds: Float) {
         if (diagnostics.hasFatalErrors()) {
             return
@@ -67,6 +83,8 @@ class GameEngine(
                     )
 
                     is InputEvent.Key -> scenes.onKey(event.code, event.pressed)
+                    is InputEvent.Pointer -> scenes.onPointer(event.event)
+                    InputEvent.ResetInput -> scenes.resetInput()
                 }
 
                 if (diagnostics.hasFatalErrors()) {
