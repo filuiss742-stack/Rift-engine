@@ -2,6 +2,7 @@ package com.rift.engine.scene
 
 import com.rift.engine.assets.AssetManager
 import com.rift.engine.audio.AudioManager
+import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.Camera
 import com.rift.engine.graphics.RenderContext
@@ -31,6 +32,7 @@ abstract class Scene {
         internal set
     var audio: AudioManager? = null
         internal set
+    internal var diagnostics: DiagnosticReporter? = null
 
     protected val objects = mutableListOf<GameObject>()
 
@@ -53,6 +55,7 @@ abstract class Scene {
         } else {
             objects.remove(gameObject)
             physics.removeBody(gameObject)
+            gameObject.diagnostics = null
         }
     }
 
@@ -75,8 +78,16 @@ abstract class Scene {
             applyPendingMutations()
         }
 
-        physics.step(deltaSeconds)
-        ui.update(deltaSeconds)
+        try {
+            physics.step(deltaSeconds)
+        } catch (exception: Exception) {
+            reportSceneFailure("scene.physics.update", exception)
+        }
+        try {
+            ui.update(deltaSeconds)
+        } catch (exception: Exception) {
+            reportSceneFailure("scene.ui.update", exception)
+        }
     }
 
     internal fun dispatchPointer(event: PointerEvent) {
@@ -93,7 +104,11 @@ abstract class Scene {
             try {
                 var index = 0
                 while (index < objects.size) {
-                    objects[index].render(context)
+                    try {
+                        objects[index].render(context)
+                    } catch (exception: Exception) {
+                        reportSceneFailure("scene.object.render", exception)
+                    }
                     index += 1
                 }
             } finally {
@@ -101,7 +116,11 @@ abstract class Scene {
                 applyPendingMutations()
             }
         }
-        ui.render(context)
+        try {
+            ui.render(context)
+        } catch (exception: Exception) {
+            reportSceneFailure("scene.ui.render", exception)
+        }
     }
 
     open fun onTouch(
@@ -128,6 +147,12 @@ abstract class Scene {
         keyCode: Int,
         pressed: Boolean
     ) = Unit
+
+    private fun reportSceneFailure(subsystem: String, exception: Exception) {
+        val reporter = diagnostics
+        if (reporter == null) throw exception
+        reporter.reportException(subsystem, exception)
+    }
 
     private fun applyPendingMutations() {
         if (pendingRemovals.isNotEmpty()) {
