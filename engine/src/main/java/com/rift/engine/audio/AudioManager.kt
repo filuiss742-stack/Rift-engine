@@ -113,13 +113,16 @@ class AudioManager(
         if (closed) return
         closed = true
         currentMusicId = null
-        (sounds.values + music.values).map { it.resource }
-            .distinctBy { System.identityHashCode(it) }
-            .forEach { resource ->
-            try {
-                resource.close()
-            } catch (exception: Exception) {
-                diagnostics.reportException("AudioManager.dispose", exception)
+        val disposed = java.util.Collections.newSetFromMap(
+            java.util.IdentityHashMap<AudioResource, Boolean>()
+        )
+        (sounds.values + music.values).forEach { loaded ->
+            if (disposed.add(loaded.resource)) {
+                try {
+                    loaded.resource.close()
+                } catch (exception: Exception) {
+                    diagnostics.reportException("AudioManager.dispose", exception)
+                }
             }
         }
         sounds.clear()
