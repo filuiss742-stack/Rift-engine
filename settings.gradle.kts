@@ -1,16 +1,7 @@
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-    }
+ repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+ repositories { google(); mavenCentral() }
 }
-rootProject.name = "RiftEngine"
-include(":engine", ":app")
+rootProject.name="RiftEngine"
+include(":engine",":platform-android",":platform-desktop",":demo-game",":app",":desktop-app")

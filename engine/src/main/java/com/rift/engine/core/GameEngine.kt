@@ -1,81 +1,39 @@
 package com.rift.engine.core
-
-import android.content.Context
-import android.graphics.Canvas
-import com.rift.engine.diagnostics.DiagnosticReporter
-import com.rift.engine.diagnostics.DiagnosticsOverlay
+import com.rift.engine.diagnostics.*
+import com.rift.engine.graphics.RenderContext
 import com.rift.engine.plugin.PluginManager
-import com.rift.engine.storage.SaveStore
+import com.rift.engine.storage.*
 import java.util.concurrent.ConcurrentLinkedQueue
-
-private data class TouchInput(
-    val x: Float,
-    val y: Float,
-    val screenWidth: Float,
-    val screenHeight: Float
-)
-
-class GameEngine(context: Context) {
-    val diagnostics = DiagnosticReporter()
-    val saves = SaveStore(context.applicationContext)
-    val plugins = PluginManager(diagnostics)
-    val scenes = SceneManager(diagnostics)
-
-    private val pendingInput = ConcurrentLinkedQueue<TouchInput>()
-
-    /**
-     * Thread-safe input entry point. Events are applied on the game-loop thread
-     * during update(), never directly from Android's UI thread.
-     */
-    fun onTouch(x: Float, y: Float, screenWidth: Float, screenHeight: Float) {
-        if (!diagnostics.hasErrors()) {
-            pendingInput.offer(TouchInput(x, y, screenWidth, screenHeight))
-        }
+private sealed interface InputEvent {
+ data class Pointer(val x:Float,val y:Float,val w:Float,val h:Float):InputEvent
+ data class Key(val code:Int,val pressed:Boolean):InputEvent
+}
+/** Shared runtime. A platform host provides the loop, renderer and persistence. */
+class GameEngine(val saves:SaveStore=InMemorySaveStore()) {
+ val diagnostics=DiagnosticReporter()
+ val plugins=PluginManager(diagnostics)
+ val scenes=SceneManager(diagnostics)
+ private val inputs=ConcurrentLinkedQueue<InputEvent>()
+ fun onTouch(x:Float,y:Float,w:Float,h:Float){if(!diagnostics.hasErrors())inputs.offer(InputEvent.Pointer(x,y,w,h))}
+ fun onKey(code:Int,pressed:Boolean){if(!diagnostics.hasErrors())inputs.offer(InputEvent.Key(code,pressed))}
+ fun update(deltaSeconds:Float){
+  if(diagnostics.hasErrors())return
+  safe("input.dispatch"){
+   while(true){
+    when(val e=inputs.poll()?:break){
+     is InputEvent.Pointer->scenes.onTouch(e.x,e.y,e.w,e.h)
+     is InputEvent.Key->scenes.onKey(e.code,e.pressed)
     }
-
-    fun update(deltaSeconds: Float) {
-        if (diagnostics.hasErrors()) return
-
-        runSafely("input.dispatch") {
-            while (true) {
-                val input = pendingInput.poll() ?: break
-                scenes.onTouch(input.x, input.y, input.screenWidth, input.screenHeight)
-                if (diagnostics.hasErrors()) break
-            }
-        }
-
-        if (!diagnostics.hasErrors()) {
-            runSafely("plugins.update") {
-                plugins.onUpdate(deltaSeconds)
-            }
-        }
-        if (!diagnostics.hasErrors()) {
-            runSafely("scene.update") {
-                scenes.update(deltaSeconds)
-            }
-        }
-    }
-
-    fun render(canvas: Canvas) {
-        if (diagnostics.hasErrors()) {
-            DiagnosticsOverlay.render(canvas, diagnostics.snapshot())
-            return
-        }
-
-        runSafely("scene.render") {
-            scenes.render(canvas)
-        }
-
-        if (diagnostics.hasErrors()) {
-            DiagnosticsOverlay.render(canvas, diagnostics.snapshot())
-        }
-    }
-
-    private inline fun runSafely(subsystem: String, operation: () -> Unit) {
-        try {
-            operation()
-        } catch (exception: Exception) {
-            diagnostics.reportException(subsystem, exception)
-        }
-    }
+    if(diagnostics.hasErrors())break
+   }
+  }
+  if(!diagnostics.hasErrors())safe("plugins.update"){plugins.onUpdate(deltaSeconds)}
+  if(!diagnostics.hasErrors())safe("scene.update"){scenes.update(deltaSeconds)}
+ }
+ fun render(c:RenderContext){
+  if(diagnostics.hasErrors()){DiagnosticsOverlay.render(c,diagnostics.snapshot());return}
+  safe("scene.render"){scenes.render(c)}
+  if(diagnostics.hasErrors())DiagnosticsOverlay.render(c,diagnostics.snapshot())
+ }
+ private inline fun safe(name:String,block:()->Unit){try{block()}catch(e:Exception){diagnostics.reportException(name,e)}}
 }

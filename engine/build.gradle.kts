@@ -1,25 +1,6 @@
-plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+plugins { id("org.jetbrains.kotlin.jvm") }
+kotlin {
+ jvmToolchain(17)
+ sourceSets { main { kotlin.srcDir("src/main/java") }; test { kotlin.srcDir("src/test/java") } }
 }
-
-android {
-    namespace = "com.rift.engine"
-    compileSdk = 35
-
-    defaultConfig {
-        minSdk = 23
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
-
-dependencies {
-    testImplementation("junit:junit:4.13.2")
-}
+dependencies { testImplementation("junit:junit:4.13.2") }

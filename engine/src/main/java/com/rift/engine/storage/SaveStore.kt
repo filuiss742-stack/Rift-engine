@@ -1,21 +1,15 @@
 package com.rift.engine.storage
-
-import android.content.Context
-
-class SaveStore(context: Context) {
-    private val preferences = context.getSharedPreferences("rift_engine_save", Context.MODE_PRIVATE)
-
-    fun putString(key: String, value: String) {
-        preferences.edit().putString(key, value).apply()
-    }
-
-    fun getString(key: String, defaultValue: String = ""): String =
-        preferences.getString(key, defaultValue) ?: defaultValue
-
-    fun putFloat(key: String, value: Float) {
-        preferences.edit().putFloat(key, value).apply()
-    }
-
-    fun getFloat(key: String, defaultValue: Float = 0f): Float =
-        preferences.getFloat(key, defaultValue)
+/** Platform-neutral key/value save contract. */
+interface SaveStore {
+ fun putString(key:String,value:String)
+ fun getString(key:String,defaultValue:String=""):String
+ fun putFloat(key:String,value:Float)
+ fun getFloat(key:String,defaultValue:Float=0f):Float
+}
+class InMemorySaveStore:SaveStore {
+ private val data=mutableMapOf<String,Any>()
+ @Synchronized override fun putString(key:String,value:String){data[key]=value}
+ @Synchronized override fun getString(key:String,defaultValue:String)=data[key] as? String ?: defaultValue
+ @Synchronized override fun putFloat(key:String,value:Float){data[key]=value}
+ @Synchronized override fun getFloat(key:String,defaultValue:Float)=data[key] as? Float ?: defaultValue
 }
