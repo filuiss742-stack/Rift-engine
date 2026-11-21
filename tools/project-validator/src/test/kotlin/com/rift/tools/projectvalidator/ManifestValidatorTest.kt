@@ -1,5 +1,7 @@
 package com.rift.tools.projectvalidator
 
+import java.io.File
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -58,6 +60,33 @@ class ManifestValidatorTest {
         val issues = ManifestValidator.validate(manifest)
 
         assertEquals(2, issues.count { it.code == "RIFT_ASSET_ROOT_UNSAFE" })
+    }
+
+
+    @Test
+    fun validatesEntrypointSourcesAndExistingAssetRoots() {
+        val root = Files.createTempDirectory("rift-project").toFile()
+        val sourceDir = File(root, "src/main/kotlin/com/example/game")
+        val assetsDir = File(root, "assets")
+        assertTrue(sourceDir.mkdirs())
+        assertTrue(assetsDir.mkdirs())
+        File(sourceDir, "SampleGame.kt").writeText("package com.example.game")
+        File(sourceDir, "WorldScene.kt").writeText("package com.example.game")
+
+        val issues = ManifestValidator.validate(validManifest(), root)
+
+        assertTrue(issues.isEmpty())
+    }
+
+    @Test
+    fun reportsMissingEntrypointSourcesAndAssetRoots() {
+        val root = Files.createTempDirectory("rift-project-missing").toFile()
+
+        val issues = ManifestValidator.validate(validManifest(), root)
+
+        assertTrue(issues.any { it.code == "RIFT_ENTRYPOINT_SOURCE_MISSING" })
+        assertTrue(issues.any { it.code == "RIFT_SCENE_SOURCE_MISSING" })
+        assertTrue(issues.any { it.code == "RIFT_ASSET_ROOT_MISSING" })
     }
 
     @Test
