@@ -18,7 +18,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 | GameState | com.rift.engine.state | Typed runtime state shared across all scenes managed by one SceneManager. |\n| GameStateCodec | com.rift.engine.state | Bounded versioned codec for primitive state snapshots. |
 | GameObject | com.rift.engine.entity | Entity with position, size, color, active flag, transform, render layer, optional movement profile, and lifecycle-managed components. |
 | Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
-| GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
+| GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks; quarantined components can be inspected and explicitly retried through GameObject. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and grounded state. |
 | MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent, one-update jump press, and held-jump state for variable jump height. |
 | MovementProfile | com.rift.engine.movement | Contract for converting input intent into body velocity. |
