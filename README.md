@@ -1,6 +1,6 @@
 # Rift Engine
 
-Rift Engine is a modular Kotlin 2D game engine targeting **Android (APK)** and **Windows (desktop EXE application image)**. Linux and macOS are not current targets.
+Rift Engine is a modular Kotlin 2D game engine targeting **Android (APK)** and **Windows (desktop application image with an EXE launcher)**. Linux and macOS are not current targets.
 
 The same game logic, scenes, entities, movement profiles, plugins and save API are shared. Platform modules supply rendering, input, persistence and application hosting. The architecture is intended for mixed-style games combining top-down exploration, side-view platforming, action combat and isometric presentation without duplicating game state.
 
@@ -8,7 +8,7 @@ The same game logic, scenes, entities, movement profiles, plugins and save API a
 
 - `:engine`: pure Kotlin/JVM runtime and platform-neutral contracts.
 - `:platform-android`: Android SurfaceView/Canvas, touch input and SharedPreferences.
-- `:platform-desktop`: Windows Swing/AWT, keyboard/mouse and file saves.
+- `:platform-desktop`: Windows desktop windowing, AWT rendering, keyboard/mouse and file saves.
 - `:demo-game`: shared demo scene.
 - `:app`: Android APK host.
 - `:desktop-app`: Windows desktop host.
@@ -17,9 +17,11 @@ The core must not import Android, AWT or Swing. Platform adapters depend on the 
 
 ## Build
 
-Android: `gradle :app:assembleDebug` (JDK 17, Android SDK 35, Gradle 8.9).
-Desktop: `gradle :desktop-app:run` (JDK 17).
-Windows packaging will use `jpackage` to bundle a Java runtime and an EXE launcher; this is not native compilation or a single-file executable.
+- Android: `gradle :app:assembleDebug` (JDK 17, Android SDK 35, Gradle 8.9).
+- Desktop development: `gradle :desktop-app:run` (JDK 17).
+- Shared JVM tests: `gradle :engine:test :demo-game:test :platform-desktop:test`.
+
+The Windows CI workflow uses `jpackage` to bundle a Java runtime and an EXE launcher. The result is an application image, not native compilation or a single-file executable. Launching the packaged artifact manually remains a separate smoke-test step.
 
 ## License
 
