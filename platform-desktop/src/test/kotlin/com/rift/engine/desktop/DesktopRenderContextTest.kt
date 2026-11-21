@@ -56,13 +56,17 @@ class DesktopRenderContextTest {
             val scene = object : com.rift.engine.scene.Scene() {
                 init {
                     add(
-                        com.rift.engine.entity.GameObject(
+                        object : com.rift.engine.entity.GameObject(
                             20f,
                             20f,
                             5f,
                             5f,
                             0xFFFF0000.toInt()
-                        )
+                        ) {
+                            override fun render(context: com.rift.engine.graphics.RenderContext) {
+                                context.drawRect(x, y, x + width, y + height, color)
+                            }
+                        }
                     )
                 }
 
