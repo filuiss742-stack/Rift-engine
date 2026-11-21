@@ -218,12 +218,14 @@ class PhysicsWorld(
         }
         if (deltaSeconds == 0f || bodies.isEmpty()) {
             currentContacts = emptyList()
+            lastBroadPhaseCandidateCount = 0
             return
         }
 
         val activeBodies = bodies.filter { it.enabled && it.gameObject.active }
         if (activeBodies.isEmpty()) {
             currentContacts = emptyList()
+            lastBroadPhaseCandidateCount = 0
             return
         }
 
@@ -347,10 +349,13 @@ class PhysicsWorld(
             val maxCellX = floor(bounds.right / broadPhaseCellSize).toInt()
             val minCellY = floor(bounds.top / broadPhaseCellSize).toInt()
             val maxCellY = floor(bounds.bottom / broadPhaseCellSize).toInt()
-            val cellCount = (maxCellX.toLong() - minCellX + 1L) *
-                (maxCellY.toLong() - minCellY + 1L)
+            val cellsX = maxCellX.toLong() - minCellX.toLong() + 1L
+            val cellsY = maxCellY.toLong() - minCellY.toLong() + 1L
+            val tooManyCells = cellsX > maxCellsPerBody ||
+                cellsY > maxCellsPerBody ||
+                cellsX * cellsY > maxCellsPerBody.toLong()
 
-            if (cellCount > maxCellsPerBody.toLong()) {
+            if (tooManyCells) {
                 oversized += index
             } else {
                 for (cellX in minCellX..maxCellX) {
