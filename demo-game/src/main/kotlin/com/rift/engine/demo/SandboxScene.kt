@@ -90,13 +90,4 @@ class SandboxScene : Scene() {
         super.render(context)
     }
 
-    override fun onTouch(
-        x: Float,
-        y: Float,
-        screenWidth: Float,
-        screenHeight: Float
-    ) {
-        player.x = x - player.width / 2f
-        player.y = y - player.height / 2f
-    }
 }
