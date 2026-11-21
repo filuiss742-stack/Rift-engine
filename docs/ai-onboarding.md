@@ -27,8 +27,8 @@ Do not load every document or every source file by default.
 
 | Task | Module |
 |---|---|
-| Shared runtime, scenes, entities, movement, narrative runtime, gameplay-module registry, diagnostics | :engine |
-| Shared example gameplay and story content | :demo-game |
+| Shared runtime, scenes, entities, movement, narrative runtime, gameplay-module registry, diagnostics, `RiftGame` entrypoint contract | :engine |
+| Shared example gameplay and story content; `SandboxGame` demo entrypoint | :demo-game |
 | Android lifecycle, Canvas, touch, SharedPreferences | :platform-android |
 | Windows window, AWT, keyboard/mouse, file saves | :platform-desktop |
 | Android application entry point and APK | :app |
