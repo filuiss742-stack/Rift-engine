@@ -11,6 +11,10 @@ class InputActionMap {
     private val actionsByKey = linkedMapOf<Int, MutableSet<String>>()
     private val pointerButtonsByAction = linkedMapOf<String, MutableSet<Int>>()
     private val actionsByPointerButton = linkedMapOf<Int, MutableSet<String>>()
+    private data class AxisBinding(val axisId: String, val deadZone: Float, val scale: Float)
+    private val axesByAction = linkedMapOf<String, MutableList<AxisBinding>>()
+    private val actionsByAxis = linkedMapOf<String, MutableSet<String>>()
+    private val axisValues = linkedMapOf<String, Float>()
     private val downKeys = mutableSetOf<Int>()
     private val downPointerButtons = linkedMapOf<Int, MutableSet<Int>>()
     private val pointerPositions = linkedMapOf<Int, Pair<Float, Float>>()
@@ -46,6 +50,41 @@ class InputActionMap {
         updateEdges(actionId, wasDown)
     }
 
+    fun bindAxis(
+        actionId: String,
+        axisId: String,
+        deadZone: Float = 0.15f,
+        scale: Float = 1f
+    ) {
+        require(actionId.isNotBlank()) { "actionId must not be blank." }
+        require(axisId.isNotBlank()) { "axisId must not be blank." }
+        require(deadZone.isFinite() && deadZone in 0f..<1f) {
+            "deadZone must be finite and in the range 0..1."
+        }
+        require(scale.isFinite()) { "scale must be finite." }
+        val binding = AxisBinding(axisId, deadZone, scale)
+        val wasDown = isDownInternal(actionId)
+        val bindings = axesByAction.getOrPut(actionId) { mutableListOf() }
+        if (binding in bindings) return
+        bindings.add(binding)
+        actionsByAxis.getOrPut(axisId) { linkedSetOf() }.add(actionId)
+        updateEdges(actionId, wasDown)
+    }
+
+    fun unbindAxis(actionId: String, axisId: String): Boolean {
+        val bindings = axesByAction[actionId] ?: return false
+        val wasDown = isDownInternal(actionId)
+        val removed = bindings.removeAll { it.axisId == axisId }
+        if (!removed) return false
+        actionsByAxis[axisId]?.let { actions ->
+            actions.remove(actionId)
+            if (actions.isEmpty()) actionsByAxis.remove(axisId)
+        }
+        if (bindings.isEmpty()) axesByAction.remove(actionId)
+        updateEdges(actionId, wasDown)
+        return true
+    }
+
     fun unbindKey(actionId: String, keyCode: Int): Boolean {
         val keys = keysByAction[actionId] ?: return false
         val wasDown = isDownInternal(actionId)
@@ -77,7 +116,8 @@ class InputActionMap {
     fun unbindAction(actionId: String): Boolean {
         val hadKeys = keysByAction.containsKey(actionId)
         val hadButtons = pointerButtonsByAction.containsKey(actionId)
-        if (!hadKeys && !hadButtons) return false
+        val hadAxes = axesByAction.containsKey(actionId)
+        if (!hadKeys && !hadButtons && !hadAxes) return false
 
         val wasDown = isDownInternal(actionId)
         keysByAction.remove(actionId)?.forEach { keyCode ->
@@ -92,6 +132,12 @@ class InputActionMap {
                 if (actions.isEmpty()) actionsByPointerButton.remove(buttonCode)
             }
         }
+        axesByAction.remove(actionId)?.forEach { binding ->
+            actionsByAxis[binding.axisId]?.let { actions ->
+                actions.remove(actionId)
+                if (actions.isEmpty()) actionsByAxis.remove(binding.axisId)
+            }
+        }
         updateEdges(actionId, wasDown)
         return true
     }
@@ -103,6 +149,28 @@ class InputActionMap {
 
         if (pressed) downKeys.add(keyCode) else downKeys.remove(keyCode)
         actions.forEach { updateEdges(it, wasDown[it] == true) }
+    }
+
+    fun onAxis(axisId: String, value: Float) {
+        require(axisId.isNotBlank()) { "axisId must not be blank." }
+        require(value.isFinite()) { "Axis values must be finite." }
+        val actions = actionsByAxis[axisId].orEmpty().toList()
+        val wasDown = actions.associateWith(::isDownInternal)
+        axisValues[axisId] = value.coerceIn(-1f, 1f)
+        actions.forEach { updateEdges(it, wasDown[it] == true) }
+    }
+
+    fun axisValue(actionId: String): Float {
+        val value = axesByAction[actionId].orEmpty().sumOf { binding ->
+            val raw = axisValues[binding.axisId] ?: 0f
+            val magnitude = kotlin.math.abs(raw)
+            if (magnitude <= binding.deadZone) 0.0
+            else {
+                val normalized = (magnitude - binding.deadZone) / (1f - binding.deadZone)
+                kotlin.math.sign(raw) * normalized * binding.scale
+            }.toDouble()
+        }
+        return value.toFloat().coerceIn(-1f, 1f)
     }
 
     fun onPointer(event: PointerEvent) {
@@ -153,8 +221,12 @@ class InputActionMap {
 
     /** Clears all held inputs and one-frame edges, for focus loss or scene reset. */
     fun reset() {
+        val axisActions = axesByAction.keys.toList()
+        val wasDown = axisActions.associateWith(::isDownInternal)
         downKeys.clear()
         downPointerButtons.clear()
+        axisValues.clear()
+        axisActions.forEach { updateEdges(it, wasDown[it] == true) }
         pointerPositions.clear()
         justPressedActions.clear()
         justReleasedActions.clear()
@@ -178,7 +250,8 @@ class InputActionMap {
         val keyboardDown = keysByAction[actionId].orEmpty().any { it in downKeys }
         if (keyboardDown) return true
         val pointerButtons = pointerButtonsByAction[actionId].orEmpty()
-        return downPointerButtons.values.any { held -> held.any { it in pointerButtons } }
+        if (downPointerButtons.values.any { held -> held.any { it in pointerButtons } }) return true
+        return kotlin.math.abs(axisValue(actionId)) > 0.001f
     }
 
     private fun updateEdges(actionId: String, wasDown: Boolean) {
