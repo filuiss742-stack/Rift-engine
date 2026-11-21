@@ -493,7 +493,26 @@ class PhysicsWorld(
         val centerBX = (b.left + b.right) * 0.5f
         val centerBY = (b.top + b.bottom) * 0.5f
 
-        return if (overlapX < overlapY) {
+        val resolveOnX = when {
+            overlapX < overlapY -> true
+            overlapY < overlapX -> false
+            else -> {
+                val staticBody = when {
+                    first.inverseMass == 0f -> first
+                    second.inverseMass == 0f -> second
+                    else -> null
+                }
+                if (staticBody != null) {
+                    val staticBounds = bodyBounds(staticBody)
+                    staticBounds.width < staticBounds.height
+                } else {
+                    abs(second.gameObject.velocityX - first.gameObject.velocityX) >=
+                        abs(second.gameObject.velocityY - first.gameObject.velocityY)
+                }
+            }
+        }
+
+        return if (resolveOnX) {
             CollisionContact(first, second, if (centerBX >= centerAX) 1f else -1f, 0f, overlapX, sensor)
         } else {
             CollisionContact(first, second, 0f, if (centerBY >= centerAY) 1f else -1f, overlapY, sensor)
