@@ -74,8 +74,9 @@ class DiagnosticReporterTest {
             reporter.report(DiagnosticSeverity.INFO, "INFO_$index", "test", "info")
         }
 
-        assertEquals(2, reporter.snapshot().size)
+        assertEquals(3, reporter.snapshot().size)
         assertTrue(reporter.hasFatalErrors())
+        assertTrue(reporter.snapshot().any { it.code == "FATAL_FIRST" })
 
         reporter.clear()
         assertFalse(reporter.hasFatalErrors())
