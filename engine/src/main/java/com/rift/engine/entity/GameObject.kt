@@ -94,6 +94,7 @@ open class GameObject(
     var movementProfile: MovementProfile? = null
     var movementInput: MovementInput = MovementInput()
     var active: Boolean = true
+    var renderDefaultVisual: Boolean = true
     internal var physicsControlled: Boolean = false
 
     init {
@@ -194,14 +195,16 @@ open class GameObject(
             context.translate(x, y)
             context.rotate(rotationDegrees)
             context.scale(scaleX, scaleY)
-            context.drawRoundRect(
-                0f,
-                0f,
-                width,
-                height,
-                12f,
-                color
-            )
+            if (renderDefaultVisual) {
+                context.drawRoundRect(
+                    0f,
+                    0f,
+                    width,
+                    height,
+                    12f,
+                    color
+                )
+            }
 
             traverseComponents { component ->
                 component.render(this, context)
