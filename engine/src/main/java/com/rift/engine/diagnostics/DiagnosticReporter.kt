@@ -30,7 +30,7 @@ class DiagnosticReporter(
 ) {
     private val lock = Any()
     private val entries = mutableListOf<DiagnosticEntry>()
-    private var fatalErrorReported = false
+    private var fatalEntry: DiagnosticEntry? = null
 
     init {
         require(maxEntries > 0) { "maxEntries must be greater than zero." }
@@ -45,10 +45,6 @@ class DiagnosticReporter(
         location: String? = null,
         suggestion: String? = null
     ): DiagnosticEntry = synchronized(lock) {
-        if (severity == DiagnosticSeverity.FATAL) {
-            fatalErrorReported = true
-        }
-
         val duplicate = entries.lastOrNull {
             it.severity == severity &&
                 it.code == code &&
@@ -70,6 +66,9 @@ class DiagnosticReporter(
             suggestion = suggestion
         )
         entries += entry
+        if (severity == DiagnosticSeverity.FATAL && fatalEntry == null) {
+            fatalEntry = entry
+        }
 
         while (entries.size > maxEntries) {
             entries.removeAt(0)
@@ -100,31 +99,35 @@ class DiagnosticReporter(
     }
 
     fun snapshot(): List<DiagnosticEntry> = synchronized(lock) {
-        entries.toList()
+        val retained = entries.toMutableList()
+        fatalEntry?.let { fatal ->
+            if (retained.none { it === fatal }) retained += fatal
+        }
+        retained.sortedBy { it.timestampMillis }
     }
 
     fun latestError(): DiagnosticEntry? = synchronized(lock) {
         entries.lastOrNull {
             it.severity == DiagnosticSeverity.ERROR ||
                 it.severity == DiagnosticSeverity.FATAL
-        }
+        } ?: fatalEntry
     }
 
     fun hasErrors(): Boolean = synchronized(lock) {
-        entries.any {
+        fatalEntry != null || entries.any {
             it.severity == DiagnosticSeverity.ERROR ||
                 it.severity == DiagnosticSeverity.FATAL
         }
     }
 
     fun hasFatalErrors(): Boolean = synchronized(lock) {
-        fatalErrorReported
+        fatalEntry != null
     }
 
     fun clear() {
         synchronized(lock) {
             entries.clear()
-            fatalErrorReported = false
+            fatalEntry = null
         }
     }
 }
