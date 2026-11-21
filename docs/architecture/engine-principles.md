@@ -47,6 +47,19 @@ The engine API should be discoverable through source, examples, and documentatio
 
 AI agents and human developers use the same public API. No AI service is required to build or run a game.
 
+## Timing and movement foundation
+
+The Android surface host uses a fixed 1/60-second update step with a bounded accumulator. Rendering is paced toward 60 FPS independently. The accumulator limits catch-up work and records discarded time so a slow frame cannot create an unbounded update spiral.
+
+Movement is expressed through a small `MovementProfile` interface and a device-independent `MovementInput` value. The first profiles are:
+
+- `TopDownMovementProfile`: normalized 2D movement with consistent diagonal speed.
+- `PlatformerMovementProfile`: horizontal movement, gravity, jump impulse and terminal fall speed.
+
+`GameObject` composes a `MovementBody`; its existing position and velocity properties remain as compatibility accessors. Ground contact is deliberately supplied by game/collision logic. These profiles are not a collision solver and do not create floor geometry.
+
+See [Movement and timing](../movement-and-timing.md) for API examples and current limitations.
+
 ## Diagnostics as a core capability
 
 Rift Diagnostics should progressively cover:

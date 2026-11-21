@@ -46,9 +46,10 @@ The engine must be easy for an AI to understand from the source, change safely, 
 
 Keep the architecture small and separated:
 
-- `core/`: lifecycle, engine loop, scene management.
+- `core/`: lifecycle, engine loop, scene management and fixed-step timing.
 - `scene/`: scene base class and scene-level behavior.
 - `entity/`: game objects and components.
+- `movement/`: movement body, device-independent input data and composable movement profiles.
 - `graphics/`: drawing, camera, sprites and animation.
 - `input/`: input state and touch controls.
 - `physics/`: collision and movement helpers.
@@ -132,7 +133,7 @@ Rift Diagnostics is a core engine capability, not an optional plugin.
 ## 9. Testing and build safety
 
 - The Android project must continue to build with the configured Gradle and Android SDK versions.
-- Add tests for deterministic logic when practical.
+- Add tests for deterministic logic when practical, especially timing, movement, collision and scene lifecycle behavior.
 - Keep demo scenes usable as manual smoke tests.
 - Do not suppress compiler errors with broad `try/catch`, unchecked casts, or disabled lint/test settings.
 - Never change Gradle, Kotlin, Android SDK, or plugin versions casually. Explain the compatibility reason first.

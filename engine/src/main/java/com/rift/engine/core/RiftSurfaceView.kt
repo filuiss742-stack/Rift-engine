@@ -6,6 +6,7 @@ import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.rift.engine.scene.Scene
+import java.util.concurrent.locks.LockSupport
 
 /**
  * Android rendering host for a game supplied by the application.
@@ -16,6 +17,7 @@ class RiftSurfaceView(
     initialScene: Scene
 ) : SurfaceView(context), SurfaceHolder.Callback {
     private val engine = GameEngine(context)
+    private val fixedStep = FixedStepAccumulator()
 
     @Volatile
     private var running = false
@@ -41,6 +43,7 @@ class RiftSurfaceView(
         synchronized(this) {
             if (running || loopThread?.isAlive == true) return
 
+            fixedStep.reset()
             running = true
             val thread = Thread({ runGameLoop() }, "RiftEngine-GameLoop")
             loopThread = thread
@@ -49,17 +52,21 @@ class RiftSurfaceView(
     }
 
     private fun runGameLoop() {
-        var previous = System.nanoTime()
+        var previousFrameNanos = System.nanoTime()
+        val targetFrameNanos = 1_000_000_000L / 60L
 
         while (running && !Thread.currentThread().isInterrupted) {
-            try {
-                val now = System.nanoTime()
-                val delta = ((now - previous) / 1_000_000_000.0)
-                    .toFloat()
-                    .coerceAtMost(0.05f)
-                previous = now
+            val frameStartNanos = System.nanoTime()
 
-                engine.update(delta)
+            try {
+                val frameDeltaSeconds = (
+                    (frameStartNanos - previousFrameNanos) / 1_000_000_000.0
+                    ).toFloat()
+                previousFrameNanos = frameStartNanos
+
+                fixedStep.advance(frameDeltaSeconds) { fixedDeltaSeconds ->
+                    engine.update(fixedDeltaSeconds)
+                }
 
                 var canvas: Canvas? = null
                 try {
@@ -70,12 +77,13 @@ class RiftSurfaceView(
                 } finally {
                     if (canvas != null) holder.unlockCanvasAndPost(canvas)
                 }
-
-                Thread.sleep(2)
-            } catch (_: InterruptedException) {
-                break
             } catch (exception: Exception) {
                 engine.diagnostics.reportException("gameLoop", exception)
+            }
+
+            val remainingNanos = targetFrameNanos - (System.nanoTime() - frameStartNanos)
+            if (remainingNanos > 0L) {
+                LockSupport.parkNanos(remainingNanos)
             }
         }
     }

@@ -24,7 +24,7 @@ Before changing code, read:
 
 Keep changes small. Inspect callers before editing. Do not rewrite unrelated systems. Update docs with API changes and report only builds/tests that actually ran.
 
-## Current foundation (0.1.x)
+## Current foundation (0.2.x)
 
 - Android library module for reusable engine code
 - Demo application separated from engine implementation
@@ -32,6 +32,10 @@ Keep changes small. Inspect callers before editing. Do not rewrite unrelated sys
 - Canvas-based 2D rendering
 - Game objects with position, size, velocity and color
 - Queued touch input applied on the game-loop thread
+- Fixed 60 Hz logic updates with bounded catch-up work
+- Frame pacing toward 60 FPS
+- Composable top-down and side-view platform movement profiles
+- Jump impulse and configurable gravity; ground contact is supplied by game/collision logic
 - Camera coordinate conversion helpers
 - AABB collision helpers
 - Plugin interface and plugin manager
@@ -50,9 +54,10 @@ The debug APK is generated at app/build/outputs/apk/debug/app-debug.apk.
 
 The reusable engine source lives under `engine/src/main/java/com/rift/engine/`:
 
-- core/ — engine runtime, Android surface host and scene manager
+- core/ — engine runtime, fixed-step timing, Android surface host and scene manager
 - scene/ — scene base class
 - entity/ — game objects
+- movement/ — movement body, input data and composable movement profiles
 - graphics/ — camera helpers and presentation
 - physics/ — collision helpers
 - diagnostics/ — runtime reports and fallback screen
@@ -63,13 +68,13 @@ The demo application lives under `app/` and contains `MainActivity` and `Sandbox
 
 ## Roadmap
 
-1. Gradle Wrapper, automated tests and stronger CI checks
-2. Resource validation and sprite/animation pipeline
+1. Gradle Wrapper and broader automated tests
+2. Collision world, ground detection and collision layers
 3. Input actions and configurable virtual controls
 4. Camera integration, render layers and world transforms
-5. Composable movement profiles (top-down and platform movement)
-6. Physics stepping, gravity, ground detection and collision world
-7. Reusable action-combat systems and mode transitions
+5. Composable movement modifiers and advanced platform controls
+6. Reusable action-combat systems and mode transitions
+7. Resource validation and sprite/animation pipeline
 8. Scene serialization, save slots and asset pipeline
 9. Editor and visual diagnostics tools
 
