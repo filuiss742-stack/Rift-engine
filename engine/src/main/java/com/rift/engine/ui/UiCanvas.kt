@@ -237,6 +237,11 @@ class UiCanvas {
         pressedTargets.clear()
     }
 
+    fun resetInput() {
+        pressedTargets.values.distinct().forEach(UiElement::onRemoved)
+        pressedTargets.clear()
+    }
+
     fun elements(): List<UiElement> = elements.toList()
 
     fun update(deltaSeconds: Float) {
