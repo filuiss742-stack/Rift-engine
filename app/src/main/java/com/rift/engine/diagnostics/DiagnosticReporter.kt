@@ -72,7 +72,7 @@ class DiagnosticReporter(
             severity = DiagnosticSeverity.ERROR,
             code = "RIFT_RUNTIME_EXCEPTION",
             subsystem = subsystem,
-            message = exception.message ?: "The operation failed without an error message.",
+            message = "${exception.javaClass.simpleName}: ${exception.message ?: "The operation failed without an error message."}",
             cause = exception.cause?.toString(),
             location = location
         )
