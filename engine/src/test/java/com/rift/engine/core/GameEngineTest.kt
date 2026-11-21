@@ -96,24 +96,25 @@ class GameEngineTest {
     @Test
     fun closeCleansPluginsAndGameplayModulesExactlyOnce() {
         val engine = GameEngine()
-        var pluginCleanupCount = 0
-        var moduleCleanupCount = 0
+        val cleanupOrder = mutableListOf<String>()
+        engine.scenes.setInitialScene(object : Scene() {
+            override fun onDispose() { cleanupOrder += "scene" }
+        })
 
         engine.plugins.install(object : EnginePlugin {
             override val id = "test.shutdown-plugin"
-            override fun onUninstall() { pluginCleanupCount += 1 }
+            override fun onUninstall() { cleanupOrder += "plugin" }
         })
         assertTrue(engine.gameplayModules.install(object : GameplayModule {
             override val descriptor = GameplayModuleDescriptor("test.shutdown-module", "1.0.0")
             override fun onInstall(context: GameplayModuleContext) = Unit
-            override fun onUninstall() { moduleCleanupCount += 1 }
+            override fun onUninstall() { cleanupOrder += "module" }
         }))
 
         engine.close()
         engine.close()
 
-        assertEquals(1, pluginCleanupCount)
-        assertEquals(1, moduleCleanupCount)
+        assertEquals(listOf("scene", "module", "plugin"), cleanupOrder)
         assertTrue(engine.plugins.all().isEmpty())
         assertTrue(engine.gameplayModules.installed().isEmpty())
     }
