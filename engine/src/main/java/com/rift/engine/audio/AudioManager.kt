@@ -137,11 +137,11 @@ class AudioManager(
     ): AudioResource? {
         check(!closed) { "AudioManager is closed." }
         if (!validId(id)) {
-            report("RIFT_AUDIO_ID_INVALID", "Audio ID must be a stable lowercase identifier.", id)
+            report("RIFT_AUDIO_ID_INVALID", "Audio ID must be a stable lowercase identifier.", id, "Use a lowercase stable ID beginning with a letter.")
             return null
         }
         if (!validRelativePath(path)) {
-            report("RIFT_AUDIO_PATH_UNSAFE", "Audio path must be a safe project-relative path.", path)
+            report("RIFT_AUDIO_PATH_UNSAFE", "Audio path must be a safe project-relative path.", path, "Use a relative path below the configured assets root and remove '..' segments.")
             return null
         }
 
@@ -151,7 +151,8 @@ class AudioManager(
                 report(
                     "RIFT_AUDIO_ID_CONFLICT",
                     "Audio ID '$id' is already loaded from '${existing.path}'.",
-                    id
+                    id,
+                    "Assign a unique audio ID or keep the original source path."
                 )
                 return null
             }
@@ -161,7 +162,7 @@ class AudioManager(
         return try {
             val resource = audioLoader.load(path, streaming)
             if (resource == null) {
-                report("RIFT_AUDIO_NOT_FOUND", "Audio '$path' could not be loaded.", path)
+                report("RIFT_AUDIO_NOT_FOUND", "Audio '$path' could not be loaded.", path, "Check the file exists under the host asset root and use a supported audio format.")
                 null
             } else if ((sounds.values + music.values).any { it.resource === resource }) {
                 report(
@@ -181,7 +182,8 @@ class AudioManager(
                 "AudioManager",
                 "Audio '$path' could not be decoded.",
                 exception.toString(),
-                path
+                path,
+                "Check the audio format and platform decoder support."
             )
             null
         }
@@ -217,13 +219,19 @@ class AudioManager(
         }
     }
 
-    private fun report(code: String, message: String, location: String) {
+    private fun report(
+        code: String,
+        message: String,
+        location: String,
+        suggestion: String
+    ) {
         diagnostics.report(
             DiagnosticSeverity.ERROR,
             code,
             "AudioManager",
             message,
-            location = location
+            location = location,
+            suggestion = suggestion
         )
     }
 
