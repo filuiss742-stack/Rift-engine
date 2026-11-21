@@ -8,11 +8,13 @@ import com.rift.engine.movement.TopDownMovementProfile
 import com.rift.engine.physics.PhysicsBodyType
 import com.rift.engine.scene.Scene
 import com.rift.engine.ui.UiLabel
+import com.rift.engine.ui.VirtualJoystick
 
 /**
  * Top-down mode in the shared demo. Press TAB to switch to the side-view mode.
  */
 class SandboxScene : Scene() {
+    private val joystick = VirtualJoystick(24f, 440f, 112f)
     private val player = GameObject(
         x = 140f,
         y = 220f,
@@ -55,14 +57,15 @@ class SandboxScene : Scene() {
         add(secondObstacle)
 
         ui.add(UiLabel(24f, 18f, 560f, 28f, "RIFT ENGINE • TOP-DOWN MODE", 0xFFFFFFFF.toInt(), 20f, true))
-        ui.add(UiLabel(24f, 46f, 560f, 24f, "WASD / arrows: move   TAB: side-view mode", 0xFFDCE1EB.toInt(), 14f))
+        ui.add(UiLabel(24f, 46f, 560f, 24f, "WASD / arrows or joystick: move   TAB: side-view", 0xFFDCE1EB.toInt(), 14f))
+        ui.add(joystick)
     }
 
     override fun update(deltaSeconds: Float) {
-        val horizontal = (if (input.isDown("move.right")) 1f else 0f) -
-            (if (input.isDown("move.left")) 1f else 0f)
-        val vertical = (if (input.isDown("move.down")) 1f else 0f) -
-            (if (input.isDown("move.up")) 1f else 0f)
+        val horizontal = ((if (input.isDown("move.right")) 1f else 0f) -
+            (if (input.isDown("move.left")) 1f else 0f) + joystick.axisX).coerceIn(-1f, 1f)
+        val vertical = ((if (input.isDown("move.down")) 1f else 0f) -
+            (if (input.isDown("move.up")) 1f else 0f) + joystick.axisY).coerceIn(-1f, 1f)
         player.movementInput = MovementInput(horizontal, vertical)
 
         super.update(deltaSeconds)
