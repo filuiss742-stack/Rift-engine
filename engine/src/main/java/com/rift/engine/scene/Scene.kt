@@ -62,6 +62,7 @@ abstract class Scene {
             if (objects.any { it === gameObject }) pendingRemovals.add(gameObject)
         } else if (objects.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
+            combat.removeOwner(gameObject)
             quarantinedObjects.remove(gameObject)
             gameObject.diagnostics = null
         }
