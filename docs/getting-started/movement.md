@@ -52,7 +52,7 @@ player.movementInput = MovementInput(
 
 The responsive profile keeps per-character jump timers, so create one profile instance per character. Its default gravity is 980 logical pixels/s². When the GameObject is registered with `PhysicsWorld`, the movement body automatically detects that ownership and leaves gravity to the physics world. This also prevents double gravity in the existing `PlatformerMovementProfile`. When the body is removed from the world, profile gravity becomes active again.
 
-The physics world updates grounded state and integrates velocity for its GameObjects. See the [2D physics guide](physics.md) for supported behavior and limitations.
+The physics world updates grounded state and integrates velocity for its GameObjects. `maxFallSpeed` currently clamps gravity only when the movement profile owns gravity; PhysicsWorld does not yet expose a terminal-velocity cap for physics-controlled bodies. See the [2D physics guide](physics.md) for supported behavior and limitations.
 
 ## Update timing
 
