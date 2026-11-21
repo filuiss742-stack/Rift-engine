@@ -61,6 +61,29 @@ class PhysicsWorldTest {
     }
 
 
+
+    @Test
+    fun dynamicBodyStopsAtInsideCornerWithoutCrossingEitherWall() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val mover = GameObject(80f, 80f, 10f, 10f).apply {
+            velocityX = 100f
+            velocityY = 100f
+        }
+        val verticalWall = GameObject(100f, 0f, 10f, 100f)
+        val horizontalWall = GameObject(0f, 100f, 100f, 10f)
+        world.addBody(mover, gravityScale = 0f)
+        world.addBody(verticalWall, PhysicsBodyType.STATIC)
+        world.addBody(horizontalWall, PhysicsBodyType.STATIC)
+
+        world.step(0.2f)
+
+        assertEquals(90f, mover.x, 0.001f)
+        assertEquals(90f, mover.y, 0.001f)
+        assertEquals(0f, mover.velocityX, 0.001f)
+        assertEquals(0f, mover.velocityY, 0.001f)
+        assertEquals(2, world.contacts().size)
+    }
+
     @Test
     fun reportsBeginStayAndEndContactLifecycle() {
         val world = PhysicsWorld(gravityY = 100f)
