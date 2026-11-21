@@ -6,6 +6,7 @@ import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import com.rift.engine.scene.Scene
+import com.rift.engine.state.GameState
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -20,6 +21,8 @@ class SceneManager(
     var current: Scene? = null
         private set
 
+    val gameState = GameState()
+
     private val pendingScenes = ConcurrentLinkedQueue<Scene>()
     private val heldKeys = mutableSetOf<Int>()
 
@@ -27,6 +30,7 @@ class SceneManager(
     fun setInitialScene(scene: Scene) {
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
+            scene.gameState = gameState
             scene.input.reset()
             safe("scene.onEnter") {
                 scene.onEnter()
@@ -153,6 +157,7 @@ class SceneManager(
             }
 
             current = nextScene
+            nextScene.gameState = gameState
             nextScene.input.reset()
             safe("scene.onEnter") {
                 nextScene.onEnter()
