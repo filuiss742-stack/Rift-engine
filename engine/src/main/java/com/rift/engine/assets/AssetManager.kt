@@ -55,6 +55,13 @@ class AssetManager(
                 resource.close()
                 report("RIFT_ASSET_TEXTURE_INVALID", "Texture '$path' returned invalid dimensions or was already disposed.", path)
                 null
+            } else if (textures.values.any { it.resource === resource }) {
+                report(
+                    "RIFT_ASSET_RESOURCE_REUSED",
+                    "Texture loader returned a resource already owned by another asset ID.",
+                    path
+                )
+                null
             } else {
                 textures[id] = LoadedTexture(path, resource)
                 resource
@@ -89,9 +96,9 @@ class AssetManager(
     override fun close() {
         if (closed) return
         closed = true
-        textures.values.forEach { loaded ->
+        textures.values.map { it.resource }.distinctBy { System.identityHashCode(it) }.forEach { resource ->
             try {
-                loaded.resource.close()
+                resource.close()
             } catch (exception: Exception) {
                 diagnostics.reportException("AssetManager.dispose", exception)
             }
