@@ -268,10 +268,20 @@ class CombatTrialScene : Scene() {
         val texture = assets?.loadTexture("rift.trial.sheet", "sprites/rift_trial_sheet.png") ?: return
         val sheet = SpriteSheet(texture, 64, 64)
         player.renderDefaultVisual = false; enemy.renderDefaultVisual = false; npc.renderDefaultVisual = false
-        playerAnim = anim(sheet, mapOf("idle" to listOf(0,1), "walk" to listOf(0,1,2,1), "attack" to listOf(2,3,2), "dodge" to listOf(1,3)), "idle")
-        enemyAnim = anim(sheet, mapOf("idle" to listOf(4,5), "walk" to listOf(4,5,4,5), "telegraph" to listOf(5,6), "attack" to listOf(6,7), "hit" to listOf(7)), "idle")
+        playerAnim = anim(
+            sheet,
+            mapOf("idle" to listOf(0,1), "walk" to listOf(0,1,2,1), "attack" to listOf(2,3,2), "dodge" to listOf(1,3)),
+            "idle",
+            mapOf("idle" to 2f, "walk" to 6f, "attack" to 8f, "dodge" to 8f)
+        )
+        enemyAnim = anim(
+            sheet,
+            mapOf("idle" to listOf(4,5), "walk" to listOf(4,5,4,5), "telegraph" to listOf(5,6), "attack" to listOf(6,7), "hit" to listOf(7)),
+            "idle",
+            mapOf("idle" to 2f, "walk" to 4f, "telegraph" to 3f, "attack" to 6f, "hit" to 6f)
+        )
         player.addComponent(playerAnim!!); enemy.addComponent(enemyAnim!!)
-        npc.addComponent(anim(sheet, mapOf("idle" to listOf(0,1)), "idle"))
+        npc.addComponent(anim(sheet, mapOf("idle" to listOf(0,1)), "idle", mapOf("idle" to 2f)))
     }
 
 }
@@ -350,10 +360,21 @@ class DungeonTrialScene : Scene() {
     }
 }
 
-private fun anim(sheet: SpriteSheet, sets: Map<String, List<Int>>, initial: String): SpriteAnimationComponent {
-    val animations = sets.mapValues { (_, ids) ->
-        SpriteAnimation(ids.map { AnimationFrame(sheet.sprite(it), 1f / 3f) }, looping = true)
-    }
+private fun anim(
+    sheet: SpriteSheet,
+    sets: Map<String, List<Int>>,
+    initial: String,
+    framesPerSecond: Map<String, Float> = emptyMap()
+): SpriteAnimationComponent {
+    val oneShotAnimations = setOf("attack", "dodge", "telegraph", "hit", "death")
+    val animations = sets.map { (id, ids) ->
+        val fps = framesPerSecond[id] ?: 3f
+        require(fps.isFinite() && fps > 0f) { "Animation FPS for '$id' must be finite and positive." }
+        id to SpriteAnimation(
+            ids.map { AnimationFrame(sheet.sprite(it), 1f / fps) },
+            looping = id !in oneShotAnimations
+        )
+    }.toMap()
     return SpriteAnimationComponent(animations, initial)
 }
 private fun distance(a: GameObject, b: GameObject): Float = distance(a, b.x + b.width * .5f, b.y + b.height * .5f)
