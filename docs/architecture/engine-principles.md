@@ -26,6 +26,13 @@ Prefer small components and explicit profiles that can be combined. Do not creat
 
 A component should have one clear responsibility and a small documented API. Conflicting ownership of the same state (for example, two movement systems both writing vertical velocity) should be reported as a diagnostic conflict where the engine can detect it.
 
+## Module boundaries
+
+- The `:engine` module is an Android library and must not depend on demo/game content.
+- The `:app` module is a sample host application and may depend on `:engine`.
+- The engine receives scenes and game-specific configuration from the host application.
+- Game-specific entities, scenes, assets and rules must not be imported into engine packages.
+
 ## Extensibility
 
 - A basic game should work with a small set of built-in systems.

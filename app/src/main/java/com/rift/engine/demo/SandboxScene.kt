@@ -3,7 +3,6 @@ package com.rift.engine.demo
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RectF
 import com.rift.engine.entity.GameObject
 import com.rift.engine.scene.Scene
 
@@ -17,10 +16,9 @@ class SandboxScene : Scene() {
         color = Color.argb(35, 160, 190, 255)
         strokeWidth = 1f
     }
-    private lateinit var player: GameObject
+    private val player = GameObject(140f, 220f, 64f, 64f, Color.rgb(105, 150, 255))
 
-    override fun onEnter() {
-        player = GameObject(140f, 220f, 64f, 64f, Color.rgb(105, 150, 255))
+    init {
         add(player)
         add(GameObject(420f, 170f, 100f, 100f, Color.rgb(255, 170, 80)))
         add(GameObject(650f, 350f, 80f, 80f, Color.rgb(120, 220, 170)))
@@ -42,9 +40,7 @@ class SandboxScene : Scene() {
     }
 
     override fun onTouch(x: Float, y: Float, screenWidth: Float, screenHeight: Float) {
-        if (::player.isInitialized) {
-            player.x = x - player.width / 2f
-            player.y = y - player.height / 2f
-        }
+        player.x = x - player.width / 2f
+        player.y = y - player.height / 2f
     }
 }

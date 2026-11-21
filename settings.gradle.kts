@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "RiftEngine"
-include(":app")
+include(":engine", ":app")
