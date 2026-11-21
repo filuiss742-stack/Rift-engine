@@ -112,7 +112,7 @@ class SceneManager(
         val activeScene = current ?: return
         activeScene.input.onPointer(event)
         safe("scene.input.pointer") {
-            activeScene.onPointer(event)
+            activeScene.dispatchPointer(event)
         }
         applyPendingTransitions()
     }
