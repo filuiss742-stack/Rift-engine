@@ -1,5 +1,6 @@
 package com.rift.engine.core
 
+import com.rift.engine.entity.GameObject
 import com.rift.engine.scene.Scene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
