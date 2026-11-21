@@ -68,6 +68,15 @@ The gameplay-module registry is a runtime extension point, not a dynamic binary 
 
 Current asset limitations: synchronous texture loading only; no font or audio asset pipeline, compression, GPU batching, irregular atlas importer, or background streaming. See the [assets and animation guide](getting-started/assets-and-animation.md).
 
+
+## UI
+
+| API | Package | Purpose |
+|---|---|---|
+| UiCanvas | com.rift.engine.ui | Scene-owned screen-space layer with z-order, rendering, update, and pointer routing. |
+| UiElement | com.rift.engine.ui | Base bounds, visibility, enabled state, z-index, and pointer lifecycle. |
+| UiPanel / UiLabel / UiButton / UiImage | com.rift.engine.ui | Basic screen-space widgets; no automatic layout or focus navigation. |
+
 ## Input
 
 | API | Package | Purpose |
