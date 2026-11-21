@@ -15,7 +15,8 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 | API | Package | Purpose |
 |---|---|---|
-| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, optional movement profile, and lifecycle-managed components. |
+| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, rotation/scale transform, optional movement profile, and lifecycle-managed components. |
+| Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
 | GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and externally supplied grounded state. |
 | MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent and one-update jump press. |
