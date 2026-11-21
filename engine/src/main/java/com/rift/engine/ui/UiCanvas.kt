@@ -49,6 +49,8 @@ abstract class UiElement(
 
     open fun onPointer(event: PointerEvent): Boolean = false
 
+    open fun onRemoved() = Unit
+
     fun contains(pointX: Float, pointY: Float): Boolean =
         pointX >= x && pointX <= x + width &&
             pointY >= y && pointY <= y + height
@@ -61,6 +63,10 @@ class UiPanel(
     height: Float,
     var color: Int = 0xCC111827.toInt(),
     var cornerRadius: Float = 8f
+        set(value) {
+            require(value.isFinite() && value >= 0f) { "cornerRadius must be finite and non-negative." }
+            field = value
+        }
 ) : UiElement(x, y, width, height) {
     override fun render(context: RenderContext) {
         context.drawRoundRect(x, y, x + width, y + height, cornerRadius, color)
@@ -74,9 +80,14 @@ class UiLabel(
     height: Float,
     var text: String,
     var color: Int = 0xFFFFFFFF.toInt(),
-    var fontSize: Float = 16f,
+    fontSize: Float = 16f,
     var bold: Boolean = false
-) : UiElement(x, y, width, height) {
+) : UiElement {
+    var fontSize: Float = fontSize
+        set(value) {
+            require(value.isFinite() && value > 0f) { "fontSize must be finite and greater than zero." }
+            field = value
+        }(x, y, width, height) {
     override fun render(context: RenderContext) {
         context.drawText(text, x, y + fontSize, color, fontSize, bold)
     }
@@ -116,10 +127,9 @@ class UiButton(
     }
 
     override fun onPointer(event: PointerEvent): Boolean {
-        if (!enabled || !visible) return false
         return when (event.type) {
             PointerEventType.DOWN -> {
-                if (!contains(event.x, event.y)) false
+                if (!enabled || !visible || !contains(event.x, event.y)) false
                 else {
                     pressedPointers.add(event.pointerId)
                     true
@@ -127,12 +137,16 @@ class UiButton(
             }
             PointerEventType.UP -> {
                 val wasPressed = pressedPointers.remove(event.pointerId)
-                if (wasPressed && contains(event.x, event.y)) onClick()
+                if (wasPressed && enabled && visible && contains(event.x, event.y)) onClick()
                 wasPressed
             }
             PointerEventType.CANCEL -> pressedPointers.remove(event.pointerId)
             PointerEventType.MOVE -> event.pointerId in pressedPointers
         }
+    }
+
+    override fun onRemoved() {
+        pressedPointers.clear()
     }
 }
 
@@ -164,11 +178,16 @@ class UiCanvas {
     }
 
     fun remove(element: UiElement): Boolean {
-        pressedTargets.entries.removeAll { it.value === element }
-        return elements.removeAll { it === element }
+        val removed = elements.removeAll { it === element }
+        if (removed) {
+            pressedTargets.entries.removeAll { it.value === element }
+            element.onRemoved()
+        }
+        return removed
     }
 
     fun clear() {
+        elements.forEach(UiElement::onRemoved)
         elements.clear()
         pressedTargets.clear()
     }
@@ -189,15 +208,15 @@ class UiCanvas {
     fun dispatchPointer(event: PointerEvent): Boolean {
         return when (event.type) {
             PointerEventType.DOWN -> {
-                val target = elements.asReversed().firstOrNull {
-                    it.visible && it.enabled && it.contains(event.x, event.y)
-                } ?: return false
-                if (target.onPointer(event)) {
-                    pressedTargets[event.pointerId] = target
-                    true
-                } else {
-                    false
+                for (target in elements.asReversed()) {
+                    if (target.visible && target.enabled &&
+                        target.contains(event.x, event.y) && target.onPointer(event)
+                    ) {
+                        pressedTargets[event.pointerId] = target
+                        return true
+                    }
                 }
+                false
             }
             PointerEventType.UP, PointerEventType.CANCEL -> {
                 val target = pressedTargets.remove(event.pointerId) ?: return false
