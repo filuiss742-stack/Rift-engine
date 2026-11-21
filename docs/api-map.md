@@ -34,10 +34,10 @@ This page lists APIs verified in the current development branch. It is a navigat
 | PhysicsBody / PhysicsBodyType | com.rift.engine.physics | Body configuration and STATIC/KINEMATIC/DYNAMIC behavior. |
 | CollisionShape | com.rift.engine.physics | Box and circle collision shapes. |
 | CollisionFilter | com.rift.engine.physics | Category/mask and group filtering for collision pairs and queries. |
-| CollisionContact | com.rift.engine.physics | Contact pair, normal, penetration, and sensor flag from the latest physics step. |
+| CollisionContact | com.rift.engine.physics | Contact pair, normal, penetration, and sensor flag from the latest physics step. |\n| ContactPhase / PhysicsContactEvent | com.rift.engine.physics | Polled BEGIN, STAY, and END contact lifecycle events from the latest step. |
 | RaycastHit | com.rift.engine.physics | Nearest segment ray hit with point, normal, and normalized fraction. |
 
-Physics limitations: no polygon shapes, friction, restitution, joints, continuous collision detection, or begin/stay/end callbacks. Rotated boxes use enclosing AABBs. See the [physics guide](getting-started/physics.md).
+Physics limitations: no polygon shapes, friction, restitution, joints, or continuous collision detection. Contact lifecycle is polled through `contactEvents()` rather than callbacks. Rotated boxes use enclosing AABBs. See the [physics guide](getting-started/physics.md).
 
 ## Combat
 
