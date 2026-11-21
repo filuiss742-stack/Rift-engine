@@ -36,7 +36,7 @@ class GameObjectComponentTest {
     @Test
     fun duplicateInstanceIsNotAttachedTwice() {
         val owner = GameObject(0f, 0f, 10f, 10f)
-        val component = GameComponent {}
+        val component = object : GameComponent {}
 
         assertTrue(owner.addComponent(component))
         assertFalse(owner.addComponent(component))
