@@ -274,7 +274,6 @@ class CombatTrialScene : Scene() {
         npc.addComponent(anim(sheet, mapOf("idle" to listOf(0,1)), "idle"))
     }
 
-    private enum class EnemyState { IDLE, TELEGRAPH, RECOVERY, DEFEATED }
 }
 
 /** Side-view mini-zone with physics jump, blockers, platforms, a zoomed camera and route-dependent return. */
