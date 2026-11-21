@@ -11,6 +11,7 @@ object GameStateCodec {
     private const val HEADER = "RIFT_STATE_V1"
     private const val MAX_BYTES = 1_048_576
     private const val MAX_ENTRIES = 10_000
+    private const val MAX_KEY_LENGTH = 4_096
     private val encoder = Base64.getUrlEncoder().withoutPadding()
     private val decoder = Base64.getUrlDecoder()
 
@@ -52,7 +53,9 @@ object GameStateCodec {
             val parts = line.split('\t')
             require(parts.size == 3) { "Game-state entry must have three tab-separated fields." }
             val key = decodeText(parts[1])
-            require(key.isNotBlank()) { "Game-state keys must not be blank." }
+            require(key.isNotBlank() && key.length <= MAX_KEY_LENGTH) {
+                "Game-state keys must be non-blank and at most $MAX_KEY_LENGTH characters."
+            }
             require(!result.containsKey(key)) { "Duplicate game-state key '$key'." }
             val rawValue = decodeText(parts[2])
             result[key] = decodeValue(parts[0], rawValue)
