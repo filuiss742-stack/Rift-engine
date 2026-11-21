@@ -85,7 +85,7 @@ Current asset limitations: synchronous texture loading only; no font or audio as
 | PointerEvent / PointerEventType / PointerButtons | com.rift.engine.input | Device-independent mouse/touch pointer lifecycle and button identifiers, including multi-touch pointer IDs. |
 | InputActionMap | com.rift.engine.input | Maps named actions to keyboard keys and pointer buttons; exposes held/pressed/released state and pointer position/delta. Gamepad bindings are not implemented. |
 
-## Storage, plugins, and diagnostics
+## Audio\n\n| API | Package | Purpose |\n|---|---|---|\n| AudioResource / AudioLoader | com.rift.engine.audio | Platform-neutral playback handle and host-supplied audio decoder. |\n| AudioManager | com.rift.engine.audio | ID-based sound/music cache, playback controls, volume, and disposal. |\n\nCurrent audio limitations: synchronous loading, Android MediaPlayer for both effects and music, Java Sound formats on Windows, and no mixer buses/spatial audio/cross-fades.\n\n## Storage, plugins, and diagnostics
 
 | API | Package | Purpose |
 |---|---|---|
@@ -98,15 +98,15 @@ Current asset limitations: synchronous texture loading only; no font or audio as
 
 ## Ownership and lifecycle notes
 
-- GameEngine owns its SceneManager, PluginManager, GameplayModuleManager, and AssetManager; it receives SaveStore and DiagnosticReporter through its constructor.
+- GameEngine owns its SceneManager, PluginManager, GameplayModuleManager, AssetManager, and AudioManager; it receives SaveStore and DiagnosticReporter through its constructor.
 - SceneManager.setInitialScene(scene) sets the first scene. changeScene(scene) queues a transition that is applied at a safe runtime boundary after the current update/render/input/lifecycle callback returns.
 - Every activated scene receives the manager's shared GameState and AssetManager.
 - A Scene owns objects added through protected add/remove helpers. Mutations during traversal are deferred.
 - A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment.
 - GameObject updates its movement profile and integrates position unless registered with a PhysicsWorld. A Scene steps its PhysicsWorld after entity updates.
-- Platform hosts own the game loop and concrete RenderContext, SaveStore, and TextureLoader implementations. GameEngine.close() releases cached textures.
+- Platform hosts own the game loop and concrete RenderContext, SaveStore, and TextureLoader implementations. GameEngine.close() releases cached textures and audio resources.
 - The current desktop host uses Swing scheduling; simulation and rendering currently share the Swing event-dispatch thread.
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: gamepad action bindings, virtual joystick/button widgets, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font/audio assets, music and sound playback, UI widgets, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: gamepad action bindings, virtual joystick/button widgets, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font/audio buses, spatial audio, advanced UI layout/focus navigation, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
