@@ -34,6 +34,19 @@ class GameStateTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
+    fun rejectsKeysThatTheSaveCodecWouldRefuse() {
+        GameState().putInt("k".repeat(4097), 1)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsMoreEntriesThanTheSaveCodecCanLoad() {
+        val state = GameState()
+        repeat(10_001) { index ->
+            state.putInt("entry.$index", index)
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
     fun rejectsNonFiniteFloatValues() {
         GameState().putFloat("bad", Float.NaN)
     }
