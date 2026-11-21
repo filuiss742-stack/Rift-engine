@@ -3,8 +3,10 @@ plugins { id("org.jetbrains.kotlin.jvm") version "2.0.21" }
 group = "com.rift.engine"
 version = "0.5.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
+if (project == rootProject) {
+    repositories {
+        mavenCentral()
+    }
 }
 kotlin {
  jvmToolchain(17)
