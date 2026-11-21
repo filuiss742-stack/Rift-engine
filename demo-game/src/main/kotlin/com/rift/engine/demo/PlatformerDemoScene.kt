@@ -3,6 +3,8 @@ package com.rift.engine.demo
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.movement.MovementInput
 import com.rift.engine.movement.PlatformerMovementProfile
 import com.rift.engine.physics.PhysicsBodyType
@@ -104,20 +106,14 @@ class PlatformerDemoScene : Scene() {
 
     override fun render(context: RenderContext) {
         context.clear(0xFF182332.toInt())
-        context.drawRect(0f, 0f, context.width.toFloat(), context.height.toFloat(), 0xFF182332.toInt())
         for (x in 0..context.width step 80) {
             context.drawLine(x.toFloat(), 0f, x.toFloat(), context.height.toFloat(), 0x1FFFFFFF)
         }
         super.render(context)
     }
 
-    override fun onTouch(
-        x: Float,
-        y: Float,
-        screenWidth: Float,
-        screenHeight: Float
-    ) {
-        if (player.isGrounded) {
+    override fun onPointer(event: PointerEvent) {
+        if (event.type == PointerEventType.DOWN && player.isGrounded) {
             player.velocityY = -440f
             player.isGrounded = false
         }
