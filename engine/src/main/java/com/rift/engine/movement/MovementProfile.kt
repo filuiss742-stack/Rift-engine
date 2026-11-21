@@ -65,7 +65,7 @@ class PlatformerMovementProfile(
             } else {
                 body.velocityY = 0f
             }
-        } else {
+        } else if (!body.isPhysicsControlled) {
             body.velocityY = (body.velocityY + gravity * deltaSeconds)
                 .coerceAtMost(maxFallSpeed)
         }
