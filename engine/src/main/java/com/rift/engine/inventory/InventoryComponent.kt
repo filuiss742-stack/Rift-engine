@@ -10,7 +10,9 @@ data class ItemDefinition(
         require(id.matches(Regex("^[a-z][a-z0-9._-]{0,127}$"))) {
             "Item ID must be a stable lowercase identifier."
         }
-        require(maxStack > 0) { "maxStack must be greater than zero." }
+        require(maxStack in 1..100_000) {
+            "maxStack must be between 1 and 100,000."
+        }
     }
 }
 
@@ -30,7 +32,9 @@ class InventoryComponent(
     private val contents = mutableListOf<InventoryStack>()
 
     init {
-        require(maxSlots > 0) { "maxSlots must be greater than zero." }
+        require(maxSlots in 1..10_000) {
+            "maxSlots must be between 1 and 10,000."
+        }
     }
 
     fun registerItem(definition: ItemDefinition): Boolean {
