@@ -19,6 +19,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [Render layers](docs/getting-started/render-layers.md) — stable world-object draw order.
 - [Input guide](docs/getting-started/input.md).
 - [Virtual touch controls](docs/getting-started/virtual-controls.md) — analog joystick and multi-touch action buttons.
+- [Real-time combat](docs/getting-started/combat.md) — health, damage hitboxes, hurtboxes, and team filtering.
 - [Movement guide](docs/getting-started/movement.md).
 - [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
 - [Multi-mode demo](docs/getting-started/multi-mode-demo.md) — switch between top-down and side-view gameplay while retaining shared progression.
