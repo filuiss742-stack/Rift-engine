@@ -3,7 +3,7 @@ package com.rift.engine.desktop
 import com.rift.engine.assets.AssetManager
 import com.rift.engine.audio.AudioManager
 import com.rift.engine.core.GameEngine
-import com.rift.engine.demo.SandboxGame
+import com.rift.engine.demo.CombatTrialGame
 import com.rift.engine.diagnostics.DiagnosticReporter
 import java.io.File
 import javax.swing.SwingUtilities
@@ -20,6 +20,6 @@ fun main() {
     val engine = GameEngine(saves, diagnostics, assets, audio)
 
     SwingUtilities.invokeLater {
-        DesktopGameWindow(engine, SandboxGame()).isVisible = true
+        DesktopGameWindow(engine, CombatTrialGame()).isVisible = true
     }
 }
