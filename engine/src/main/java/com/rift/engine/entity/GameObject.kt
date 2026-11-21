@@ -20,6 +20,7 @@ open class GameObject(
     var color: Int = 0xFFFFFFFF.toInt()
 ) {
     val movementBody = MovementBody(x, y)
+    val transform = Transform2D()
 
     private val components = mutableListOf<GameComponent>()
     private val pendingComponentAdds = mutableListOf<GameComponent>()
@@ -54,6 +55,24 @@ open class GameObject(
         get() = movementBody.isGrounded
         set(value) {
             movementBody.isGrounded = value
+        }
+
+    var rotationDegrees: Float
+        get() = transform.rotationDegrees
+        set(value) {
+            transform.rotationDegrees = value
+        }
+
+    var scaleX: Float
+        get() = transform.scaleX
+        set(value) {
+            transform.scaleX = value
+        }
+
+    var scaleY: Float
+        get() = transform.scaleY
+        set(value) {
+            transform.scaleY = value
         }
 
     var movementProfile: MovementProfile? = null
@@ -139,27 +158,30 @@ open class GameObject(
             return
         }
 
-        context.drawRoundRect(
-            x,
-            y,
-            x + width,
-            y + height,
-            12f,
-            color
-        )
+        context.pushState()
+        try {
+            context.translate(x, y)
+            context.rotate(rotationDegrees)
+            context.scale(scaleX, scaleY)
+            context.drawRoundRect(
+                0f,
+                0f,
+                width,
+                height,
+                12f,
+                color
+            )
 
-        traverseComponents { component ->
-            component.render(this, context)
+            traverseComponents { component ->
+                component.render(this, context)
+            }
+        } finally {
+            context.popState()
         }
     }
 
     fun bounds(): Aabb {
-        return Aabb(
-            left = x,
-            top = y,
-            right = x + width,
-            bottom = y + height
-        )
+        return transform.transformedBounds(x, y, width, height)
     }
 
     private inline fun traverseComponents(action: (GameComponent) -> Unit) {
