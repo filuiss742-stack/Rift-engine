@@ -35,6 +35,9 @@ abstract class UiElement(
     var visible: Boolean = true
     var enabled: Boolean = true
     var zIndex: Int = 0
+    var focusable: Boolean = false
+    var isFocused: Boolean = false
+        internal set
 
     init {
         require(x.isFinite() && y.isFinite()) { "UI position must be finite." }
@@ -53,6 +56,12 @@ abstract class UiElement(
             pointY >= y && pointY <= y + height
 }
 
+enum class UiLayout {
+    ABSOLUTE,
+    VERTICAL,
+    HORIZONTAL
+}
+
 class UiPanel(
     x: Float,
     y: Float,
@@ -61,6 +70,9 @@ class UiPanel(
     var color: Int = 0xCC111827.toInt(),
     cornerRadius: Float = 8f
 ) : UiElement(x, y, width, height) {
+    private val childElements = mutableListOf<UiElement>()
+    private val pressedChildren = mutableMapOf<Int, UiElement>()
+
     var cornerRadius: Float = cornerRadius
         set(value) {
             require(value.isFinite() && value >= 0f) {
@@ -69,12 +81,129 @@ class UiPanel(
             field = value
         }
 
+    var layout: UiLayout = UiLayout.ABSOLUTE
+        set(value) {
+            field = value
+            layoutChildren()
+        }
+
+    var padding: Float = 8f
+        set(value) {
+            require(value.isFinite() && value >= 0f) { "padding must be finite and non-negative." }
+            field = value
+            layoutChildren()
+        }
+
+    var gap: Float = 8f
+        set(value) {
+            require(value.isFinite() && value >= 0f) { "gap must be finite and non-negative." }
+            field = value
+            layoutChildren()
+        }
+
     init {
         require(cornerRadius.isFinite() && cornerRadius >= 0f)
     }
 
+    fun add(child: UiElement): Boolean {
+        if (childElements.any { it === child }) return false
+        childElements.add(child)
+        layoutChildren()
+        return true
+    }
+
+    fun remove(child: UiElement): Boolean {
+        val removed = childElements.removeAll { it === child }
+        if (removed) {
+            pressedChildren.entries.removeAll { it.value === child }
+            child.isFocused = false
+            child.onRemoved()
+            layoutChildren()
+        }
+        return removed
+    }
+
+    fun children(): List<UiElement> = childElements.toList()
+
+    override fun update(deltaSeconds: Float) {
+        childElements.toList().forEach { child ->
+            if (child.visible && child.enabled) child.update(deltaSeconds)
+        }
+    }
+
     override fun render(context: RenderContext) {
         context.drawRoundRect(x, y, x + width, y + height, cornerRadius, color)
+        context.pushState()
+        try {
+            context.clipRect(x, y, x + width, y + height)
+            context.translate(x, y)
+            childElements.filter { it.visible }
+                .sortedBy { it.zIndex }
+                .forEach { it.render(context) }
+        } finally {
+            context.popState()
+        }
+    }
+
+    override fun onPointer(event: PointerEvent): Boolean {
+        val localEvent = event.copy(x = event.x - x, y = event.y - y)
+        return when (event.type) {
+            PointerEventType.DOWN -> {
+                if (!enabled || !visible || !contains(event.x, event.y)) {
+                    false
+                } else {
+                    for (child in childElements.toList().sortedBy { it.zIndex }.asReversed()) {
+                        if (child.visible && child.enabled &&
+                            child.contains(localEvent.x, localEvent.y) &&
+                            child.onPointer(localEvent)
+                        ) {
+                            pressedChildren[event.pointerId] = child
+                            return true
+                        }
+                    }
+                    true
+                }
+            }
+            PointerEventType.MOVE, PointerEventType.UP, PointerEventType.CANCEL -> {
+                val child = pressedChildren[event.pointerId] ?: return contains(event.x, event.y)
+                child.onPointer(localEvent)
+                if (event.type == PointerEventType.UP || event.type == PointerEventType.CANCEL) {
+                    pressedChildren.remove(event.pointerId)
+                }
+                true
+            }
+        }
+    }
+
+    override fun onRemoved() {
+        pressedChildren.values.distinct().forEach { it.onRemoved() }
+        pressedChildren.clear()
+        childElements.forEach {
+            it.isFocused = false
+            it.onRemoved()
+        }
+    }
+
+    private fun layoutChildren() {
+        when (layout) {
+            UiLayout.ABSOLUTE -> Unit
+            UiLayout.VERTICAL -> {
+                var cursor = padding
+                childElements.forEach { child ->
+                    child.x = padding
+                    child.y = cursor
+                    cursor += child.height + gap
+                }
+            }
+            UiLayout.HORIZONTAL -> {
+                var cursor = padding
+                childElements.forEach { child ->
+                    child.x = cursor
+                    child.y = padding
+                    cursor += child.width + gap
+                }
+            }
+        }
     }
 }
 
