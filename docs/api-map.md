@@ -63,10 +63,10 @@ The gameplay-module registry is a runtime extension point, not a dynamic binary 
 | Camera | com.rift.engine.graphics | Top-left anchored zoom camera applied to Scene world-object rendering; exposes world/screen coordinate conversions. |
 | TextureResource / TextureLoader | com.rift.engine.graphics | Platform-neutral texture handle and platform-supplied decoding contract. |
 | TextureRegion / Sprite / SpriteSheet | com.rift.engine.graphics | Atlas rectangles, drawable sprites, and regular grid indexing. |
-| SpriteAnimation / SpriteAnimationComponent | com.rift.engine.animation | Time-based frame animation and reusable GameObject component. |
+| SpriteAnimation / SpriteAnimationComponent | com.rift.engine.animation | Time-based frame animation and reusable GameObject component. |\n| TileMapComponent | com.rift.engine.tilemap | Sprite-sheet-backed tile grid attached to a GameObject; caches frame sprites and skips empty cells. |
 | AssetManager | com.rift.engine.assets | Validated ID-based synchronous texture cache with disposal and structured diagnostics. |
 
-Current asset limitations: synchronous texture loading only; no font pipeline, compression, GPU batching, irregular atlas importer, or background streaming. See the [assets and animation guide](getting-started/assets-and-animation.md).
+Current asset limitations: synchronous texture loading only; no font pipeline, compression, GPU batching, irregular atlas importer, or background streaming. Tile maps currently use regular sprite-sheet frames and do not include an editor or chunk streaming. See the [assets and animation guide](getting-started/assets-and-animation.md).
 
 ## UI
 
