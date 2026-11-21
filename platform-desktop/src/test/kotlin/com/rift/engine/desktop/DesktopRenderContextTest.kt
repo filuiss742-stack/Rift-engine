@@ -46,6 +46,45 @@ class DesktopRenderContextTest {
         }
     }
 
+
+    @Test
+    fun sceneCameraTransformsWorldObjectsButNotPostSceneOverlay() {
+        val image = BufferedImage(60, 60, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val context = DesktopRenderContext(graphics, image.width, image.height)
+            val scene = object : com.rift.engine.scene.Scene() {
+                init {
+                    add(
+                        com.rift.engine.entity.GameObject(
+                            20f,
+                            20f,
+                            5f,
+                            5f,
+                            0xFFFF0000.toInt()
+                        )
+                    )
+                }
+
+                override fun render(context: com.rift.engine.graphics.RenderContext) {
+                    super.render(context)
+                    context.drawRect(1f, 1f, 3f, 3f, 0xFF00FF00.toInt())
+                }
+            }
+            scene.camera.x = 10f
+            scene.camera.y = 10f
+            scene.camera.zoom = 2f
+
+            scene.render(context)
+
+            assertEquals(0xFFFF0000.toInt(), image.getRGB(21, 21))
+            assertEquals(0xFF00FF00.toInt(), image.getRGB(2, 2))
+            assertEquals(0, image.getRGB(11, 11))
+        } finally {
+            graphics.dispose()
+        }
+    }
+
     @Test(expected = IllegalStateException::class)
     fun popStateRejectsUnbalancedStack() {
         val image = BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
