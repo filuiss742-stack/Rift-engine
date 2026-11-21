@@ -5,6 +5,7 @@ import android.view.*
 import com.rift.engine.core.*
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.game.RiftGame
+import com.rift.engine.input.EngineKey
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.locks.LockSupport
 
@@ -29,7 +30,7 @@ class AndroidSaveStore(context:Context):SaveStore {
 class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
  private val engine=GameEngine(AndroidSaveStore(context));private val clock=FixedStepAccumulator()
  @Volatile private var running=false;private var thread:Thread?=null
- init{holder.addCallback(this);isFocusable=true;engine.scenes.setInitialScene(game.createInitialScene())}
+ init{holder.addCallback(this);isFocusable=true;isFocusableInTouchMode=true;engine.scenes.setInitialScene(game.createInitialScene());requestFocus()}
  override fun surfaceCreated(h:SurfaceHolder){resume()}
  override fun surfaceDestroyed(h:SurfaceHolder){pause()}
  override fun surfaceChanged(h:SurfaceHolder,f:Int,w:Int,hh:Int)=Unit
@@ -47,5 +48,17 @@ class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),Surfac
   synchronized(this){if(thread===t&&t?.isAlive!=true)thread=null}
  }
  fun stop()=pause()
+ override fun onKeyDown(keyCode:Int,event:KeyEvent):Boolean{val key=mapKey(keyCode)?:return super.onKeyDown(keyCode,event);engine.onKey(key,true);return true}
+ override fun onKeyUp(keyCode:Int,event:KeyEvent):Boolean{val key=mapKey(keyCode)?:return super.onKeyUp(keyCode,event);engine.onKey(key,false);return true}
+ private fun mapKey(keyCode:Int):Int?=when(keyCode){
+  KeyEvent.KEYCODE_A->EngineKey.A;KeyEvent.KEYCODE_D->EngineKey.D;KeyEvent.KEYCODE_W->EngineKey.W;KeyEvent.KEYCODE_S->EngineKey.S
+  KeyEvent.KEYCODE_DPAD_LEFT->EngineKey.LEFT;KeyEvent.KEYCODE_DPAD_RIGHT->EngineKey.RIGHT;KeyEvent.KEYCODE_DPAD_UP->EngineKey.UP;KeyEvent.KEYCODE_DPAD_DOWN->EngineKey.DOWN
+  KeyEvent.KEYCODE_SPACE->EngineKey.SPACE;KeyEvent.KEYCODE_ENTER->EngineKey.ENTER;KeyEvent.KEYCODE_ESCAPE->EngineKey.ESCAPE;KeyEvent.KEYCODE_TAB->EngineKey.TAB
+  KeyEvent.KEYCODE_E->EngineKey.E;KeyEvent.KEYCODE_Q->EngineKey.Q;KeyEvent.KEYCODE_F->EngineKey.F;KeyEvent.KEYCODE_R->EngineKey.R
+  KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_SHIFT_RIGHT->EngineKey.SHIFT
+  KeyEvent.KEYCODE_CTRL_LEFT,KeyEvent.KEYCODE_CTRL_RIGHT->EngineKey.CTRL
+  KeyEvent.KEYCODE_ALT_LEFT,KeyEvent.KEYCODE_ALT_RIGHT->EngineKey.ALT
+  else->null
+ }
  override fun onTouchEvent(e:MotionEvent):Boolean{if(e.action==MotionEvent.ACTION_DOWN||e.action==MotionEvent.ACTION_MOVE)engine.onTouch(e.x,e.y,width.toFloat(),height.toFloat());return true}
 }
