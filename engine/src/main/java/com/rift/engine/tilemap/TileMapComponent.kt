@@ -23,6 +23,8 @@ class TileMapComponent(
     private val sprites: List<Sprite> =
         (0 until spriteSheet.frameCount).map(spriteSheet::sprite)
     private val tiles: IntArray = createTiles(columns, rows, initialTiles)
+    private var nonEmptyIndices = IntArray(0)
+    private var nonEmptyIndicesDirty = true
 
     init {
         require(columns > 0 && rows > 0) {
@@ -39,39 +41,61 @@ class TileMapComponent(
         }
     }
 
+    @Synchronized
     fun tileAt(column: Int, row: Int): Int {
         requireInside(column, row)
         return tiles[row * columns + column]
     }
 
+    @Synchronized
     fun setTile(column: Int, row: Int, tileIndex: Int) {
         requireInside(column, row)
         require(tileIndex == EMPTY || tileIndex in sprites.indices) {
             "Tile index must be EMPTY or a valid sprite-sheet frame index."
         }
-        tiles[row * columns + column] = tileIndex
+        val index = row * columns + column
+        if (tiles[index] != tileIndex) {
+            tiles[index] = tileIndex
+            nonEmptyIndicesDirty = true
+        }
     }
 
+    @Synchronized
     fun copyTiles(): IntArray = tiles.copyOf()
 
+    @Synchronized
     override fun render(owner: GameObject, context: RenderContext) {
-        var row = 0
-        while (row < rows) {
-            var column = 0
-            while (column < columns) {
-                val tileIndex = tiles[row * columns + column]
+        if (nonEmptyIndicesDirty) {
+            val occupiedCount = tiles.count { it != EMPTY }
+            val rebuilt = IntArray(occupiedCount)
+            var target = 0
+            tiles.forEachIndexed { index, tileIndex ->
                 if (tileIndex != EMPTY) {
-                    sprites[tileIndex].draw(
-                        context,
-                        column * tileWidth,
-                        row * tileHeight,
-                        tileWidth,
-                        tileHeight
-                    )
+                    rebuilt[target] = index
+                    target += 1
                 }
-                column += 1
             }
-            row += 1
+            nonEmptyIndices = rebuilt
+            nonEmptyIndicesDirty = false
+        }
+
+        val indices = nonEmptyIndices
+        var cursor = 0
+        while (cursor < indices.size) {
+            val index = indices[cursor]
+            val tileIndex = tiles[index]
+            if (tileIndex != EMPTY) {
+                val row = index / columns
+                val column = index - row * columns
+                sprites[tileIndex].draw(
+                    context,
+                    column * tileWidth,
+                    row * tileHeight,
+                    tileWidth,
+                    tileHeight
+                )
+            }
+            cursor += 1
         }
     }
 
