@@ -10,4 +10,10 @@ data class MovementInput(
     val horizontal: Float = 0f,
     val vertical: Float = 0f,
     val jumpPressed: Boolean = false
-)
+) {
+    init {
+        require(horizontal.isFinite() && vertical.isFinite()) {
+            "Movement axes must be finite."
+        }
+    }
+}
