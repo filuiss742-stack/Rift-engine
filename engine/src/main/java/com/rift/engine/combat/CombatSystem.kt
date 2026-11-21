@@ -132,12 +132,16 @@ class CombatWorld(
     fun removeHitbox(hitbox: CombatHitbox): Boolean =
         hitboxes.removeAll { it === hitbox }
 
-    fun removeHurtbox(hurtbox: CombatHurtbox): Boolean =
-        hurtboxes.removeAll { it === hurtbox }
+    fun removeHurtbox(hurtbox: CombatHurtbox): Boolean {
+        val removed = hurtboxes.removeAll { it === hurtbox }
+        if (removed) hitboxes.forEach { it.hitTargets.remove(hurtbox.owner) }
+        return removed
+    }
 
     fun removeOwner(owner: GameObject) {
         hitboxes.removeAll { it.owner === owner }
         hurtboxes.removeAll { it.owner === owner }
+        hitboxes.forEach { it.hitTargets.remove(owner) }
     }
 
     fun clear() {
