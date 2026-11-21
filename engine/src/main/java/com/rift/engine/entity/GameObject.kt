@@ -68,19 +68,22 @@ open class GameObject(
      * the current traversal completes.
      */
     fun addComponent(component: GameComponent): Boolean {
-        if (containsIdentity(components, component) ||
-            containsIdentity(pendingComponentAdds, component)
-        ) {
-            return false
+        if (traversingComponents) {
+            if (containsIdentity(components, component)) {
+                return pendingComponentRemovals.removeAll { it === component }
+            }
+            if (containsIdentity(pendingComponentAdds, component)) {
+                return false
+            }
+            pendingComponentAdds.add(component)
+            return true
         }
 
-        if (traversingComponents) {
-            pendingComponentRemovals.removeAll { it === component }
-            pendingComponentAdds.add(component)
-        } else {
-            components.add(component)
-            component.onAttach(this)
+        if (containsIdentity(components, component)) {
+            return false
         }
+        components.add(component)
+        component.onAttach(this)
         return true
     }
 
