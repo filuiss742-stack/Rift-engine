@@ -125,6 +125,24 @@ class SceneManagerTest {
         assertEquals(null, manager.current)
     }
 
+
+    @Test
+    fun managerDisposesScenesThatWereQueuedButNeverActivated() {
+        val manager = SceneManager()
+        var queuedDispose = 0
+        val active = object : Scene() {}
+        val queued = object : Scene() {
+            override fun onDispose() { queuedDispose += 1 }
+        }
+
+        manager.setInitialScene(active)
+        manager.changeScene(queued)
+        manager.close()
+
+        assertEquals(1, queuedDispose)
+        assertEquals(null, manager.current)
+    }
+
     @Test
     fun transitionRequestedDuringOnEnterIsAppliedInOrder() {
         val manager = SceneManager()
