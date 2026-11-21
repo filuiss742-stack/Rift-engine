@@ -33,7 +33,9 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Run all shared JVM tests
-        run: gradle :engine:test :demo-game:test :platform-desktop:test
+        run: gradle :engine:test :demo-game:test :platform-desktop:test :tools:project-validator:test
+      - name: Validate sample project manifest
+        run: gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
       - name: Build desktop distribution
         run: gradle :desktop-app:installDist
       - name: Package Windows app image
