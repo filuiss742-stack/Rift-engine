@@ -228,7 +228,13 @@ class CombatTrialScene : Scene() {
         when (enemyState) {
             EnemyState.IDLE -> {
                 enemyAttackCooldown -= dt; enemy.movementProfile = TopDownMovementProfile(66f)
-                enemy.movementInput = if (dist > 62f) MovementInput(dx / dist, dy / dist) else MovementInput()
+                if (dist > 62f) {
+                    enemy.movementInput = MovementInput(dx / dist, dy / dist)
+                    enemyAnim?.play("walk", false)
+                } else {
+                    enemy.movementInput = MovementInput()
+                    enemyAnim?.play("idle", false)
+                }
                 if (enemyAttackCooldown <= 0f) {
                     enemyState = EnemyState.TELEGRAPH; telegraphRemaining = 0.92f
                     enemy.movementInput = MovementInput(); enemyAnim?.play("telegraph")
@@ -261,7 +267,7 @@ class CombatTrialScene : Scene() {
         val sheet = SpriteSheet(texture, 64, 64)
         player.renderDefaultVisual = false; enemy.renderDefaultVisual = false; npc.renderDefaultVisual = false
         playerAnim = anim(sheet, mapOf("idle" to listOf(0,1), "walk" to listOf(0,1,2,1), "attack" to listOf(2,3,2), "dodge" to listOf(1,3)), "idle")
-        enemyAnim = anim(sheet, mapOf("idle" to listOf(4,5), "telegraph" to listOf(5,6), "attack" to listOf(6,7), "hit" to listOf(7)), "idle")
+        enemyAnim = anim(sheet, mapOf("idle" to listOf(4,5), "walk" to listOf(4,5,4,5), "telegraph" to listOf(5,6), "attack" to listOf(6,7), "hit" to listOf(7)), "idle")
         player.addComponent(playerAnim!!); enemy.addComponent(enemyAnim!!)
         npc.addComponent(anim(sheet, mapOf("idle" to listOf(0,1)), "idle"))
     }
