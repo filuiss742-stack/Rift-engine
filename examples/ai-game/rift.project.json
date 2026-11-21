@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "project": {
+    "id": "sample_game",
+    "name": "Sample Rift Game"
+  },
+  "engine": {
+    "version": "0.1.0"
+  },
+  "targets": [
+    "android",
+    "windows"
+  ],
+  "entrypoint": "com.example.game.SampleGame",
+  "scenes": [
+    {
+      "id": "world",
+      "entrypoint": "com.example.game.WorldScene"
+    }
+  ],
+  "modules": [
+    {
+      "id": "movement.top-down",
+      "version": "0.1.0",
+      "dependencies": [],
+      "conflicts": [],
+      "capabilities": [
+        "movement.top-down"
+      ]
+    }
+  ],
+  "assetRoots": [
+    "assets"
+  ]
+}
