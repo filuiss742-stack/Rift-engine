@@ -1,6 +1,7 @@
 package com.rift.engine.scene
 
 import com.rift.engine.entity.GameObject
+import com.rift.engine.graphics.Camera
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.InputActionMap
 
@@ -14,6 +15,7 @@ import com.rift.engine.input.InputActionMap
 abstract class Scene {
     /** Named actions bound by this scene; physical key events are forwarded by SceneManager. */
     val input = InputActionMap()
+    val camera = Camera()
 
     protected val objects = mutableListOf<GameObject>()
 
@@ -59,18 +61,20 @@ abstract class Scene {
     }
 
     open fun render(context: RenderContext) {
-        applyPendingMutations()
-        traversingObjects = true
-
-        try {
-            var index = 0
-            while (index < objects.size) {
-                objects[index].render(context)
-                index += 1
-            }
-        } finally {
-            traversingObjects = false
+        camera.withTransform(context) {
             applyPendingMutations()
+            traversingObjects = true
+
+            try {
+                var index = 0
+                while (index < objects.size) {
+                    objects[index].render(context)
+                    index += 1
+                }
+            } finally {
+                traversingObjects = false
+                applyPendingMutations()
+            }
         }
     }
 
