@@ -166,14 +166,19 @@ class GameEngine(
         }
     }
 
-    /** Releases all scenes and platform-owned resources when the host shuts down. */
+    /** Releases all owned runtime resources when the host shuts down. */
+    @Synchronized
     override fun close() {
         if (closed) return
         closed = true
         inputs.clear()
-        scenes.close()
-        audio.close()
-        assets.close()
+
+        // One failing cleanup must not prevent the remaining resources from closing.
+        safe("engine.close.plugins") { plugins.close() }
+        safe("engine.close.gameplayModules") { gameplayModules.close() }
+        safe("engine.close.scenes") { scenes.close() }
+        safe("engine.close.audio") { audio.close() }
+        safe("engine.close.assets") { assets.close() }
     }
 
     fun render(context: RenderContext) {
