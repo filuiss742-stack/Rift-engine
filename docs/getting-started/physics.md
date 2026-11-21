@@ -53,7 +53,7 @@ physics.contacts().forEach { contact ->
 }
 ```
 
-Contacts describe the most recent physics step. They are a snapshot, not persistent begin/stay/end callbacks. A future event layer can be added without changing the body registration model.
+Contacts describe the most recent physics step. Poll `physics.contactEvents()` for BEGIN, STAY, and END lifecycle entries. Events are snapshots for the most recent step; they do not invoke callbacks automatically.
 
 ## Queries
 
@@ -69,9 +69,9 @@ A raycast returns the nearest hit, including the hit body, point, surface normal
 - Box collision shapes use axis-aligned bounds derived from GameObject bounds. Circle shapes support circle/box and circle/circle overlap and response.
 - Broad phase uses a spatial hash with stable, deduplicated candidate ordering. Very large bodies that span too many cells safely fall back to checking all bodies; queryAabb and raycast still scan registered bodies.
 - The solver performs basic positional separation and removes velocity into the contact normal. It does not yet model friction, restitution, angular velocity, joints, or full rigid-body impulses.
-- Substeps reduce tunneling for ordinary movement, but this is not continuous collision detection; very fast bodies can still pass through thin geometry.
+- Adaptive substeps and iterative contact solving improve ordinary fast movement and stacked-body stability, but this is not continuous collision detection; extreme velocities can still pass through thin geometry.
 - Rotated box objects use their enclosing axis-aligned bounds, not exact polygon collision. Circle offsets follow the object's transform.
-- Contacts are polled after each step; begin/stay/end events and collision callbacks are not implemented yet.
+- Contacts and BEGIN/STAY/END lifecycle events are polled after each step; automatic collision callbacks are not implemented yet.
 - For a PlatformerMovementProfile that already applies gravity, set the PhysicsBody gravityScale to 0 to avoid applying gravity twice. The world still resolves contacts and updates grounded state.
 
 The API is designed so a spatial-hash broad phase and more shape types can be added behind PhysicsWorld without changing game code.
