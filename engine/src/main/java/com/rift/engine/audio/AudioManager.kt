@@ -113,9 +113,11 @@ class AudioManager(
         if (closed) return
         closed = true
         currentMusicId = null
-        (sounds.values + music.values).forEach { loaded ->
+        (sounds.values + music.values).map { it.resource }
+            .distinctBy { System.identityHashCode(it) }
+            .forEach { resource ->
             try {
-                loaded.resource.close()
+                resource.close()
             } catch (exception: Exception) {
                 diagnostics.reportException("AudioManager.dispose", exception)
             }
@@ -157,6 +159,13 @@ class AudioManager(
             val resource = audioLoader.load(path, streaming)
             if (resource == null) {
                 report("RIFT_AUDIO_NOT_FOUND", "Audio '$path' could not be loaded.", path)
+                null
+            } else if ((sounds.values + music.values).any { it.resource === resource }) {
+                report(
+                    "RIFT_AUDIO_RESOURCE_REUSED",
+                    "Audio loader returned a resource already owned by another audio ID.",
+                    path
+                )
                 null
             } else {
                 destination[id] = LoadedAudio(path, resource)
