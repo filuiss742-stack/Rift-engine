@@ -7,14 +7,10 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        mavenLocal()
         mavenCentral()
     }
 }
 
 rootProject.name = "RiftKotlinGame"
 
-includeBuild("../../engine") {
-    dependencySubstitution {
-        substitute(module("com.rift.engine:engine")).using(project(":"))
-    }
-}
