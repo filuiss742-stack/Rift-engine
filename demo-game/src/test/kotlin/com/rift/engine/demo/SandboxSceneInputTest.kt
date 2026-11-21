@@ -67,7 +67,7 @@ class SandboxSceneInputTest {
             radius: Float,
             color: Int
         ) {
-            if (firstRoundedRectLeft == null) {
+            if (firstRoundedRectLeft == null && color == 0xFF6996FF.toInt()) {
                 firstRoundedRectLeft = translationX + left
             }
         }
