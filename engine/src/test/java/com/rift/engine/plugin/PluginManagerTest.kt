@@ -31,6 +31,28 @@ class PluginManagerTest {
     }
 
     @Test
+    fun closeUninstallsEveryPluginOnceAndIsIdempotent() {
+        val manager = PluginManager()
+        var firstCleanup = 0
+        var secondCleanup = 0
+        manager.install(object : EnginePlugin {
+            override val id = "first"
+            override fun onUninstall() { firstCleanup += 1 }
+        })
+        manager.install(object : EnginePlugin {
+            override val id = "second"
+            override fun onUninstall() { secondCleanup += 1 }
+        })
+
+        manager.close()
+        manager.close()
+
+        assertEquals(1, firstCleanup)
+        assertEquals(1, secondCleanup)
+        assertTrue(manager.all().isEmpty())
+    }
+
+    @Test
     fun duplicateIdDoesNotReplaceExistingPlugin() {
         val manager = PluginManager()
         val original = CountingPlugin("test.shared")
