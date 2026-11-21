@@ -5,6 +5,7 @@ import com.rift.engine.entity.GameComponent
 import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -141,6 +142,29 @@ class SceneManagerTest {
 
         assertEquals(1, queuedDispose)
         assertEquals(null, manager.current)
+    }
+
+
+    @Test
+    fun focusedUiConsumesActivationKeysBeforeGameplayBindings() {
+        val manager = SceneManager()
+        var clicks = 0
+        val scene = object : Scene() {
+            init {
+                input.bindKey("jump", EngineKey.SPACE)
+                ui.add(com.rift.engine.ui.UiButton(10f, 10f, 80f, 40f, "Play") {
+                    clicks += 1
+                })
+            }
+        }
+        manager.setInitialScene(scene)
+
+        manager.onKey(EngineKey.TAB, true)
+        manager.onKey(EngineKey.TAB, false)
+        manager.onKey(EngineKey.SPACE, true)
+
+        assertEquals(1, clicks)
+        assertFalse(scene.input.isDown("jump"))
     }
 
     @Test
