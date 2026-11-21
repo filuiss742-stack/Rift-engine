@@ -2,6 +2,7 @@ package com.rift.engine.scene
 
 import com.rift.engine.entity.GameObject
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.InputActionMap
 
 /**
  * A scene owns its game objects.
@@ -11,6 +12,9 @@ import com.rift.engine.graphics.RenderContext
  * without allocating a copied object list every frame.
  */
 abstract class Scene {
+    /** Named actions bound by this scene; physical key events are forwarded by SceneManager. */
+    val input = InputActionMap()
+
     protected val objects = mutableListOf<GameObject>()
 
     private val pendingAdds = mutableListOf<GameObject>()
