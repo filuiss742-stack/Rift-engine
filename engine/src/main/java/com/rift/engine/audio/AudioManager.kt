@@ -168,7 +168,8 @@ class AudioManager(
                 report(
                     "RIFT_AUDIO_RESOURCE_REUSED",
                     "Audio loader returned a resource already owned by another audio ID.",
-                    path
+                    path,
+                    "Return a distinct audio handle for each sound or music ID."
                 )
                 null
             } else {
@@ -213,7 +214,8 @@ class AudioManager(
                 "AudioManager",
                 "Audio '$id' failed during $subsystem.",
                 exception.toString(),
-                id
+                id,
+                "Check the platform audio device, resource state, and supported playback format."
             )
             false
         }
