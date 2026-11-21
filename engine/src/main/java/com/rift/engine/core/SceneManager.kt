@@ -185,9 +185,7 @@ class SceneManager(
     }
 
     private fun syncHeldKeys(scene: Scene) {
-        heldKeys.forEach { keyCode ->
-            scene.input.onKey(keyCode, true)
-        }
+        heldKeys.forEach(scene.input::syncHeldKey)
     }
 
     private inline fun safe(
