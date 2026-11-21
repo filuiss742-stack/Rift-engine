@@ -31,7 +31,7 @@ class TileMapComponentTest {
         owner.render(context)
 
         assertEquals(4, context.draws.size)
-        assertEquals(listOf(0, 5, 2, 3), context.draws.map { it.sourceLeft / 16 + (it.sourceTop / 16) * 4 })
+        assertEquals(listOf(0, 5, 2, 7), context.draws.map { it.sourceLeft / 16 + (it.sourceTop / 16) * 4 })
         assertEquals(listOf(0f, 32f, 0f, 16f), context.draws.map { it.destinationLeft })
         assertEquals(listOf(0f, 0f, 16f, 16f), context.draws.map { it.destinationTop })
         assertEquals(7, tileMap.tileAt(1, 1))
