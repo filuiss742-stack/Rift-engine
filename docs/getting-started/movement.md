@@ -27,7 +27,7 @@ player.movementInput = MovementInput(horizontal = 1f, jumpPressed = true)
 
 Positive Y points down. Gravity is positive and jump velocity is negative. Set `jumpPressed` for only the update in which a new jump press occurs.
 
-**Important:** the engine does not yet detect floors or resolve collisions. Game logic must currently set `movementBody.isGrounded`; a future collision-world system will own that responsibility.
+Register the player with the Scene's `PhysicsWorld` and add static floor bodies to get collision resolution and grounded-state updates. The physics world uses AABB shapes; see the [2D physics guide](physics.md) for supported behavior and limitations.
 
 ## Update timing
 
