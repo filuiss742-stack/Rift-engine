@@ -16,12 +16,12 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [2D transforms](docs/getting-started/transforms.md) — object rotation, scale, render state, and transformed bounds.
 - [2D camera](docs/getting-started/camera.md) — zoom, world/screen conversion, and screen-space overlays.
 - [Input guide](docs/getting-started/input.md).
-- [Movement guide](docs/getting-started/movement.md).
+- [Movement guide](docs/getting-started/movement.md).\n- [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
 - [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
 - [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
 - [Saves and plugins](docs/getting-started/saves-plugins.md).
 - [Project manifest format](docs/project-manifest.md) — machine-readable project model and validation.
-- [1.0.0 release gates](docs/roadmap/1.0.0-release-gates.md) — evidence-based definition of a complete release.
+- [0.5.0 release gates](docs/roadmap/0.5.0-release-gates.md) — scope and acceptance criteria for the first usable 2D game-engine milestone.\n- [1.0.0 long-term gates](docs/roadmap/1.0.0-release-gates.md) — future stable-release requirements.
 - [Practical cookbook](docs/cookbook.md).
 - [Change matrix](docs/architecture/change-matrix.md) — module choice and validation.
 - [Full AI contributor rules](AI_RULES.md).
