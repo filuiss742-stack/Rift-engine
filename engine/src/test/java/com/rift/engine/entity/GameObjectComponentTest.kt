@@ -129,6 +129,37 @@ class GameObjectComponentTest {
     }
 
     @Test
+    fun quarantinedComponentCanBeRetriedWithoutReattaching() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val owner = GameObject(0f, 0f, 10f, 10f)
+        owner.diagnostics = diagnostics
+        var shouldFail = true
+        var updates = 0
+        val component = object : GameComponent {
+            override fun update(owner: GameObject, deltaSeconds: Float) {
+                updates += 1
+                if (shouldFail) error("temporary component failure")
+            }
+        }
+
+        assertTrue(owner.addComponent(component))
+        owner.update(1f / 60f)
+        owner.update(1f / 60f)
+
+        assertEquals(1, updates)
+        assertTrue(owner.isComponentQuarantined(component))
+        assertFalse(owner.retryComponent(object : GameComponent {}))
+
+        shouldFail = false
+        assertTrue(owner.retryComponent(component))
+        assertFalse(owner.isComponentQuarantined(component))
+        owner.update(1f / 60f)
+
+        assertEquals(2, updates)
+        assertEquals(1, owner.components().size)
+    }
+
+    @Test
     fun readdingComponentCancelsPendingRemoval() {
         val owner = GameObject(0f, 0f, 10f, 10f)
         var updates = 0
