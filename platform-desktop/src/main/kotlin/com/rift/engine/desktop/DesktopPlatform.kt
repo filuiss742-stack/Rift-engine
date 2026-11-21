@@ -136,6 +136,7 @@ class DesktopSaveStore(
             try {
                 file.inputStream().use(properties::load)
             } catch (exception: Exception) {
+                properties.clear()
                 diagnostics.report(
                     severity = DiagnosticSeverity.WARNING,
                     code = "DESKTOP_SAVE_READ_FAILED",
