@@ -170,6 +170,23 @@ class PhysicsWorldTest {
     }
 
     @Test
+    fun boxRaycastStartingInsideReturnsFirstExitSurfaceAndNormal() {
+        val world = PhysicsWorld(gravityY = 0f)
+        val target = GameObject(10f, 10f, 20f, 20f)
+        world.addBody(target, PhysicsBodyType.STATIC)
+
+        val hit = world.raycast(15f, 15f, 40f, 15f)
+
+        assertNotNull(hit)
+        assertTrue(hit!!.body.gameObject === target)
+        assertEquals(30f, hit.pointX, 0.001f)
+        assertEquals(15f, hit.pointY, 0.001f)
+        assertEquals(1f, hit.normalX, 0.001f)
+        assertEquals(0f, hit.normalY, 0.001f)
+        assertEquals(0.6f, hit.fraction, 0.001f)
+    }
+
+    @Test
     fun clearReleasesBodiesAndResetsContactState() {
         val world = PhysicsWorld(gravityY = 0f)
         val first = GameObject(0f, 0f, 10f, 10f)
