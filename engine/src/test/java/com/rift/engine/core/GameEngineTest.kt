@@ -8,6 +8,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameEngineTest {
+
+    @Test
+    fun queuesAnalogAxesForTheGameLoopThread() {
+        val engine = GameEngine()
+        var receivedAxis = 0f
+        val scene = object : Scene() {
+            override fun onAxis(axisId: String, value: Float) {
+                if (axisId == "gamepad.left.x") receivedAxis = value
+            }
+        }
+        engine.scenes.setInitialScene(scene)
+
+        engine.onAxis("gamepad.left.x", 0.75f)
+        assertEquals(0f, receivedAxis, 0.001f)
+        engine.update(1f / 60f)
+
+        assertEquals(0.75f, receivedAxis, 0.001f)
+        engine.close()
+    }
+
     @Test
     fun recoverableErrorDoesNotStopSceneUpdates() {
         val engine = GameEngine()
