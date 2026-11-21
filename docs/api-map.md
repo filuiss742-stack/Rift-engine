@@ -75,6 +75,7 @@ Current asset limitations: synchronous texture loading only; no font pipeline, c
 | UiCanvas | com.rift.engine.ui | Scene-owned screen-space layer with z-order, rendering, update, and pointer routing. |
 | UiElement | com.rift.engine.ui | Base bounds, visibility, enabled state, z-index, and pointer lifecycle. |
 | UiPanel / UiLabel / UiButton / UiImage | com.rift.engine.ui | Basic screen-space widgets; no automatic layout or focus navigation. |
+| VirtualJoystick / VirtualButton | com.rift.engine.ui | Multi-touch virtual movement axes and press-and-hold touch actions. |
 
 ## Input
 
@@ -117,4 +118,4 @@ Current audio limitations: synchronous loading, Android MediaPlayer for both eff
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: gamepad action bindings, virtual joystick/button widgets, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font assets, audio buses/spatial audio/cross-fades, advanced UI layout/focus navigation, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: gamepad action bindings, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font assets, audio buses/spatial audio/cross-fades, advanced UI layout/focus navigation, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
