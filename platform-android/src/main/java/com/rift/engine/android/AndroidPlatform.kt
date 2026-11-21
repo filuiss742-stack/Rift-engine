@@ -207,7 +207,30 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
   KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.KEYCODE_SHIFT_RIGHT->EngineKey.SHIFT
   KeyEvent.KEYCODE_CTRL_LEFT,KeyEvent.KEYCODE_CTRL_RIGHT->EngineKey.CTRL
   KeyEvent.KEYCODE_ALT_LEFT,KeyEvent.KEYCODE_ALT_RIGHT->EngineKey.ALT
+  KeyEvent.KEYCODE_BUTTON_A->EngineKey.SPACE
+  KeyEvent.KEYCODE_BUTTON_B->EngineKey.ESCAPE
+  KeyEvent.KEYCODE_BUTTON_X->EngineKey.E
+  KeyEvent.KEYCODE_BUTTON_Y->EngineKey.Q
+  KeyEvent.KEYCODE_BUTTON_L1->EngineKey.SHIFT
+  KeyEvent.KEYCODE_BUTTON_R1->EngineKey.CTRL
+  KeyEvent.KEYCODE_BUTTON_START->EngineKey.ENTER
+  KeyEvent.KEYCODE_BUTTON_SELECT->EngineKey.TAB
   else->null
+ }
+ override fun onGenericMotionEvent(event:MotionEvent):Boolean {
+  if(event.action==MotionEvent.ACTION_MOVE &&
+     (event.source and InputDevice.SOURCE_JOYSTICK)==InputDevice.SOURCE_JOYSTICK){
+   engine.onAxis("gamepad.left.x",event.getAxisValue(MotionEvent.AXIS_X))
+   engine.onAxis("gamepad.left.y",event.getAxisValue(MotionEvent.AXIS_Y))
+   engine.onAxis("gamepad.right.x",event.getAxisValue(MotionEvent.AXIS_RX))
+   engine.onAxis("gamepad.right.y",event.getAxisValue(MotionEvent.AXIS_RY))
+   engine.onAxis("gamepad.left.trigger",event.getAxisValue(MotionEvent.AXIS_LTRIGGER))
+   engine.onAxis("gamepad.right.trigger",event.getAxisValue(MotionEvent.AXIS_RTRIGGER))
+   engine.onAxis("gamepad.dpad.x",event.getAxisValue(MotionEvent.AXIS_HAT_X))
+   engine.onAxis("gamepad.dpad.y",event.getAxisValue(MotionEvent.AXIS_HAT_Y))
+   return true
+  }
+  return super.onGenericMotionEvent(event)
  }
  override fun onTouchEvent(e:MotionEvent):Boolean {
   val viewport=ViewportTransform(
