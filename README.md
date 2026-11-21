@@ -1,69 +1,45 @@
 # Rift Engine
 
-**Rift Engine** is an experimental, modular 2D game engine for Android, written in Kotlin.
+Rift Engine is an AI-first, modular Kotlin game engine targeting **Android (APK)** and **Windows (desktop application image with an EXE launcher)**. Linux and macOS are not current targets.
 
-It is an independent, **AI-first** engine. Games made with it live in separate projects. The main design goal is a small, explicit API that both people and AI coding agents can understand and modify safely.
+Its long-term direction is a hybrid 2D/3D gameplay constructor: one game can combine top-down exploration, side-view platforming, real-time action combat, first-person sequences, racing, mech battles, branching stories, and original modes without duplicating game state. These are design goals, not claims that every renderer or gameplay pack already exists.
 
-Rift Engine is designed for multi-style 2D games: a single project should be able to combine top-down exploration, side-view platforming, action combat, and isometric presentation while keeping shared game state and progression. This is an architectural direction; features are implemented incrementally and the roadmap below tracks unfinished systems.
+The same shared runtime is used by both platform hosts. Platform modules supply rendering, input, persistence and application hosting. Optional gameplay modules can be installed, replaced and removed through an explicit runtime registry.
 
-## AI contributors
+## Start here
 
-Before changing code, read:
+- [AI agent onboarding](docs/ai-onboarding.md) — short route for coding agents with limited context.
+- [AI-native architecture](docs/architecture/ai-native-architecture.md) — target project model, agent workflow, safe transactions, diagnostics and implementation sequence.
+- [Current API map](docs/api-map.md) — real APIs and their current limitations.
+- [Create your first scene](docs/getting-started/create-a-scene.md).
+- [Input guide](docs/getting-started/input.md).
+- [Movement guide](docs/getting-started/movement.md).
+- [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
+- [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
+- [Saves and plugins](docs/getting-started/saves-plugins.md).
+- [Practical cookbook](docs/cookbook.md).
+- [Change matrix](docs/architecture/change-matrix.md) — module choice and validation.
+- [Full AI contributor rules](AI_RULES.md).
 
-- [AGENTS.md](AGENTS.md) — short mandatory instructions for AI agents.
-- [AI_RULES.md](AI_RULES.md) — full architecture, coding, change and testing rules.
-- [Engine architecture principles](docs/architecture/engine-principles.md) — universal gameplay and presentation design.
-- [Rift Diagnostics](docs/diagnostics.md) — runtime error reporting and fallback screen.
+## Modules
 
-Keep changes small. Inspect callers before editing. Do not rewrite unrelated systems. Update docs with API changes and report only builds/tests that actually ran.
+- `:engine`: pure Kotlin/JVM runtime and platform-neutral contracts.
+- `:platform-android`: Android SurfaceView/Canvas, touch input and SharedPreferences.
+- `:platform-desktop`: Windows desktop windowing, AWT rendering, keyboard/mouse and file saves.
+- `:demo-game`: shared demo scene.
+- `:app`: Android APK host.
+- `:desktop-app`: Windows desktop host.
 
-## Current foundation (0.1.x)
+The core must not import Android, AWT or Swing. Platform adapters depend on the core, never the other way around.
 
-- Android application entry point and real-time game loop
-- Scene lifecycle and scene switching
-- Canvas-based 2D rendering
-- Game objects with position, size, velocity and color
-- Touch input
-- Camera coordinate conversion helpers
-- AABB collision helpers
-- Plugin interface and plugin manager
-- Persistent key/value save storage
-- Interactive sandbox scene
-- Runtime diagnostics with structured error entries and a fallback screen
-- Detection of duplicate/empty plugin IDs and missing active scenes
+## Build and test
 
-## Build
+- Android: `gradle :app:assembleDebug` (JDK 17, Android SDK 35, Gradle 8.9).
+- Desktop development: `gradle :desktop-app:run` (JDK 17).
+- Shared JVM tests: `gradle :engine:test :demo-game:test :platform-desktop:test`.
+- Architecture boundary check: `python scripts/check_engine_boundaries.py`.
 
-Requires JDK 17, Android SDK 35 and Gradle 8.9:
-
-    gradle assembleDebug
-
-The debug APK is generated at app/build/outputs/apk/debug/app-debug.apk.
-
-## Architecture
-
-- core/ — engine runtime, game loop and scene manager
-- scene/ — scene base class
-- entity/ — game objects and components
-- graphics/ — drawing, camera helpers and presentation
-- input/ — input state and touch controls (planned)
-- physics/ — collision and movement helpers
-- diagnostics/ — runtime reports and fallback screen
-- plugin/ — extension API
-- storage/ — save data
-- demo/ — examples and test scenes only
-
-## Roadmap
-
-1. Automated build and basic runtime smoke tests
-2. Resource validation and sprite/animation pipeline
-3. Input actions and configurable virtual controls
-4. Camera integration, render layers and world transforms
-5. Composable movement profiles (top-down and platform movement)
-6. Physics stepping, gravity, ground detection and collision world
-7. Reusable action-combat systems and mode transitions
-8. Scene serialization, save slots and asset pipeline
-9. Editor and visual diagnostics tools
+The Windows CI workflow uses `jpackage` to bundle a Java runtime and an EXE launcher. The result is an application image, not native compilation or a single-file executable. Launching the packaged artifact manually remains a separate smoke-test step.
 
 ## License
 

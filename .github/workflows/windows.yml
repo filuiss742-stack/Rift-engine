@@ -1,0 +1,50 @@
+name: Windows Desktop
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check engine platform boundaries
+        run: python scripts/check_engine_boundaries.py
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run all shared JVM tests
+        run: gradle :engine:test :demo-game:test :platform-desktop:test
+      - name: Build desktop distribution
+        run: gradle :desktop-app:installDist
+      - name: Package Windows app image
+        shell: pwsh
+        run: |
+          $mainJar = Get-ChildItem desktop-app/build/install/desktop-app/lib -Filter "desktop-app*.jar" | Select-Object -First 1
+          if (-not $mainJar) { throw "Desktop application JAR was not found in the install distribution." }
+          jpackage --type app-image --name RiftEngine --input desktop-app/build/install/desktop-app/lib --main-jar $mainJar.Name --main-class com.rift.engine.desktop.MainKt --dest build/windows
+      - name: Upload Windows app image
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-engine-windows
+          path: build/windows/RiftEngine
+          if-no-files-found: error
