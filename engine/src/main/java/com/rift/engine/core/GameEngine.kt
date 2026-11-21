@@ -33,12 +33,13 @@ class GameEngine(
     val diagnostics: DiagnosticReporter = DiagnosticReporter(),
     val assets: AssetManager = AssetManager(diagnostics = diagnostics),
     val audio: AudioManager = AudioManager(diagnostics = diagnostics)
-) {
+) : AutoCloseable {
     val plugins = PluginManager(diagnostics)
     val gameplayModules = GameplayModuleManager(diagnostics)
     val scenes = SceneManager(diagnostics, assets, audio)
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
+    @Volatile private var closed = false
 
     private companion object {
         const val SAVE_KEY_PREFIX = "rift.game-state."
@@ -59,13 +60,13 @@ class GameEngine(
     }
 
     fun onPointer(event: PointerEvent) {
-        if (!diagnostics.hasFatalErrors()) {
+        if (!closed && !diagnostics.hasFatalErrors()) {
             inputs.offer(InputEvent.Pointer(event))
         }
     }
 
     fun onKey(code: Int, pressed: Boolean) {
-        if (!diagnostics.hasFatalErrors()) {
+        if (!closed && !diagnostics.hasFatalErrors()) {
             inputs.offer(InputEvent.Key(code, pressed))
         }
     }
@@ -73,14 +74,14 @@ class GameEngine(
     fun onAxis(axisId: String, value: Float) {
         require(axisId.isNotBlank()) { "axisId must not be blank." }
         require(value.isFinite()) { "Axis values must be finite." }
-        if (!diagnostics.hasFatalErrors()) {
+        if (!closed && !diagnostics.hasFatalErrors()) {
             inputs.offer(InputEvent.Axis(axisId, value.coerceIn(-1f, 1f)))
         }
     }
 
     /** Releases all held keys and pointer buttons after the host loses focus. */
     fun onFocusLost() {
-        if (!diagnostics.hasFatalErrors()) {
+        if (!closed && !diagnostics.hasFatalErrors()) {
             inputs.offer(InputEvent.ResetInput)
         }
     }
@@ -89,7 +90,7 @@ class GameEngine(
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
             "deltaSeconds must be finite and non-negative."
         }
-        if (diagnostics.hasFatalErrors()) return
+        if (closed || diagnostics.hasFatalErrors()) return
 
         safe("input.dispatch") {
             while (true) {
@@ -119,6 +120,7 @@ class GameEngine(
      * Call at a safe game-loop boundary, not from a background worker.
      */
     fun saveGameState(slot: String): Boolean {
+        check(!closed) { "GameEngine is closed." }
         require(validSaveSlot(slot)) {
             "Save slot must contain 1..64 letters, digits, dots, underscores, or hyphens."
         }
@@ -140,6 +142,7 @@ class GameEngine(
      * is empty or the data is invalid; malformed data is reported, not applied.
      */
     fun loadGameState(slot: String): Boolean {
+        check(!closed) { "GameEngine is closed." }
         require(validSaveSlot(slot)) {
             "Save slot must contain 1..64 letters, digits, dots, underscores, or hyphens."
         }
@@ -163,13 +166,18 @@ class GameEngine(
         }
     }
 
-    /** Releases platform-owned assets when the host permanently shuts down. */
-    fun close() {
+    /** Releases all scenes and platform-owned resources when the host shuts down. */
+    override fun close() {
+        if (closed) return
+        closed = true
+        inputs.clear()
+        scenes.close()
         audio.close()
         assets.close()
     }
 
     fun render(context: RenderContext) {
+        if (closed) return
         if (diagnostics.hasFatalErrors()) {
             DiagnosticsOverlay.render(context, diagnostics.snapshot(), blocking = true)
             return
