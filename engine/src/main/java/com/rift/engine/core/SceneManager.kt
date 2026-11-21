@@ -22,7 +22,7 @@ class SceneManager(
     private val diagnostics: DiagnosticReporter = DiagnosticReporter(),
     private val assets: AssetManager = AssetManager(diagnostics = diagnostics),
     private val audio: AudioManager = AudioManager(diagnostics = diagnostics)
-) {
+) : AutoCloseable {
     @Volatile
     var current: Scene? = null
         private set
@@ -74,7 +74,7 @@ class SceneManager(
     }
 
     @Synchronized
-    fun close() {
+    override fun close() {
         if (closed) return
         closed = true
         pendingScenes.clear()
