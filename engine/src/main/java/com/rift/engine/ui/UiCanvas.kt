@@ -2,6 +2,7 @@ package com.rift.engine.ui
 
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.graphics.Sprite
+import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 
@@ -244,6 +245,7 @@ class UiButton(
     var backgroundColor: Int = 0xFF315A8C.toInt(),
     var pressedColor: Int = 0xFF24446B.toInt(),
     var textColor: Int = 0xFFFFFFFF.toInt(),
+    var focusColor: Int = 0xFFFFD166.toInt(),
     fontSize: Float = 16f,
     cornerRadius: Float = 8f
 ) : UiElement(x, y, width, height) {
@@ -271,9 +273,20 @@ class UiButton(
     init {
         require(fontSize.isFinite() && fontSize > 0f)
         require(cornerRadius.isFinite() && cornerRadius >= 0f)
+        focusable = true
     }
 
     override fun render(context: RenderContext) {
+        if (isFocused) {
+            context.drawRoundRect(
+                x - 3f,
+                y - 3f,
+                x + width + 3f,
+                y + height + 3f,
+                cornerRadius + 3f,
+                focusColor
+            )
+        }
         context.drawRoundRect(
             x,
             y,
@@ -348,6 +361,9 @@ class UiCanvas {
     private val failedElements = java.util.Collections.newSetFromMap(
         java.util.IdentityHashMap<UiElement, Boolean>()
     )
+    private val handledUiKeys = mutableSetOf<Int>()
+    var focusedElement: UiElement? = null
+        private set
 
     fun add(element: UiElement): Boolean {
         if (elements.any { it === element }) return false
@@ -361,6 +377,7 @@ class UiCanvas {
         if (removed) {
             failedElements.remove(element)
             pressedTargets.entries.removeAll { it.value === element }
+            if (containsElement(element, focusedElement)) setFocus(null)
             safely("ui.detach", element) { element.onRemoved() }
         }
         return removed
@@ -373,6 +390,8 @@ class UiCanvas {
         elements.clear()
         pressedTargets.clear()
         failedElements.clear()
+        setFocus(null)
+        handledUiKeys.clear()
     }
 
     fun resetInput() {
@@ -383,6 +402,65 @@ class UiCanvas {
     }
 
     fun elements(): List<UiElement> = elements.toList()
+
+    fun setFocus(element: UiElement?): Boolean {
+        if (element != null && (
+            !element.focusable ||
+                !element.visible ||
+                !element.enabled ||
+                element in failedElements ||
+                focusableElements().none { it === element }
+        )) return false
+        focusedElement?.isFocused = false
+        focusedElement = element
+        focusedElement?.isFocused = true
+        return true
+    }
+
+    fun focusNext(): Boolean {
+        val candidates = focusableElements().filter {
+            it.visible && it.enabled && it !in failedElements
+        }
+        if (candidates.isEmpty()) {
+            setFocus(null)
+            return false
+        }
+        val currentIndex = candidates.indexOfFirst { it === focusedElement }
+        val next = candidates[(currentIndex + 1) % candidates.size]
+        setFocus(next)
+        return true
+    }
+
+    /** Returns true when the UI consumed the keyboard event. */
+    fun dispatchKey(keyCode: Int, pressed: Boolean): Boolean {
+        if (keyCode in handledUiKeys) {
+            if (!pressed) handledUiKeys.remove(keyCode)
+            return true
+        }
+        if (!pressed) return false
+        return when (keyCode) {
+            EngineKey.TAB -> {
+                if (focusNext()) {
+                    handledUiKeys.add(keyCode)
+                    true
+                } else false
+            }
+            EngineKey.ENTER, EngineKey.SPACE -> {
+                val target = focusedElement
+                if (target == null || target !in focusableElements()) {
+                    setFocus(null)
+                    false
+                } else {
+                    handledUiKeys.add(keyCode)
+                    if (target is UiButton) {
+                        safely("ui.activate", target) { target.activate() }
+                    }
+                    true
+                }
+            }
+            else -> false
+        }
+    }
 
     fun update(deltaSeconds: Float) {
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
@@ -469,6 +547,22 @@ class UiCanvas {
         }
     }
 
+    private fun focusableElements(): List<UiElement> {
+        val result = mutableListOf<UiElement>()
+        fun collect(element: UiElement) {
+            if (element.focusable) result += element
+            if (element is UiPanel) element.children().forEach(::collect)
+        }
+        elements.sortedBy { it.zIndex }.forEach(::collect)
+        return result
+    }
+
+    private fun containsElement(root: UiElement, target: UiElement?): Boolean {
+        if (target == null) return false
+        if (root === target) return true
+        return root is UiPanel && root.children().any { containsElement(it, target) }
+    }
+
     private fun quarantine(
         subsystem: String,
         element: UiElement,
@@ -476,6 +570,7 @@ class UiCanvas {
     ) {
         if (!failedElements.add(element)) return
         pressedTargets.entries.removeAll { it.value === element }
+        if (containsElement(element, focusedElement)) setFocus(null)
         try {
             element.onRemoved()
         } catch (cleanupException: Exception) {
