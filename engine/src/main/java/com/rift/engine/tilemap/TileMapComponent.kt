@@ -18,11 +18,11 @@ class TileMapComponent(
     val tileWidth: Float,
     val tileHeight: Float,
     spriteSheet: SpriteSheet,
-    initialTiles: IntArray = IntArray(columns * rows) { -1 }
+    initialTiles: IntArray? = null
 ) : GameComponent {
     private val sprites: List<Sprite> =
         (0 until spriteSheet.frameCount).map(spriteSheet::sprite)
-    private val tiles: IntArray = initialTiles.copyOf()
+    private val tiles: IntArray = createTiles(columns, rows, initialTiles)
 
     init {
         require(columns > 0 && rows > 0) {
@@ -34,10 +34,7 @@ class TileMapComponent(
         require(tileHeight.isFinite() && tileHeight > 0f) {
             "tileHeight must be finite and greater than zero."
         }
-        require(initialTiles.size == columns * rows) {
-            "Initial tile array size must equal columns * rows."
-        }
-        require(initialTiles.all { it == EMPTY || it in sprites.indices }) {
+        require(tiles.all { it == EMPTY || it in sprites.indices }) {
             "Tile indices must be EMPTY or a valid sprite-sheet frame index."
         }
     }
@@ -86,5 +83,17 @@ class TileMapComponent(
 
     companion object {
         const val EMPTY = -1
+        private const val MAX_TILES = 1_000_000
+
+        private fun createTiles(columns: Int, rows: Int, initialTiles: IntArray?): IntArray {
+            require(columns > 0 && rows > 0) { "Tile map dimensions must be positive." }
+            val size = Math.multiplyExact(columns, rows)
+            require(size <= MAX_TILES) { "Tile maps are limited to $MAX_TILES cells." }
+            if (initialTiles == null) return IntArray(size) { EMPTY }
+            require(initialTiles.size == size) {
+                "Initial tile array size must equal columns * rows."
+            }
+            return initialTiles.copyOf()
+        }
     }
 }
