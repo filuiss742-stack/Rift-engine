@@ -50,6 +50,9 @@ jobs:
       - name: Test game template independently
         working-directory: templates/kotlin-game
         run: gradle test
+      - name: Test independent AI game acceptance project
+        working-directory: examples/ai-game
+        run: gradle test build
       - name: Android lint
         run: gradle :platform-android:lintDebug :app:lintDebug
       - name: Build debug APK
