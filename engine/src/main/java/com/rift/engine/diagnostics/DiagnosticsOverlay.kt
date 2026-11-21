@@ -51,6 +51,16 @@ object DiagnosticsOverlay {
                 16f
             )
             y += 24f
+            latestError.suggestion?.let { suggestion ->
+                context.drawText(
+                    "Suggested next step: $suggestion",
+                    24f,
+                    y,
+                    orange,
+                    14f
+                )
+                y += 22f
+            }
         } else {
             context.drawText(
                 "No runtime errors recorded.",
