@@ -11,6 +11,7 @@ import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import com.rift.engine.game.RiftGame
 import com.rift.engine.storage.SaveStore
+import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
@@ -23,6 +24,7 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
@@ -156,6 +158,59 @@ class DesktopRenderContext(
 
     override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) {
         currentGraphics.clip(Rectangle2D.Float(left, top, right - left, bottom - top))
+    }
+
+    override fun drawTextureRegion(
+        texture: com.rift.engine.graphics.TextureResource,
+        sourceLeft: Int,
+        sourceTop: Int,
+        sourceRight: Int,
+        sourceBottom: Int,
+        destinationLeft: Float,
+        destinationTop: Float,
+        destinationRight: Float,
+        destinationBottom: Float,
+        alpha: Float
+    ) {
+        val desktopTexture = texture as? DesktopTexture
+            ?: throw IllegalArgumentException("Texture was not created by the desktop texture loader.")
+        check(!desktopTexture.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(
+            sourceLeft >= 0 && sourceTop >= 0 &&
+                sourceRight <= texture.width && sourceBottom <= texture.height &&
+                sourceLeft < sourceRight && sourceTop < sourceBottom
+        ) { "Texture source rectangle is outside the texture bounds." }
+        require(destinationRight > destinationLeft && destinationBottom > destinationTop) {
+            "Texture destination rectangle must have positive dimensions."
+        }
+
+        val sourceWidth = (sourceRight - sourceLeft).toDouble()
+        val sourceHeight = (sourceBottom - sourceTop).toDouble()
+        val scaleX = (destinationRight - destinationLeft) / sourceWidth
+        val scaleY = (destinationBottom - destinationTop) / sourceHeight
+        val transform = AffineTransform(
+            scaleX.toDouble(),
+            0.0,
+            0.0,
+            scaleY.toDouble(),
+            destinationLeft - sourceLeft * scaleX,
+            destinationTop - sourceTop * scaleY
+        )
+
+        val child = currentGraphics.create() as Graphics2D
+        try {
+            child.clip(Rectangle2D.Float(
+                destinationLeft,
+                destinationTop,
+                destinationRight - destinationLeft,
+                destinationBottom - destinationTop
+            ))
+            child.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
+            child.drawImage(desktopTexture.image, transform, null)
+        } finally {
+            child.dispose()
+        }
     }
 }
 
