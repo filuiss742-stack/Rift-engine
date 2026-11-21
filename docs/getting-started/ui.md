@@ -41,3 +41,26 @@ UiButton supports pointer IDs, so simultaneous touch contacts are tracked indepe
 - Virtual joystick and virtual button controls are not included yet.
 
 See the [input guide](input.md), [assets and animation](assets-and-animation.md), and [0.5.0 release gates](../roadmap/0.5.0-release-gates.md).
+
+
+## Nested panels and layout
+
+`UiPanel` can contain child widgets. Child coordinates are local to the panel. The panel clips child rendering and routes pointer events into the local coordinate space.
+
+```kotlin
+val menu = UiPanel(24f, 24f, 320f, 240f).apply {
+    layout = UiLayout.VERTICAL
+    padding = 16f
+    gap = 10f
+    add(UiLabel(0f, 0f, 280f, 24f, "Pause"))
+    add(UiButton(0f, 0f, 280f, 44f, "Resume") { resumeGame() })
+    add(UiButton(0f, 0f, 280f, 44f, "Settings") { openSettings() })
+}
+ui.add(menu)
+```
+
+Available layouts are `ABSOLUTE`, `VERTICAL`, and `HORIZONTAL`. Vertical and horizontal layouts use each child's requested size, panel padding, and gap; they do not resize children automatically.
+
+## Keyboard focus
+
+Buttons are focusable by default. TAB cycles through visible, enabled buttons; ENTER or SPACE activates the focused button. Focus is visible through a highlight outline. Keyboard events consumed by the UI are not forwarded to gameplay action bindings.
