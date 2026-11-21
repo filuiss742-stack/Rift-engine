@@ -17,11 +17,12 @@ class InputActionMap {
         require(actionId.isNotBlank()) { "actionId must not be blank." }
         require(keyCode > 0) { "keyCode must be greater than zero." }
 
+        val wasDown = isDown(actionId)
         val keys = keysByAction.getOrPut(actionId) { linkedSetOf() }
         if (!keys.add(keyCode)) return
         actionsByKey.getOrPut(keyCode) { linkedSetOf() }.add(actionId)
 
-        if (keyCode in downKeys) {
+        if (!wasDown && keyCode in downKeys) {
             justPressedActions.add(actionId)
             justReleasedActions.remove(actionId)
         }
