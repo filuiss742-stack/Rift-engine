@@ -40,6 +40,7 @@ class SandboxScene : Scene() {
         physics.gravityX = 0f
         physics.gravityY = 0f
         physics.addBody(player, PhysicsBodyType.DYNAMIC, gravityScale = 0f)
+        add(player)
 
         add(GameObject(0f, 0f, 960f, 24f, 0xFF36465E.toInt()).apply { renderLayer = -10 })
         add(GameObject(0f, 576f, 960f, 24f, 0xFF36465E.toInt()).apply { renderLayer = -10 })
