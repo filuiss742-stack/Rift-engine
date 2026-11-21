@@ -37,6 +37,7 @@ class SceneManager(
     @Synchronized
     fun setInitialScene(scene: Scene) {
         check(!closed) { "SceneManager is closed." }
+        check(!scene.isDisposed) { "Cannot attach a disposed Scene." }
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
             knownScenes.add(scene)
@@ -61,6 +62,15 @@ class SceneManager(
      * current lifecycle, update, render, or input callback has returned.
      */
     fun changeScene(scene: Scene) {
+        if (scene.isDisposed) {
+            diagnostics.report(
+                DiagnosticSeverity.WARNING,
+                "SCENE_ALREADY_DISPOSED",
+                "SceneManager",
+                "A disposed scene cannot be scheduled for activation."
+            )
+            return
+        }
         if (closed) {
             diagnostics.report(
                 DiagnosticSeverity.WARNING,
