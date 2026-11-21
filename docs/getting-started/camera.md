@@ -14,11 +14,35 @@ The camera also provides worldToScreenX/Y and screenToWorldX/Y for coordinate co
 
 For custom drawing, Camera.withTransform(context) applies the camera inside a push/pop renderer state and restores that state even if the draw callback fails.
 
+## CameraRig
+
+CameraRig is an optional helper for common follow-camera behavior. It is not forced on every Scene; games can keep direct camera control or use their own camera logic.
+
+```kotlin
+val cameraRig = CameraRig(
+    camera = camera,
+    viewportWidth = 480f,
+    viewportHeight = 270f,
+    smoothing = 8f,
+    deadZoneWidth = 48f,
+    deadZoneHeight = 32f,
+    worldBounds = Aabb(0f, 0f, 2400f, 1350f)
+)
+
+override fun update(deltaSeconds: Float) {
+    super.update(deltaSeconds) // updates objects and steps scene physics
+    cameraRig.update(player, deltaSeconds)
+}
+```
+
+Call the rig after the scene update/physics step so it follows the resolved player position. Viewport dimensions are logical screen pixels; the visible world area is divided by camera zoom. smoothing = 0 follows immediately. snapTo(player) is useful for scene entry or teleportation. shake(amplitude, durationSeconds) adds a fading shake; shake may briefly exceed world bounds.
+
+The rig assumes it owns camera position while active. If code changes the camera position externally between rig updates, call snapTo or otherwise coordinate that ownership.
+
 ## Current limitations
 
-- No automatic follow target or smoothing.
-- No camera bounds or dead-zone configuration.
 - No split-screen or multiple viewport manager.
 - Input pointer coordinates are not automatically converted to world coordinates.
+- Camera rotation and automatic viewport/safe-area integration are not implemented.
 
 See the [2D transform guide](transforms.md) and [1.0.0 release gates](../roadmap/1.0.0-release-gates.md).
