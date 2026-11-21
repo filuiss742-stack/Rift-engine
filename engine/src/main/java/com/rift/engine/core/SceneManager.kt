@@ -120,6 +120,7 @@ class SceneManager(
     fun resetInput() {
         heldKeys.clear()
         current?.input?.reset()
+        current?.ui?.resetInput()
         safe("scene.input.reset") {
             current?.onFocusLost()
         }
