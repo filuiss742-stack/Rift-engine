@@ -33,6 +33,30 @@ class GameEngineTest {
     }
 
     @Test
+    fun queuedQuickTapReachesSceneAsPressedAndReleasedInOneUpdate() {
+        val engine = GameEngine()
+        var pressedDuringUpdate = false
+        var releasedDuringUpdate = false
+        val scene = object : Scene() {
+            init { input.bindKey("attack", 7) }
+            override fun update(deltaSeconds: Float) {
+                pressedDuringUpdate = input.wasPressed("attack")
+                releasedDuringUpdate = input.wasReleased("attack")
+            }
+        }
+        engine.scenes.setInitialScene(scene)
+
+        engine.onKey(7, true)
+        engine.onKey(7, false)
+        engine.update(1f / 60f)
+
+        assertTrue(pressedDuringUpdate)
+        assertTrue(releasedDuringUpdate)
+        assertFalse(scene.input.isDown("attack"))
+        engine.close()
+    }
+
+    @Test
     fun recoverableErrorDoesNotStopSceneUpdates() {
         val engine = GameEngine()
         val scene = CountingScene()
