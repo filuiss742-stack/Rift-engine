@@ -155,6 +155,7 @@ class SceneManager(
             }
 
             if (previousScene != null) {
+                previousScene.ui.resetInput()
                 safe("scene.onExit") {
                     previousScene.onExit()
                 }
