@@ -146,6 +146,34 @@ class SceneManagerTest {
 
 
     @Test
+    fun inactiveScenesCanBeExplicitlyDisposedDuringLongRunningTransitions() {
+        val manager = SceneManager()
+        var disposedCount = 0
+        var current = object : Scene() {
+            override fun onDispose() { disposedCount += 1 }
+        }
+        manager.setInitialScene(current)
+
+        repeat(100) {
+            val previous = current
+            current = object : Scene() {
+                override fun onDispose() { disposedCount += 1 }
+            }
+            manager.changeScene(current)
+            manager.update(1f / 60f)
+
+            assertTrue(manager.disposeScene(previous))
+            assertTrue(previous.isDisposed)
+            assertFalse(manager.disposeScene(previous))
+        }
+
+        assertEquals(100, disposedCount)
+        assertFalse(manager.disposeScene(current))
+        manager.close()
+        assertEquals(101, disposedCount)
+    }
+
+    @Test
     fun focusedUiConsumesActivationKeysBeforeGameplayBindings() {
         val manager = SceneManager()
         var clicks = 0
