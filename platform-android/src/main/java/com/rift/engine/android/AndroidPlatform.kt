@@ -110,6 +110,45 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
     override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) {
         canvas.clipRect(left, top, right, bottom)
     }
+
+    override fun drawTextureRegion(
+        texture: com.rift.engine.graphics.TextureResource,
+        sourceLeft: Int,
+        sourceTop: Int,
+        sourceRight: Int,
+        sourceBottom: Int,
+        destinationLeft: Float,
+        destinationTop: Float,
+        destinationRight: Float,
+        destinationBottom: Float,
+        alpha: Float
+    ) {
+        val androidTexture = texture as? AndroidTexture
+            ?: throw IllegalArgumentException("Texture was not created by the Android texture loader.")
+        check(!androidTexture.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(
+            sourceLeft >= 0 && sourceTop >= 0 &&
+                sourceRight <= texture.width && sourceBottom <= texture.height &&
+                sourceLeft < sourceRight && sourceTop < sourceBottom
+        ) { "Texture source rectangle is outside the texture bounds." }
+
+        val previousAlpha = paint.alpha
+        val previousFilter = paint.isFilterBitmap
+        paint.alpha = (alpha * 255f).toInt()
+        paint.isFilterBitmap = true
+        try {
+            canvas.drawBitmap(
+                androidTexture.bitmap,
+                Rect(sourceLeft, sourceTop, sourceRight, sourceBottom),
+                RectF(destinationLeft, destinationTop, destinationRight, destinationBottom),
+                paint
+            )
+        } finally {
+            paint.alpha = previousAlpha
+            paint.isFilterBitmap = previousFilter
+        }
+    }
 }
 class AndroidSaveStore(context:Context):SaveStore {
  private val prefs=context.applicationContext.getSharedPreferences("rift_engine_save",Context.MODE_PRIVATE)
