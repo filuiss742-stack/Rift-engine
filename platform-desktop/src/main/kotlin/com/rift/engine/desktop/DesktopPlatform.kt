@@ -391,9 +391,17 @@ class DesktopGameWindow(
         defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(event: WindowEvent) {
-                gameTimer.stop()
-                engine.close()
-                dispose()
+                try {
+                    closeRuntime()
+                } finally {
+                    dispose()
+                }
+            }
+
+            // Also covers programmatic dispose(), which does not dispatch
+            // windowClosing. GameEngine.close() is idempotent.
+            override fun windowClosed(event: WindowEvent) {
+                closeRuntime()
             }
         })
         contentPane.add(panel)
@@ -441,6 +449,11 @@ class DesktopGameWindow(
         setLocationRelativeTo(null)
 
         gameTimer.start()
+    }
+
+    private fun closeRuntime() {
+        gameTimer.stop()
+        engine.close()
     }
 
     private fun pointerEvent(
