@@ -723,10 +723,12 @@ class PhysicsWorld(
         dx: Float,
         dy: Float
     ): RaycastHit? {
-        var tMin = 0f
-        var tMax = 1f
-        var normalX = 0f
-        var normalY = 0f
+        var entryTime = Float.NEGATIVE_INFINITY
+        var exitTime = Float.POSITIVE_INFINITY
+        var entryNormalX = 0f
+        var entryNormalY = 0f
+        var exitNormalX = 0f
+        var exitNormalY = 0f
 
         fun axis(
             start: Float,
@@ -736,40 +738,57 @@ class PhysicsWorld(
             isX: Boolean
         ): Boolean {
             if (abs(delta) < 0.000001f) return start in minimum..maximum
+
             var near = (minimum - start) / delta
             var far = (maximum - start) / delta
-            var sign = -1f
+            var nearSign = -1f
             if (near > far) {
                 val swap = near
                 near = far
                 far = swap
-                sign = 1f
+                nearSign = 1f
             }
-            if (near > tMin) {
-                tMin = near
+
+            if (near > entryTime) {
+                entryTime = near
                 if (isX) {
-                    normalX = sign
-                    normalY = 0f
+                    entryNormalX = nearSign
+                    entryNormalY = 0f
                 } else {
-                    normalX = 0f
-                    normalY = sign
+                    entryNormalX = 0f
+                    entryNormalY = nearSign
                 }
             }
-            tMax = min(tMax, far)
-            return tMin <= tMax
+            if (far < exitTime) {
+                exitTime = far
+                if (isX) {
+                    exitNormalX = -nearSign
+                    exitNormalY = 0f
+                } else {
+                    exitNormalX = 0f
+                    exitNormalY = -nearSign
+                }
+            }
+            return entryTime <= exitTime
         }
 
         if (!axis(startX, dx, bounds.left, bounds.right, true)) return null
         if (!axis(startY, dy, bounds.top, bounds.bottom, false)) return null
-        if (tMin !in 0f..1f) return null
+        if (exitTime < 0f) return null
+
+        // A ray beginning inside a box reports its first exit surface, matching
+        // the circle raycast behavior, rather than a zero normal at fraction 0.
+        val startsInside = entryTime < 0f
+        val fraction = if (startsInside) exitTime else entryTime
+        if (fraction !in 0f..1f) return null
 
         return RaycastHit(
             body = body,
-            pointX = startX + dx * tMin,
-            pointY = startY + dy * tMin,
-            normalX = normalX,
-            normalY = normalY,
-            fraction = tMin
+            pointX = startX + dx * fraction,
+            pointY = startY + dy * fraction,
+            normalX = if (startsInside) exitNormalX else entryNormalX,
+            normalY = if (startsInside) exitNormalY else entryNormalY,
+            fraction = fraction
         )
     }
 }
