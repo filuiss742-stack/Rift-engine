@@ -503,6 +503,54 @@ class DesktopGameWindow(
             KeyEvent.VK_Q -> EngineKey.Q
             KeyEvent.VK_F -> EngineKey.F
             KeyEvent.VK_R -> EngineKey.R
+            KeyEvent.VK_B -> EngineKey.B
+            KeyEvent.VK_C -> EngineKey.C
+            KeyEvent.VK_G -> EngineKey.G
+            KeyEvent.VK_H -> EngineKey.H
+            KeyEvent.VK_I -> EngineKey.I
+            KeyEvent.VK_J -> EngineKey.J
+            KeyEvent.VK_K -> EngineKey.K
+            KeyEvent.VK_L -> EngineKey.L
+            KeyEvent.VK_M -> EngineKey.M
+            KeyEvent.VK_N -> EngineKey.N
+            KeyEvent.VK_O -> EngineKey.O
+            KeyEvent.VK_P -> EngineKey.P
+            KeyEvent.VK_T -> EngineKey.T
+            KeyEvent.VK_U -> EngineKey.U
+            KeyEvent.VK_V -> EngineKey.V
+            KeyEvent.VK_X -> EngineKey.X
+            KeyEvent.VK_Y -> EngineKey.Y
+            KeyEvent.VK_Z -> EngineKey.Z
+            KeyEvent.VK_0 -> EngineKey.DIGIT_0
+            KeyEvent.VK_1 -> EngineKey.DIGIT_1
+            KeyEvent.VK_2 -> EngineKey.DIGIT_2
+            KeyEvent.VK_3 -> EngineKey.DIGIT_3
+            KeyEvent.VK_4 -> EngineKey.DIGIT_4
+            KeyEvent.VK_5 -> EngineKey.DIGIT_5
+            KeyEvent.VK_6 -> EngineKey.DIGIT_6
+            KeyEvent.VK_7 -> EngineKey.DIGIT_7
+            KeyEvent.VK_8 -> EngineKey.DIGIT_8
+            KeyEvent.VK_9 -> EngineKey.DIGIT_9
+            KeyEvent.VK_F1 -> EngineKey.F1
+            KeyEvent.VK_F2 -> EngineKey.F2
+            KeyEvent.VK_F3 -> EngineKey.F3
+            KeyEvent.VK_F4 -> EngineKey.F4
+            KeyEvent.VK_F5 -> EngineKey.F5
+            KeyEvent.VK_F6 -> EngineKey.F6
+            KeyEvent.VK_F7 -> EngineKey.F7
+            KeyEvent.VK_F8 -> EngineKey.F8
+            KeyEvent.VK_F9 -> EngineKey.F9
+            KeyEvent.VK_F10 -> EngineKey.F10
+            KeyEvent.VK_F11 -> EngineKey.F11
+            KeyEvent.VK_F12 -> EngineKey.F12
+            KeyEvent.VK_BACK_SPACE -> EngineKey.BACKSPACE
+            KeyEvent.VK_DELETE -> EngineKey.DELETE
+            KeyEvent.VK_HOME -> EngineKey.HOME
+            KeyEvent.VK_END -> EngineKey.END
+            KeyEvent.VK_PAGE_UP -> EngineKey.PAGE_UP
+            KeyEvent.VK_PAGE_DOWN -> EngineKey.PAGE_DOWN
+            KeyEvent.VK_INSERT -> EngineKey.INSERT
+            KeyEvent.VK_CAPS_LOCK -> EngineKey.CAPS_LOCK
             KeyEvent.VK_SHIFT -> EngineKey.SHIFT
             KeyEvent.VK_CONTROL -> EngineKey.CTRL
             KeyEvent.VK_ALT -> EngineKey.ALT
