@@ -64,6 +64,7 @@ class ViewportRenderContext(
     override val height: Int get() = viewport.logicalHeight
 
     private var closed = false
+    private var nestedStateDepth = 0
 
     init {
         delegate.pushState()
@@ -75,9 +76,24 @@ class ViewportRenderContext(
         delegate.clear(color)
     }
 
+    override fun pushState() {
+        check(!closed) { "ViewportRenderContext is closed." }
+        delegate.pushState()
+        nestedStateDepth += 1
+    }
+
+    override fun popState() {
+        check(!closed) { "ViewportRenderContext is closed." }
+        check(nestedStateDepth > 0) { "Viewport state stack is empty." }
+        delegate.popState()
+        nestedStateDepth -= 1
+    }
+
     override fun close() {
         if (closed) return
         closed = true
+        repeat(nestedStateDepth) { delegate.popState() }
+        nestedStateDepth = 0
         delegate.popState()
     }
 
