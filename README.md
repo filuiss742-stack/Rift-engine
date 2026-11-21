@@ -13,6 +13,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [Current API map](docs/api-map.md) — real APIs and their current limitations.
 - [Create your first scene](docs/getting-started/create-a-scene.md).
 - [GameObject components](docs/getting-started/components.md) — compose reusable behavior without genre-specific inheritance.
+- [2D transforms](docs/getting-started/transforms.md) — object rotation, scale, render state, and transformed bounds.
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
 - [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
