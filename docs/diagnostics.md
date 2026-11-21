@@ -1,20 +1,41 @@
 # Rift Diagnostics
 
-Rift Diagnostics is the first runtime safety and error-reporting layer in Rift Engine.
+Rift Diagnostics is a platform-neutral runtime reporting layer and an evolving
+foundation for configuration and dependency diagnostics.
 
 ## Purpose
 
-It replaces an unexplained empty/black game view after a caught engine exception with a readable diagnostic screen. It also keeps a short, thread-safe history of recent events for developers and AI coding agents.
+It records known runtime failures and configuration conflicts, keeps a bounded
+history, and can display a fallback screen through the shared render contract.
+It does not claim to detect every possible bug and never rewrites project code.
 
 ## How it works
 
-- `DiagnosticReporter` stores up to 100 recent entries.
-- Each entry contains severity, stable error code, subsystem, message, optional cause, and first stack-frame location.
-- Exact duplicate reports are not added repeatedly.
-- `GameEngine` records exceptions from update, render, and input operations.
-- When an error exists, `DiagnosticsOverlay` draws a fallback screen using Android Canvas only; it does not depend on game scenes, textures, fonts, or other game assets.
-- Plugin ID conflicts and invalid blank IDs are reported by `PluginManager`.
-- Diagnostics never edits or repairs project source code automatically.
+- `DiagnosticReporter` stores up to 100 recent entries by default.
+- Entries contain severity, stable code, subsystem, message, optional cause,
+  and the first available stack-frame location.
+- Exact duplicate reports are coalesced.
+- The reporter is thread-safe.
+- Engine boundaries record caught exceptions.
+- Plugin ID conflicts and blank IDs are reported by `PluginManager`.
+- The fallback overlay uses `RenderContext`; it does not depend on Android UI,
+  AWT, game textures, or other platform-specific APIs.
+
+## Severity
+
+- `INFO`: informational event.
+- `WARNING`: suspicious or conflicting configuration that may still run.
+- `ERROR`: an operation failed. The event is visible, but does not by itself
+  stop the engine. A failing optional plugin should not automatically stop the
+  rest of the game.
+- `FATAL`: the engine has explicitly been marked unable to continue safely.
+  Fatal diagnostics pause further input dispatch, plugin updates, and scene
+  updates until the diagnostic state is cleared.
+
+The current implementation does not automatically promote every exception to
+`FATAL`. Runtime exceptions caught at subsystem boundaries are reported as
+`ERROR`; callers must explicitly report a fatal condition when continuing
+would be unsafe.
 
 ## Usage
 
@@ -24,38 +45,40 @@ Read recent events:
 val events = engine.diagnostics.snapshot()
 val latestError = engine.diagnostics.latestError()
 val hasErrors = engine.diagnostics.hasErrors()
+val mustStop = engine.diagnostics.hasFatalErrors()
 ```
 
-After fixing the cause, a developer may clear the current diagnostic state:
+After the underlying cause has been fixed, a developer may clear diagnostics:
 
 ```kotlin
 engine.diagnostics.clear()
 ```
 
-Clearing diagnostics does not fix the underlying problem. Only clear after the cause has been corrected.
-
-## Severity
-
-- `INFO`: informational event.
-- `WARNING`: suspicious or conflicting configuration that may still run.
-- `ERROR`: an operation failed and normal game rendering is paused behind the diagnostic screen.
+Clearing diagnostics does not fix the underlying problem. Only clear after the
+cause has been corrected.
 
 ## Current limitations
 
-- It catches Kotlin/Java `Exception` failures at engine boundaries, not every possible JVM `Error` or Android process failure.
-- It cannot prove the cause of every visual or gameplay bug. It reports the exception and its first stack frame when available.
-- Static code analysis, asset validation, scene/camera validation, performance profiling, and automated repair suggestions are future work.
-- A crash that occurs before the Android Activity or SurfaceView can be created cannot be shown by this in-game overlay.
+- It catches Kotlin/Java `Exception` failures at engine boundaries, not every
+  possible JVM `Error`, native crash, or operating-system process failure.
+- It cannot prove the cause of every visual or gameplay bug. It reports
+  available evidence, not a guaranteed root cause.
+- Static code analysis, asset validation, scene/camera validation, dependency
+  graph validation, performance profiling, and automated repair suggestions
+  are future work.
+- A crash before a platform host is created cannot be displayed by the
+  in-game overlay.
 
 ## Troubleshooting
 
-1. Read the error code, subsystem, message, and location.
-2. Fix the reported source issue.
-3. Re-run the project and its tests.
-4. Call `engine.diagnostics.clear()` only after the cause has been fixed.
+1. Read the severity, code, subsystem, message, and location.
+2. Treat warnings and hypotheses as leads, not confirmed causes.
+3. Fix the underlying source or configuration issue.
+4. Re-run the relevant tests and platform build.
+5. Clear diagnostic history only after the cause has been fixed.
 
 ## Dependencies and compatibility
 
-- Engine version: current development branch (0.1.x).
-- Android Canvas and Kotlin standard library only.
-- No third-party dependency.
+- Engine version: current development branch.
+- Kotlin/JVM standard library only.
+- No platform-specific or third-party dependency.
