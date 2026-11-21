@@ -7,6 +7,8 @@ import com.rift.engine.audio.AudioManager
 import com.rift.engine.core.*
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.graphics.ViewportRenderContext
+import com.rift.engine.graphics.ViewportTransform
 import com.rift.engine.game.RiftGame
 import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerButtons
@@ -165,7 +167,7 @@ class AndroidSaveStore(context:Context):SaveStore {
  override fun putFloat(key:String,value:Float){prefs.edit().putFloat(key,value).apply()}
  override fun getFloat(key:String,defaultValue:Float)=prefs.getFloat(key,defaultValue)
 }
-class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
+class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
  private val diagnostics=DiagnosticReporter()
  private val assets=AssetManager(AndroidTextureLoader(context),diagnostics)
  private val audio=AudioManager(AndroidAudioLoader(context),diagnostics)
@@ -180,7 +182,12 @@ class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),Surfac
  private fun loop(){var prev=System.nanoTime();val target=1_000_000_000L/60
   while(running&&!Thread.currentThread().isInterrupted){val start=System.nanoTime()
    try{val dt=((start-prev)/1e9).toFloat();prev=start;clock.advance(dt){engine.update(it)}
-    var c:Canvas?=null;try{if(holder.surface.isValid){c=holder.lockCanvas();if(c!=null)engine.render(AndroidRenderContext(c))}}finally{if(c!=null)holder.unlockCanvasAndPost(c)}
+    var c:Canvas?=null;try{if(holder.surface.isValid){c=holder.lockCanvas();if(c!=null){
+     val baseContext=AndroidRenderContext(c)
+     val viewport=ViewportTransform(game.viewportWidth,game.viewportHeight,baseContext.width,baseContext.height)
+     val renderContext=ViewportRenderContext(baseContext,viewport)
+     try{engine.render(renderContext)}finally{renderContext.close()}
+    }}}finally{if(c!=null)holder.unlockCanvasAndPost(c)}
    }catch(e:Exception){engine.diagnostics.reportException("android.loop",e)}
    val wait=target-(System.nanoTime()-start);if(wait>0)LockSupport.parkNanos(wait)
   }
@@ -203,25 +210,33 @@ class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),Surfac
   else->null
  }
  override fun onTouchEvent(e:MotionEvent):Boolean {
-  val viewportWidth=width.toFloat()
-  val viewportHeight=height.toFloat()
+  val viewport=ViewportTransform(
+   game.viewportWidth,
+   game.viewportHeight,
+   width.coerceAtLeast(1),
+   height.coerceAtLeast(1)
+  )
+  val viewportWidth=game.viewportWidth.toFloat()
+  val viewportHeight=game.viewportHeight.toFloat()
+  fun logicalX(index:Int)=viewport.screenToLogicalX(e.getX(index))
+  fun logicalY(index:Int)=viewport.screenToLogicalY(e.getY(index))
   when(e.actionMasked){
    MotionEvent.ACTION_DOWN,MotionEvent.ACTION_POINTER_DOWN -> {
     val i=e.actionIndex
-    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.DOWN,e.getX(i),e.getY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
+    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.DOWN,logicalX(i),logicalY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
    }
    MotionEvent.ACTION_MOVE -> {
     for(i in 0 until e.pointerCount){
-     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.MOVE,e.getX(i),e.getY(i),viewportWidth,viewportHeight))
+     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.MOVE,logicalX(i),logicalY(i),viewportWidth,viewportHeight))
     }
    }
    MotionEvent.ACTION_UP,MotionEvent.ACTION_POINTER_UP -> {
     val i=e.actionIndex
-    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.UP,e.getX(i),e.getY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
+    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.UP,logicalX(i),logicalY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
    }
    MotionEvent.ACTION_CANCEL -> {
     for(i in 0 until e.pointerCount){
-     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.CANCEL,e.getX(i),e.getY(i),viewportWidth,viewportHeight))
+     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.CANCEL,logicalX(i),logicalY(i),viewportWidth,viewportHeight))
     }
    }
   }
