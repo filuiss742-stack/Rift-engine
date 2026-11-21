@@ -6,23 +6,21 @@ import org.junit.Test
 class DialogueSessionTest {
     @Test
     fun choiceEffectsChangeStateUsedByLaterBranches() {
-        val graph = DialogueGraph(
-            listOf(
-                DialogueNode("start", "Guard", "What will you do?", choices = listOf(
-                    DialogueChoice("help", "Help the guard", "helped", effects = listOf(
-                        SetStoryFlag("guard_helped"), AddStoryValue("trust", 2)
-                    )),
-                    DialogueChoice("leave", "Walk away", "left")
+        val graph = DialogueGraph(listOf(
+            DialogueNode("start", "Guard", "What will you do?", choices = listOf(
+                DialogueChoice("help", "Help the guard", "helped", effects = listOf(
+                    SetStoryFlag("guard_helped"), AddStoryValue("trust", 2)
                 )),
-                DialogueNode("helped", "Guard", "I will remember this."),
-                DialogueNode("later", "Guard", "You helped me before.", choices = listOf(
-                    DialogueChoice("remembered", "Ask for help", "ally",
-                        conditions = listOf(HasStoryFlag("guard_helped")))
-                )),
-                DialogueNode("ally", "Guard", "I will stand with you."),
-                DialogueNode("left", "Guard", "Then go.")
-            )
-        )
+                DialogueChoice("leave", "Walk away", "left")
+            )),
+            DialogueNode("helped", "Guard", "I will remember this."),
+            DialogueNode("later", "Guard", "You helped me before.", choices = listOf(
+                DialogueChoice("remembered", "Ask for help", "ally",
+                    conditions = listOf(HasStoryFlag("guard_helped")))
+            )),
+            DialogueNode("ally", "Guard", "I will stand with you."),
+            DialogueNode("left", "Guard", "Then go.")
+        ))
         val state = StoryState()
         val session = DialogueSession(graph, state)
         assertTrue(session.start("start"))
@@ -55,7 +53,7 @@ class DialogueSessionTest {
     }
 
     @Test
-    fun automaticDialogueAdvancesAndEnds() {
+    fun automaticDialogueAdvancesAndTerminalLineCloses() {
         val graph = DialogueGraph(listOf(
             DialogueNode("one", "A", "First", nextNodeId = "two"),
             DialogueNode("two", "B", "Last")
@@ -64,8 +62,9 @@ class DialogueSessionTest {
         assertTrue(session.start("one"))
         assertTrue(session.advance())
         assertEquals("two", session.currentNode?.id)
+        assertTrue(session.advance())
+        assertTrue(session.isFinished)
         assertFalse(session.advance())
-        assertFalse(session.isFinished)
     }
 
     @Test(expected = IllegalArgumentException::class)
