@@ -44,11 +44,8 @@ abstract class UiElement(
     }
 
     open fun update(deltaSeconds: Float) = Unit
-
     abstract fun render(context: RenderContext)
-
     open fun onPointer(event: PointerEvent): Boolean = false
-
     open fun onRemoved() = Unit
 
     fun contains(pointX: Float, pointY: Float): Boolean =
@@ -62,12 +59,20 @@ class UiPanel(
     width: Float,
     height: Float,
     var color: Int = 0xCC111827.toInt(),
-    var cornerRadius: Float = 8f
+    cornerRadius: Float = 8f
+) : UiElement(x, y, width, height) {
+    var cornerRadius: Float = cornerRadius
         set(value) {
-            require(value.isFinite() && value >= 0f) { "cornerRadius must be finite and non-negative." }
+            require(value.isFinite() && value >= 0f) {
+                "cornerRadius must be finite and non-negative."
+            }
             field = value
         }
-) : UiElement(x, y, width, height) {
+
+    init {
+        require(cornerRadius.isFinite() && cornerRadius >= 0f)
+    }
+
     override fun render(context: RenderContext) {
         context.drawRoundRect(x, y, x + width, y + height, cornerRadius, color)
     }
@@ -82,12 +87,19 @@ class UiLabel(
     var color: Int = 0xFFFFFFFF.toInt(),
     fontSize: Float = 16f,
     var bold: Boolean = false
-) : UiElement {
+) : UiElement(x, y, width, height) {
     var fontSize: Float = fontSize
         set(value) {
-            require(value.isFinite() && value > 0f) { "fontSize must be finite and greater than zero." }
+            require(value.isFinite() && value > 0f) {
+                "fontSize must be finite and greater than zero."
+            }
             field = value
-        }(x, y, width, height) {
+        }
+
+    init {
+        require(fontSize.isFinite() && fontSize > 0f)
+    }
+
     override fun render(context: RenderContext) {
         context.drawText(text, x, y + fontSize, color, fontSize, bold)
     }
@@ -103,13 +115,34 @@ class UiButton(
     var backgroundColor: Int = 0xFF315A8C.toInt(),
     var pressedColor: Int = 0xFF24446B.toInt(),
     var textColor: Int = 0xFFFFFFFF.toInt(),
-    var fontSize: Float = 16f,
-    var cornerRadius: Float = 8f
+    fontSize: Float = 16f,
+    cornerRadius: Float = 8f
 ) : UiElement(x, y, width, height) {
     private val pressedPointers = mutableSetOf<Int>()
 
+    var fontSize: Float = fontSize
+        set(value) {
+            require(value.isFinite() && value > 0f) {
+                "fontSize must be finite and greater than zero."
+            }
+            field = value
+        }
+
+    var cornerRadius: Float = cornerRadius
+        set(value) {
+            require(value.isFinite() && value >= 0f) {
+                "cornerRadius must be finite and non-negative."
+            }
+            field = value
+        }
+
     val isPressed: Boolean
         get() = pressedPointers.isNotEmpty()
+
+    init {
+        require(fontSize.isFinite() && fontSize > 0f)
+        require(cornerRadius.isFinite() && cornerRadius >= 0f)
+    }
 
     override fun render(context: RenderContext) {
         context.drawRoundRect(
@@ -156,8 +189,20 @@ class UiImage(
     width: Float,
     height: Float,
     var sprite: Sprite,
-    var alpha: Float = 1f
+    alpha: Float = 1f
 ) : UiElement(x, y, width, height) {
+    var alpha: Float = alpha
+        set(value) {
+            require(value.isFinite() && value in 0f..1f) {
+                "alpha must be between zero and one."
+            }
+            field = value
+        }
+
+    init {
+        require(alpha.isFinite() && alpha in 0f..1f)
+    }
+
     override fun render(context: RenderContext) {
         sprite.draw(context, x, y, width, height, alpha)
     }
@@ -165,7 +210,7 @@ class UiImage(
 
 /**
  * Screen-space UI layer. Elements are drawn by ascending zIndex; hit testing
- * runs in reverse order so the visually topmost control receives the pointer.
+ * runs in reverse order so the visually topmost interactive control receives the pointer.
  */
 class UiCanvas {
     private val elements = mutableListOf<UiElement>()
