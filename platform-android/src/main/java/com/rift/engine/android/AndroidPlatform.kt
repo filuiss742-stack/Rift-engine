@@ -6,6 +6,9 @@ import com.rift.engine.core.*
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.game.RiftGame
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerButtons
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.locks.LockSupport
 
@@ -148,5 +151,33 @@ class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),Surfac
   KeyEvent.KEYCODE_ALT_LEFT,KeyEvent.KEYCODE_ALT_RIGHT->EngineKey.ALT
   else->null
  }
- override fun onTouchEvent(e:MotionEvent):Boolean{if(e.action==MotionEvent.ACTION_DOWN||e.action==MotionEvent.ACTION_MOVE)engine.onTouch(e.x,e.y,width.toFloat(),height.toFloat());return true}
+ override fun onTouchEvent(e:MotionEvent):Boolean {
+  val viewportWidth=width.toFloat()
+  val viewportHeight=height.toFloat()
+  when(e.actionMasked){
+   MotionEvent.ACTION_DOWN,MotionEvent.ACTION_POINTER_DOWN -> {
+    val i=e.actionIndex
+    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.DOWN,e.getX(i),e.getY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
+   }
+   MotionEvent.ACTION_MOVE -> {
+    for(i in 0 until e.pointerCount){
+     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.MOVE,e.getX(i),e.getY(i),viewportWidth,viewportHeight))
+    }
+   }
+   MotionEvent.ACTION_UP,MotionEvent.ACTION_POINTER_UP -> {
+    val i=e.actionIndex
+    engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.UP,e.getX(i),e.getY(i),viewportWidth,viewportHeight,PointerButtons.TOUCH))
+   }
+   MotionEvent.ACTION_CANCEL -> {
+    for(i in 0 until e.pointerCount){
+     engine.onPointer(PointerEvent(e.getPointerId(i),PointerEventType.CANCEL,e.getX(i),e.getY(i),viewportWidth,viewportHeight))
+    }
+   }
+  }
+  return true
+ }
+ override fun onWindowFocusChanged(hasWindowFocus:Boolean){
+  super.onWindowFocusChanged(hasWindowFocus)
+  if(!hasWindowFocus)engine.onFocusLost()
+ }
 }
