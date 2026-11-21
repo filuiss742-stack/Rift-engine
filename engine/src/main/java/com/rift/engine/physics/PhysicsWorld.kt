@@ -127,6 +127,7 @@ class PhysicsWorld(
     gravityY: Float = 980f,
     private val maxSubstepDistance: Float = 16f,
     private val maxSubsteps: Int = 16,
+    private val solverIterations: Int = 6,
     private val broadPhaseCellSize: Float = 128f,
     private val maxCellsPerBody: Int = 256
 ) {
@@ -156,6 +157,7 @@ class PhysicsWorld(
             "maxSubstepDistance must be finite and greater than zero."
         }
         require(maxSubsteps > 0) { "maxSubsteps must be greater than zero." }
+        require(solverIterations > 0) { "solverIterations must be greater than zero." }
         require(broadPhaseCellSize.isFinite() && broadPhaseCellSize > 0f) {
             "broadPhaseCellSize must be finite and greater than zero."
         }
@@ -245,7 +247,21 @@ class PhysicsWorld(
                 max(vx, vy) * deltaSeconds
             } ?: 0f
 
-        val substeps = ceil(maxDistance / maxSubstepDistance)
+        val minimumDynamicExtent = activeBodies
+            .filter { it.type == PhysicsBodyType.DYNAMIC }
+            .minOfOrNull { body ->
+                when (val shape = body.shape) {
+                    CollisionShape.Box -> min(body.gameObject.width, body.gameObject.height) *
+                        min(abs(body.gameObject.scaleX), abs(body.gameObject.scaleY))
+                    is CollisionShape.Circle -> shape.radius * 2f *
+                        min(abs(body.gameObject.scaleX), abs(body.gameObject.scaleY))
+                }
+            } ?: maxSubstepDistance
+        val safeSubstepDistance = min(
+            maxSubstepDistance,
+            (minimumDynamicExtent * 0.5f).coerceAtLeast(1f)
+        )
+        val substeps = ceil(maxDistance / safeSubstepDistance)
             .toInt()
             .coerceIn(1, maxSubsteps)
         val subDelta = deltaSeconds / substeps
@@ -268,14 +284,16 @@ class PhysicsWorld(
 
             val candidates = candidatePairs(activeBodies)
             lastBroadPhaseCandidateCount = candidates.size
-            candidates.forEach { (firstIndex, secondIndex) ->
-                val first = activeBodies[firstIndex]
-                val second = activeBodies[secondIndex]
-                if (first.collisionFilter.allows(second.collisionFilter)) {
-                    val contact = detectContact(first, second)
-                    if (contact != null) {
-                        contactsByPair[first to second] = contact
-                        if (!contact.isSensor) resolve(contact)
+            repeat(solverIterations) {
+                candidates.forEach { (firstIndex, secondIndex) ->
+                    val first = activeBodies[firstIndex]
+                    val second = activeBodies[secondIndex]
+                    if (first.collisionFilter.allows(second.collisionFilter)) {
+                        val contact = detectContact(first, second)
+                        if (contact != null) {
+                            contactsByPair[first to second] = contact
+                            if (!contact.isSensor) resolve(contact)
+                        }
                     }
                 }
             }
