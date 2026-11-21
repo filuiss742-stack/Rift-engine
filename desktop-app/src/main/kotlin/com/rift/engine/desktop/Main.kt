@@ -1,7 +1,7 @@
 package com.rift.engine.desktop
 
 import com.rift.engine.core.GameEngine
-import com.rift.engine.demo.SandboxScene
+import com.rift.engine.demo.SandboxGame
 import com.rift.engine.diagnostics.DiagnosticReporter
 import java.io.File
 import javax.swing.SwingUtilities
@@ -16,6 +16,6 @@ fun main() {
     val engine = GameEngine(saves, diagnostics)
 
     SwingUtilities.invokeLater {
-        DesktopGameWindow(engine, SandboxScene()).isVisible = true
+        DesktopGameWindow(engine, SandboxGame()).isVisible = true
     }
 }
