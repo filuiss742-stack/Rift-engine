@@ -15,7 +15,8 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 | API | Package | Purpose |
 |---|---|---|
-| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, and optional movement profile. |
+| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, optional movement profile, and lifecycle-managed components. |
+| GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and externally supplied grounded state. |
 | MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent and one-update jump press. |
 | MovementProfile | com.rift.engine.movement | Contract for converting movement intent into body velocity. |
@@ -75,6 +76,7 @@ StoryState currently contains boolean-like flags and integer values. Save/load s
 - GameEngine owns its SceneManager, PluginManager, and GameplayModuleManager; it receives SaveStore and DiagnosticReporter through its constructor.
 - SceneManager.setInitialScene(scene) sets the first scene. Use changeScene(scene) to replace it.
 - A Scene owns objects added through protected add/remove helpers. Mutations during traversal are deferred.
+- A GameObject owns components added through addComponent/removeComponent. Component changes during update/render are deferred; component identity, not equality, defines attachment.
 - GameObject updates its movement profile and then integrates position.
 - Platform hosts own the game loop and concrete RenderContext / SaveStore implementations.
 - The current desktop host uses Swing scheduling; do not assume simulation already runs on a dedicated game thread.
