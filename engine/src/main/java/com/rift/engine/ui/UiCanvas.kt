@@ -213,11 +213,16 @@ class UiImage(
  * runs in reverse order so the visually topmost interactive control receives the pointer.
  */
 class UiCanvas {
+    internal var diagnostics: com.rift.engine.diagnostics.DiagnosticReporter? = null
     private val elements = mutableListOf<UiElement>()
     private val pressedTargets = mutableMapOf<Int, UiElement>()
+    private val failedElements = java.util.Collections.newSetFromMap(
+        java.util.IdentityHashMap<UiElement, Boolean>()
+    )
 
     fun add(element: UiElement): Boolean {
         if (elements.any { it === element }) return false
+        failedElements.remove(element)
         elements.add(element)
         return true
     }
@@ -225,20 +230,26 @@ class UiCanvas {
     fun remove(element: UiElement): Boolean {
         val removed = elements.removeAll { it === element }
         if (removed) {
+            failedElements.remove(element)
             pressedTargets.entries.removeAll { it.value === element }
-            element.onRemoved()
+            safely("ui.detach", element) { element.onRemoved() }
         }
         return removed
     }
 
     fun clear() {
-        elements.forEach(UiElement::onRemoved)
+        elements.toList().forEach { element ->
+            safely("ui.detach", element) { element.onRemoved() }
+        }
         elements.clear()
         pressedTargets.clear()
+        failedElements.clear()
     }
 
     fun resetInput() {
-        pressedTargets.values.distinct().forEach(UiElement::onRemoved)
+        pressedTargets.values.distinct().forEach { element ->
+            safely("ui.input.reset", element) { element.onRemoved() }
+        }
         pressedTargets.clear()
     }
 
@@ -248,33 +259,99 @@ class UiCanvas {
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
             "deltaSeconds must be finite and non-negative."
         }
-        elements.filter { it.visible && it.enabled }.forEach { it.update(deltaSeconds) }
+        elements.toList().forEach { element ->
+            if (element.visible && element.enabled && element !in failedElements) {
+                safely("ui.update", element) { element.update(deltaSeconds) }
+            }
+        }
     }
 
     fun render(context: RenderContext) {
-        elements.filter { it.visible }.sortedBy { it.zIndex }.forEach { it.render(context) }
+        elements.filter { it.visible && it !in failedElements }
+            .sortedBy { it.zIndex }
+            .forEach { element ->
+                safely("ui.render", element) { element.render(context) }
+            }
     }
 
     fun dispatchPointer(event: PointerEvent): Boolean {
         return when (event.type) {
             PointerEventType.DOWN -> {
-                for (target in elements.sortedBy { it.zIndex }.asReversed()) {
-                    if (target.visible && target.enabled &&
-                        target.contains(event.x, event.y) && target.onPointer(event)
+                for (target in elements.toList().sortedBy { it.zIndex }.asReversed()) {
+                    if (target.visible && target.enabled && target !in failedElements &&
+                        target.contains(event.x, event.y)
                     ) {
-                        pressedTargets[event.pointerId] = target
-                        return true
+                        val consumed = try {
+                            target.onPointer(event)
+                        } catch (exception: Exception) {
+                            quarantine("ui.input", target, exception)
+                            true
+                        }
+                        if (consumed) {
+                            pressedTargets[event.pointerId] = target
+                            return true
+                        }
                     }
                 }
                 false
             }
-            PointerEventType.UP, PointerEventType.CANCEL -> {
+            PointerEventType.UP -> {
                 val target = pressedTargets.remove(event.pointerId) ?: return false
-                target.onPointer(event)
+                if (target !in failedElements) {
+                    safely("ui.input", target) { target.onPointer(event) }
+                }
+                true
+            }
+            PointerEventType.CANCEL -> {
+                val target = pressedTargets.remove(event.pointerId) ?: return false
+                if (target !in failedElements) {
+                    safely("ui.input", target) { target.onPointer(event) }
+                }
+                true
             }
             PointerEventType.MOVE -> {
-                pressedTargets[event.pointerId]?.onPointer(event) ?: false
+                val target = pressedTargets[event.pointerId] ?: return false
+                if (target !in failedElements) {
+                    safely("ui.input", target) { target.onPointer(event) }
+                }
+                true
             }
         }
+    }
+
+    fun isElementQuarantined(element: UiElement): Boolean =
+        element in failedElements
+
+    fun retryElement(element: UiElement): Boolean {
+        if (elements.none { it === element }) return false
+        return failedElements.remove(element)
+    }
+
+    private fun safely(
+        subsystem: String,
+        element: UiElement,
+        action: () -> Unit
+    ) {
+        if (element in failedElements) return
+        try {
+            action()
+        } catch (exception: Exception) {
+            quarantine(subsystem, element, exception)
+        }
+    }
+
+    private fun quarantine(
+        subsystem: String,
+        element: UiElement,
+        exception: Exception
+    ) {
+        failedElements.add(element)
+        val reporter = diagnostics
+        if (reporter == null) throw exception
+        reporter.reportException(
+            subsystem,
+            exception,
+            "Inspect the failing UI element and call retryElement() after correcting its behavior."
+        )
     }
 }
