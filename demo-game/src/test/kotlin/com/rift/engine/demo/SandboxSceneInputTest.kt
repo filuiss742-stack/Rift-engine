@@ -33,28 +33,8 @@ class SandboxSceneInputTest {
         val manager = SceneManager()
         manager.setInitialScene(scene)
 
-        manager.onPointer(
-            PointerEvent(
-                pointerId = 1,
-                type = PointerEventType.DOWN,
-                x = 700f,
-                y = 300f,
-                viewportWidth = 960f,
-                viewportHeight = 600f,
-                button = PointerButtons.TOUCH
-            )
-        )
-        manager.onPointer(
-            PointerEvent(
-                pointerId = 1,
-                type = PointerEventType.UP,
-                x = 700f,
-                y = 300f,
-                viewportWidth = 960f,
-                viewportHeight = 600f,
-                button = PointerButtons.TOUCH
-            )
-        )
+        // A world touch is delivered through the legacy touch entry point; it must not move the player.
+        manager.onTouch(700f, 300f, 960f, 600f)
         manager.update(1f / 60f)
         manager.render(renderer)
 
