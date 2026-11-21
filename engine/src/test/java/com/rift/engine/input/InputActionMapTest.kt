@@ -61,6 +61,21 @@ class InputActionMapTest {
         assertFalse(input.wasPressed("jump"))
     }
 
+
+    @Test
+    fun bindingAnotherAlreadyHeldKeyDoesNotRepeatActionPress() {
+        val input = InputActionMap()
+        input.bindKey("move.left", 1)
+        input.onKey(1, true)
+        input.endFrame()
+
+        input.onKey(2, true)
+        input.bindKey("move.left", 2)
+
+        assertTrue(input.isDown("move.left"))
+        assertFalse(input.wasPressed("move.left"))
+    }
+
     @Test
     fun unbindingHeldActionProducesReleaseEdge() {
         val input = InputActionMap()
