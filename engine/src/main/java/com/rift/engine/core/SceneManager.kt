@@ -9,6 +9,8 @@ import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
 import com.rift.engine.scene.Scene
 import com.rift.engine.state.GameState
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -29,11 +31,15 @@ class SceneManager(
 
     private val pendingScenes = ConcurrentLinkedQueue<Scene>()
     private val heldKeys = mutableSetOf<Int>()
+    private val knownScenes = Collections.newSetFromMap(IdentityHashMap<Scene, Boolean>())
+    @Volatile private var closed = false
 
     @Synchronized
     fun setInitialScene(scene: Scene) {
+        check(!closed) { "SceneManager is closed." }
         if (current == null && pendingScenes.isEmpty()) {
             current = scene
+            knownScenes.add(scene)
             scene.attachRuntime(diagnostics, gameState, assets, audio, ::changeScene)
             scene.input.reset()
             safe("scene.onEnter") {
@@ -55,10 +61,39 @@ class SceneManager(
      * current lifecycle, update, render, or input callback has returned.
      */
     fun changeScene(scene: Scene) {
+        if (closed) {
+            diagnostics.report(
+                DiagnosticSeverity.WARNING,
+                "SCENE_MANAGER_CLOSED",
+                "SceneManager",
+                "A scene transition was requested after the SceneManager was closed."
+            )
+            return
+        }
         pendingScenes.offer(scene)
     }
 
+    @Synchronized
+    fun close() {
+        if (closed) return
+        closed = true
+        pendingScenes.clear()
+        val activeScene = current
+        if (activeScene != null) {
+            activeScene.ui.resetInput()
+            safe("scene.onExit") { activeScene.onExit() }
+        }
+        current = null
+        heldKeys.clear()
+        val scenesToDispose = knownScenes.toList()
+        knownScenes.clear()
+        scenesToDispose.forEach { scene ->
+            safe("scene.dispose") { scene.disposeRuntime() }
+        }
+    }
+
     fun update(deltaSeconds: Float) {
+        if (closed) return
         applyPendingTransitions()
         val activeScene = current ?: return
         try {
@@ -72,6 +107,7 @@ class SceneManager(
     }
 
     fun render(context: RenderContext) {
+        if (closed) return
         applyPendingTransitions()
         val activeScene = current
         if (activeScene == null) {
@@ -109,6 +145,7 @@ class SceneManager(
     }
 
     fun onPointer(event: PointerEvent) {
+        if (closed) return
         applyPendingTransitions()
         val activeScene = current ?: return
         activeScene.input.onPointer(event)
@@ -119,6 +156,7 @@ class SceneManager(
     }
 
     fun resetInput() {
+        if (closed) return
         heldKeys.clear()
         current?.input?.reset()
         current?.ui?.resetInput()
@@ -128,6 +166,7 @@ class SceneManager(
     }
 
     fun onAxis(axisId: String, value: Float) {
+        if (closed) return
         applyPendingTransitions()
         val activeScene = current ?: return
         activeScene.input.onAxis(axisId, value)
@@ -141,6 +180,7 @@ class SceneManager(
         keyCode: Int,
         pressed: Boolean
     ) {
+        if (closed) return
         applyPendingTransitions()
         if (pressed) {
             heldKeys.add(keyCode)
@@ -157,6 +197,7 @@ class SceneManager(
     }
 
     private fun applyPendingTransitions() {
+        if (closed) return
         var applied = 0
         while (true) {
             val nextScene = pendingScenes.poll() ?: return
@@ -173,6 +214,7 @@ class SceneManager(
             }
 
             current = nextScene
+            knownScenes.add(nextScene)
             nextScene.attachRuntime(diagnostics, gameState, assets, audio, ::changeScene)
             nextScene.input.reset()
             safe("scene.onEnter") {
