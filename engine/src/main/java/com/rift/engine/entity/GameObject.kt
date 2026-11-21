@@ -48,6 +48,7 @@ open class GameObject(
     private val pendingComponentAdds = mutableListOf<GameComponent>()
     private val pendingComponentRemovals = mutableListOf<GameComponent>()
     private var traversingComponents = false
+    private var disposed = false
 
     var x: Float
         get() = movementBody.x
@@ -122,6 +123,7 @@ open class GameObject(
      * the current traversal completes.
      */
     fun addComponent(component: GameComponent): Boolean {
+        check(!disposed) { "Cannot add components to a disposed GameObject." }
         if (traversingComponents) {
             if (containsIdentity(components, component)) {
                 return pendingComponentRemovals.removeAll { it === component }
@@ -150,6 +152,7 @@ open class GameObject(
      * component traversal.
      */
     fun removeComponent(component: GameComponent): Boolean {
+        if (disposed) return false
         val pendingAddRemoved = pendingComponentAdds.removeAll { it === component }
         if (traversingComponents) {
             if (!containsIdentity(components, component)) {
@@ -180,6 +183,7 @@ open class GameObject(
     }
 
     open fun update(deltaSeconds: Float) {
+        if (disposed) return
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
             "deltaSeconds must be finite and non-negative."
         }
@@ -204,7 +208,7 @@ open class GameObject(
     }
 
     open fun render(context: RenderContext) {
-        if (!active) {
+        if (disposed || !active) {
             return
         }
 
@@ -304,6 +308,39 @@ open class GameObject(
                 exception.addSuppressed(cleanupException)
             }
             throw exception
+        }
+    }
+
+    internal fun disposeComponents(reporter: DiagnosticReporter?) {
+        if (disposed) return
+        disposed = true
+        val attached = components.toList()
+        components.clear()
+        pendingComponentAdds.clear()
+        pendingComponentRemovals.clear()
+        failedComponents.clear()
+        val failures = mutableListOf<Exception>()
+        attached.forEach { component ->
+            try {
+                component.onDetach(this)
+            } catch (exception: Exception) {
+                if (reporter != null) {
+                    reporter.reportException(
+                        "component.dispose",
+                        exception,
+                        "Inspect the component onDetach() implementation and release only resources owned by that component."
+                    )
+                } else {
+                    failures += exception
+                }
+            }
+        }
+        diagnostics = null
+        if (failures.isNotEmpty()) {
+            throw IllegalStateException(
+                "One or more GameObject components failed to detach.",
+                failures.first()
+            )
         }
     }
 
