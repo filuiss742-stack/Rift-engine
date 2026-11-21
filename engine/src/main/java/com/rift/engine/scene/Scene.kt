@@ -34,11 +34,15 @@ abstract class Scene {
     protected val objects = mutableListOf<GameObject>()
     private val pendingAdds = mutableListOf<GameObject>()
     private val pendingRemovals = mutableSetOf<GameObject>()
+    private val quarantinedObjects = java.util.Collections.newSetFromMap(
+        java.util.IdentityHashMap<GameObject, Boolean>()
+    )
     private var traversingObjects = false
 
     protected fun add(gameObject: GameObject) {
         if (objects.any { it === gameObject } || pendingAdds.any { it === gameObject }) return
         if (pendingRemovals.remove(gameObject)) return
+        quarantinedObjects.remove(gameObject)
         gameObject.diagnostics = diagnostics
         if (traversingObjects) pendingAdds.add(gameObject) else objects.add(gameObject)
     }
@@ -46,6 +50,7 @@ abstract class Scene {
     protected fun remove(gameObject: GameObject) {
         if (pendingAdds.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
+            quarantinedObjects.remove(gameObject)
             gameObject.diagnostics = null
             return
         }
@@ -53,9 +58,22 @@ abstract class Scene {
             if (objects.any { it === gameObject }) pendingRemovals.add(gameObject)
         } else if (objects.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
+            quarantinedObjects.remove(gameObject)
             gameObject.diagnostics = null
         }
     }
+
+    /**
+     * Retries an object previously quarantined after an update or render exception.
+     * Returns false when the object is not currently owned by this scene.
+     */
+    fun retryObject(gameObject: GameObject): Boolean {
+        if (objects.none { it === gameObject }) return false
+        return quarantinedObjects.remove(gameObject)
+    }
+
+    fun isObjectQuarantined(gameObject: GameObject): Boolean =
+        gameObject in quarantinedObjects
 
     internal fun attachRuntime(
         reporter: DiagnosticReporter,
@@ -84,10 +102,14 @@ abstract class Scene {
         try {
             var index = 0
             while (index < objects.size) {
-                try {
-                    objects[index].update(deltaSeconds)
-                } catch (exception: Exception) {
-                    reportSceneFailure("scene.object.update", exception)
+                val gameObject = objects[index]
+                if (gameObject !in quarantinedObjects) {
+                    try {
+                        gameObject.update(deltaSeconds)
+                    } catch (exception: Exception) {
+                        quarantinedObjects.add(gameObject)
+                        reportSceneFailure("scene.object.update", exception)
+                    }
                 }
                 index += 1
             }
@@ -119,10 +141,14 @@ abstract class Scene {
             try {
                 var index = 0
                 while (index < objects.size) {
-                    try {
-                        objects[index].render(context)
-                    } catch (exception: Exception) {
-                        reportSceneFailure("scene.object.render", exception)
+                    val gameObject = objects[index]
+                    if (gameObject !in quarantinedObjects) {
+                        try {
+                            gameObject.render(context)
+                        } catch (exception: Exception) {
+                            quarantinedObjects.add(gameObject)
+                            reportSceneFailure("scene.object.render", exception)
+                        }
                     }
                     index += 1
                 }
@@ -163,6 +189,7 @@ abstract class Scene {
             removals.forEach { gameObject ->
                 objects.removeAll { it === gameObject }
                 physics.removeBody(gameObject)
+                quarantinedObjects.remove(gameObject)
                 gameObject.diagnostics = null
             }
         }
@@ -172,6 +199,7 @@ abstract class Scene {
             pendingAdds.clear()
             additions.forEach { gameObject ->
                 if (objects.none { it === gameObject }) {
+                    quarantinedObjects.remove(gameObject)
                     gameObject.diagnostics = diagnostics
                     objects.add(gameObject)
                 }
