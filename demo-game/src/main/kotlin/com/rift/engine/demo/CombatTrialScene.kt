@@ -51,6 +51,7 @@ class CombatTrialScene : Scene() {
     private val skillBtn = VirtualButton(866f, 468f, 82f, 82f, "SKILL", onPressed = { touchSkill = true })
     private val hud = UiLabel(18f, 16f, 900f, 26f, "RIFT TRIAL • HP 100 • GOLEM 60", 0xFFFFFFFF.toInt(), 18f, true)
     private val hints = UiLabel(18f, 44f, 900f, 22f, "WASD / joystick • SPACE attack • SHIFT dodge • Q skill • E interact", 0xFFDCE6E4.toInt(), 13f)
+    private val endingLabel = UiLabel(18f, 72f, 900f, 24f, "", 0xFFFFD6A5.toInt(), 16f, true)
 
     private val story = StoryState()
     private val dialogue = DialogueSession(
@@ -82,7 +83,7 @@ class CombatTrialScene : Scene() {
         player.addComponent(playerHealth); enemy.addComponent(enemyHealth)
         add(player); add(enemy); add(npc)
         combat.addHurtbox(enemy, teamId = "enemy")
-        ui.add(hud); ui.add(hints); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn)
+        ui.add(hud); ui.add(hints); ui.add(endingLabel); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn)
         story.setValue("relationship", 0); dialogue.start("meet")
         panel.add(line); panel.add(help); panel.add(dismiss); panel.add(relation); panel.add(close)
         panel.visible = false; close.visible = false; ui.add(panel)
@@ -93,6 +94,8 @@ class CombatTrialScene : Scene() {
         loadSprites()
         playerHealth.reset(gameState.int("player.hp", 100).coerceIn(1, 100).toFloat())
         story.setValue("relationship", gameState.int("story.relationship"))
+        endingLabel.text = gameState.string("story.ending")
+        endingLabel.visible = endingLabel.text.isNotBlank()
     }
 
     override fun update(deltaSeconds: Float) {
