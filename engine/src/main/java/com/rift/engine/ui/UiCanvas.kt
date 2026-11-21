@@ -320,6 +320,10 @@ class UiButton(
         }
     }
 
+    internal fun activate() {
+        if (enabled && visible) onClick()
+    }
+
     override fun onRemoved() {
         pressedPointers.clear()
     }
