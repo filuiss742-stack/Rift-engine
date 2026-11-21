@@ -102,8 +102,24 @@ open class GameObject(
     var movementInput: MovementInput = MovementInput()
     var active: Boolean = true
     var renderDefaultVisual: Boolean = true
+    private val renderLayerListeners = mutableSetOf<() -> Unit>()
+
     /** Lower layers render first; equal layers preserve scene insertion order. */
     var renderLayer: Int = 0
+        set(value) {
+            if (field == value) return
+            field = value
+            renderLayerListeners.forEach { it() }
+        }
+
+    internal fun addRenderLayerListener(listener: () -> Unit) {
+        renderLayerListeners.add(listener)
+    }
+
+    internal fun removeRenderLayerListener(listener: () -> Unit) {
+        renderLayerListeners.remove(listener)
+    }
+
     internal var physicsControlled: Boolean = false
 
     init {
