@@ -2,6 +2,8 @@ package com.rift.engine.desktop
 
 import com.rift.engine.core.FixedStepAccumulator
 import com.rift.engine.core.GameEngine
+import com.rift.engine.diagnostics.DiagnosticReporter
+import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
 import com.rift.engine.scene.Scene
@@ -21,6 +23,9 @@ import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.Properties
 import javax.swing.JFrame
 import javax.swing.JPanel
@@ -121,13 +126,26 @@ class DesktopRenderContext(
 }
 
 class DesktopSaveStore(
-    private val file: File
+    private val file: File,
+    private val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) : SaveStore {
     private val properties = Properties()
 
     init {
         if (file.isFile) {
-            file.inputStream().use(properties::load)
+            try {
+                file.inputStream().use(properties::load)
+            } catch (exception: Exception) {
+                diagnostics.report(
+                    severity = DiagnosticSeverity.WARNING,
+                    code = "DESKTOP_SAVE_READ_FAILED",
+                    subsystem = "DesktopSaveStore",
+                    message = "The save file could not be read. Defaults will be used.",
+                    cause = exception.toString(),
+                    location = file.absolutePath
+                )
+                preserveCorruptedFile()
+            }
         }
     }
 
@@ -150,13 +168,78 @@ class DesktopSaveStore(
 
     @Synchronized
     override fun getFloat(key: String, defaultValue: Float): Float {
-        return properties.getProperty("f.$key")?.toFloatOrNull() ?: defaultValue
+        val storedValue = properties.getProperty("f.$key") ?: return defaultValue
+        val parsedValue = storedValue.toFloatOrNull()
+
+        if (parsedValue == null) {
+            diagnostics.report(
+                severity = DiagnosticSeverity.WARNING,
+                code = "DESKTOP_SAVE_VALUE_INVALID",
+                subsystem = "DesktopSaveStore",
+                message = "A saved float value was invalid; the default value will be used.",
+                cause = "Key: $key, value: $storedValue",
+                location = file.absolutePath
+            )
+        }
+
+        return parsedValue ?: defaultValue
+    }
+
+    private fun preserveCorruptedFile() {
+        val backupFile = file.resolveSibling(
+            "${file.name}.corrupt-${System.currentTimeMillis()}"
+        )
+
+        try {
+            Files.move(file.toPath(), backupFile.toPath())
+        } catch (exception: Exception) {
+            diagnostics.report(
+                severity = DiagnosticSeverity.WARNING,
+                code = "DESKTOP_SAVE_BACKUP_FAILED",
+                subsystem = "DesktopSaveStore",
+                message = "The unreadable save file could not be moved to a backup.",
+                cause = exception.toString(),
+                location = file.absolutePath
+            )
+        }
     }
 
     private fun flush() {
-        file.parentFile?.mkdirs()
-        file.outputStream().use { output ->
-            properties.store(output, "Rift saves")
+        val parent = file.absoluteFile.parentFile
+        val temporaryFile: File
+
+        try {
+            Files.createDirectories(parent.toPath())
+            temporaryFile = Files.createTempFile(
+                parent.toPath(),
+                file.name,
+                ".tmp"
+            ).toFile()
+
+            try {
+                temporaryFile.outputStream().use { output ->
+                    properties.store(output, "Rift saves")
+                }
+
+                try {
+                    Files.move(
+                        temporaryFile.toPath(),
+                        file.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                } catch (_: AtomicMoveNotSupportedException) {
+                    Files.move(
+                        temporaryFile.toPath(),
+                        file.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                }
+            } finally {
+                Files.deleteIfExists(temporaryFile.toPath())
+            }
+        } catch (exception: Exception) {
+            diagnostics.reportException("DesktopSaveStore.flush", exception)
         }
     }
 }
