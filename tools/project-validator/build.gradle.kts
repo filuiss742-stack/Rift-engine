@@ -16,3 +16,7 @@ dependencies {
 application {
     mainClass.set("com.rift.tools.projectvalidator.MainKt")
 }
+
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}
