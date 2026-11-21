@@ -8,7 +8,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 |---|---|---|
 | GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, assets, audio, and diagnostics. |
 | SceneManager | com.rift.engine.core | Sets the first scene, queues safe transitions, and owns shared GameState, AssetManager, and AudioManager references. |
-| Scene | com.rift.engine.scene | Base class for game scenes; owns objects, camera, physics and combat worlds, input map, UI, shared state, assets, and audio. |
+| Scene | com.rift.engine.scene | Base class for game scenes; owns objects, camera, physics and combat worlds, input map, UI, shared state, assets, and audio; supports enter/exit/dispose lifecycle. |
 | FixedStepAccumulator | com.rift.engine.core | Runs update callbacks using a fixed time step. |
 
 ## Entities, state, and movement
