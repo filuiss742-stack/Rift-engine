@@ -3,6 +3,7 @@ package com.rift.engine.physics
 import com.rift.engine.entity.GameObject
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -114,17 +115,19 @@ data class RaycastHit(
 )
 
 /**
- * Deterministic small-world 2D AABB physics.
+ * Deterministic 2D box/circle physics with a spatial-hash broad phase.
  *
- * The initial broad phase intentionally uses a stable O(n²) pair scan. This is
- * suitable for small and medium scenes and keeps behavior easy to inspect.
- * A spatial-hash broad phase can replace it without changing the public API.
+ * Candidate pairs are deduplicated and processed in stable body-registration
+ * order. Very large bodies that span too many grid cells fall back to checking
+ * against all bodies so they cannot disappear from collision detection.
  */
 class PhysicsWorld(
     gravityX: Float = 0f,
     gravityY: Float = 980f,
     private val maxSubstepDistance: Float = 16f,
-    private val maxSubsteps: Int = 16
+    private val maxSubsteps: Int = 16,
+    private val broadPhaseCellSize: Float = 128f,
+    private val maxCellsPerBody: Int = 256
 ) {
     var gravityX: Float = gravityX
         set(value) {
@@ -141,6 +144,9 @@ class PhysicsWorld(
     private val bodies = mutableListOf<PhysicsBody>()
     private var currentContacts: List<CollisionContact> = emptyList()
 
+    var lastBroadPhaseCandidateCount: Int = 0
+        private set
+
     init {
         require(gravityX.isFinite() && gravityY.isFinite()) {
             "Gravity must be finite."
@@ -149,6 +155,10 @@ class PhysicsWorld(
             "maxSubstepDistance must be finite and greater than zero."
         }
         require(maxSubsteps > 0) { "maxSubsteps must be greater than zero." }
+        require(broadPhaseCellSize.isFinite() && broadPhaseCellSize > 0f) {
+            "broadPhaseCellSize must be finite and greater than zero."
+        }
+        require(maxCellsPerBody > 0) { "maxCellsPerBody must be greater than zero." }
     }
 
     fun addBody(
@@ -253,22 +263,18 @@ class PhysicsWorld(
                 }
             }
 
-            var i = 0
-            while (i < activeBodies.size) {
-                var j = i + 1
-                while (j < activeBodies.size) {
-                    val first = activeBodies[i]
-                    val second = activeBodies[j]
-                    if (first.collisionFilter.allows(second.collisionFilter)) {
-                        val contact = detectContact(first, second)
-                        if (contact != null) {
-                            contactsByPair[first to second] = contact
-                            if (!contact.isSensor) resolve(contact)
-                        }
+            val candidates = candidatePairs(activeBodies)
+            lastBroadPhaseCandidateCount = candidates.size
+            candidates.forEach { (firstIndex, secondIndex) ->
+                val first = activeBodies[firstIndex]
+                val second = activeBodies[secondIndex]
+                if (first.collisionFilter.allows(second.collisionFilter)) {
+                    val contact = detectContact(first, second)
+                    if (contact != null) {
+                        contactsByPair[first to second] = contact
+                        if (!contact.isSensor) resolve(contact)
                     }
-                    j += 1
                 }
-                i += 1
             }
         }
 
@@ -329,6 +335,62 @@ class PhysicsWorld(
             }
         }
         return closest
+    }
+
+    private fun candidatePairs(activeBodies: List<PhysicsBody>): List<Pair<Int, Int>> {
+        val buckets = linkedMapOf<Long, MutableList<Int>>()
+        val oversized = mutableListOf<Int>()
+
+        activeBodies.forEachIndexed { index, body ->
+            val bounds = bodyBounds(body)
+            val minCellX = floor(bounds.left / broadPhaseCellSize).toInt()
+            val maxCellX = floor(bounds.right / broadPhaseCellSize).toInt()
+            val minCellY = floor(bounds.top / broadPhaseCellSize).toInt()
+            val maxCellY = floor(bounds.bottom / broadPhaseCellSize).toInt()
+            val cellCount = (maxCellX.toLong() - minCellX + 1L) *
+                (maxCellY.toLong() - minCellY + 1L)
+
+            if (cellCount > maxCellsPerBody.toLong()) {
+                oversized += index
+            } else {
+                for (cellX in minCellX..maxCellX) {
+                    for (cellY in minCellY..maxCellY) {
+                        val key = (cellX.toLong() shl 32) xor (cellY.toLong() and 0xffffffffL)
+                        buckets.getOrPut(key) { mutableListOf() }.add(index)
+                    }
+                }
+            }
+        }
+
+        val pairs = linkedSetOf<Long>()
+        fun addPair(first: Int, second: Int) {
+            if (first == second) return
+            val low = min(first, second)
+            val high = max(first, second)
+            pairs.add((low.toLong() shl 32) or (high.toLong() and 0xffffffffL))
+        }
+
+        buckets.values.forEach { indices ->
+            var i = 0
+            while (i < indices.size) {
+                var j = i + 1
+                while (j < indices.size) {
+                    addPair(indices[i], indices[j])
+                    j += 1
+                }
+                i += 1
+            }
+        }
+
+        oversized.forEach { largeIndex ->
+            activeBodies.indices.forEach { otherIndex ->
+                addPair(largeIndex, otherIndex)
+            }
+        }
+
+        return pairs.sorted().map { key ->
+            (key ushr 32).toInt() to key.toInt()
+        }
     }
 
     private fun detectContact(
