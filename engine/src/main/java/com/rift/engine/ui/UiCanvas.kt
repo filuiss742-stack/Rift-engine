@@ -253,7 +253,7 @@ class UiCanvas {
     fun dispatchPointer(event: PointerEvent): Boolean {
         return when (event.type) {
             PointerEventType.DOWN -> {
-                for (target in elements.asReversed()) {
+                for (target in elements.sortedBy { it.zIndex }.asReversed()) {
                     if (target.visible && target.enabled &&
                         target.contains(event.x, event.y) && target.onPointer(event)
                     ) {
