@@ -24,6 +24,8 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
@@ -362,10 +364,24 @@ class DesktopGameWindow(
         }
     }
 
+    private val gameTimer = Timer(16) {
+        val now = System.nanoTime()
+        val frameDelta = (now - previousFrameNanos) / 1_000_000_000f
+        previousFrameNanos = now
+        clock.advance(frameDelta) { fixedDelta -> engine.update(fixedDelta) }
+        panel.repaint()
+    }
+
     init {
         engine.scenes.setInitialScene(game.createInitialScene())
 
         defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
+        addWindowListener(object : WindowAdapter() {
+            override fun windowClosed(event: WindowEvent) {
+                gameTimer.stop()
+                engine.close()
+            }
+        })
         contentPane.add(panel)
         panel.isFocusable = true
 
@@ -409,19 +425,7 @@ class DesktopGameWindow(
         pack()
         setLocationRelativeTo(null)
 
-        // This simple Swing timer is adequate for the current demo. A
-        // dedicated desktop game thread is a planned host improvement before
-        // introducing expensive per-frame simulation systems.
-        Timer(16) {
-            val now = System.nanoTime()
-            val frameDelta = (now - previousFrameNanos) / 1_000_000_000f
-            previousFrameNanos = now
-
-            clock.advance(frameDelta) { fixedDelta ->
-                engine.update(fixedDelta)
-            }
-            panel.repaint()
-        }.start()
+        gameTimer.start()
     }
 
     private fun pointerEvent(
