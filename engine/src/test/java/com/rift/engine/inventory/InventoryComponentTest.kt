@@ -14,12 +14,13 @@ class InventoryComponentTest {
         assertEquals(8, inventory.add("potion", 8))
         assertEquals(2, inventory.usedSlots())
         assertEquals(0, inventory.remainingSlots())
+        assertEquals(2, inventory.add("potion", 10))
         assertEquals(0, inventory.add("potion", 10))
-        assertEquals(8, inventory.count("potion"))
+        assertEquals(10, inventory.count("potion"))
         assertEquals(
             listOf(
                 InventoryStack("potion", 5),
-                InventoryStack("potion", 3)
+                InventoryStack("potion", 5)
             ),
             inventory.stacks()
         )
