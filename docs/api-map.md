@@ -16,7 +16,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 | API | Package | Purpose |
 |---|---|---|
 | GameState | com.rift.engine.state | Typed runtime state shared across all scenes managed by one SceneManager; not automatically persisted. |
-| GameObject | com.rift.engine.entity | Entity with position, size, color, active flag, transform, optional movement profile, and lifecycle-managed components. |
+| GameObject | com.rift.engine.entity | Entity with position, size, color, active flag, transform, render layer, optional movement profile, and lifecycle-managed components. |
 | Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
 | GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and grounded state. |
