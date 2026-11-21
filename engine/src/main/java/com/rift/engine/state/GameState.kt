@@ -50,6 +50,30 @@ class GameState {
 
     fun snapshot(): Map<String, Any> = values.toMap()
 
+    /**
+     * Replaces the complete primitive state snapshot. Call at a safe game-loop
+     * boundary; this is intended for loading a saved game, not per-frame use.
+     */
+    @Synchronized
+    fun replaceWith(snapshot: Map<String, Any>) {
+        require(snapshot.size <= 10_000) { "Game state may contain at most 10,000 entries." }
+        snapshot.forEach { (key, value) ->
+            require(key.isNotBlank() && key.length <= 4096) {
+                "Game-state keys must be non-blank and at most 4096 characters."
+            }
+            when (value) {
+                is Boolean, is Int, is Long, is String -> Unit
+                is Float -> require(value.isFinite()) { "Float state values must be finite." }
+                is Double -> require(value.isFinite()) { "Double state values must be finite." }
+                else -> throw IllegalArgumentException(
+                    "Unsupported game-state value type: " + value.javaClass.name
+                )
+            }
+        }
+        values.clear()
+        values.putAll(snapshot)
+    }
+
     private fun put(key: String, value: Any) {
         require(key.isNotBlank()) { "Game state keys must not be blank." }
         values[key] = value
