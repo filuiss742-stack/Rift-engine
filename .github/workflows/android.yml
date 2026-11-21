@@ -29,8 +29,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Run engine unit tests
+        run: gradle :engine:testDebugUnitTest
+      - name: Run Android lint
+        run: gradle :engine:lintDebug :app:lintDebug
       - name: Build debug APK
-        run: gradle assembleDebug
+        run: gradle :app:assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
