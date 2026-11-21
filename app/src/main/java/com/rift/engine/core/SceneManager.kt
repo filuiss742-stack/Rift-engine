@@ -14,7 +14,7 @@ class SceneManager(
     fun setInitialScene(scene: Scene) {
         if (current == null) {
             current = scene
-            scene.onEnter()
+            runLifecycleSafely("scene.onEnter") { scene.onEnter() }
         } else {
             diagnostics.report(
                 DiagnosticSeverity.WARNING,
@@ -26,9 +26,11 @@ class SceneManager(
     }
 
     fun changeScene(scene: Scene) {
-        current?.onExit()
+        current?.let { previous ->
+            runLifecycleSafely("scene.onExit") { previous.onExit() }
+        }
         current = scene
-        scene.onEnter()
+        runLifecycleSafely("scene.onEnter") { scene.onEnter() }
     }
 
     fun update(deltaSeconds: Float) {
@@ -51,5 +53,13 @@ class SceneManager(
 
     fun onTouch(x: Float, y: Float, screenWidth: Float, screenHeight: Float) {
         current?.onTouch(x, y, screenWidth, screenHeight)
+    }
+
+    private inline fun runLifecycleSafely(subsystem: String, operation: () -> Unit) {
+        try {
+            operation()
+        } catch (exception: Exception) {
+            diagnostics.reportException(subsystem, exception)
+        }
     }
 }
