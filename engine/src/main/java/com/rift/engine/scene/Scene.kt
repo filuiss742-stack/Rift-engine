@@ -208,6 +208,7 @@ abstract class Scene {
 
     open fun onFocusLost() = Unit
     open fun onKey(keyCode: Int, pressed: Boolean) = Unit
+    open fun onAxis(axisId: String, value: Float) = Unit
 
     private fun reportSceneFailure(subsystem: String, exception: Exception) {
         val reporter = diagnostics
