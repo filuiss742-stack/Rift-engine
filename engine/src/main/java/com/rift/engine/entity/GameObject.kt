@@ -1,5 +1,6 @@
 package com.rift.engine.entity
 
+import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.movement.MovementBody
 import com.rift.engine.movement.MovementInput
@@ -37,6 +38,11 @@ open class GameObject(
             }
             field = value
         }
+
+    internal var diagnostics: DiagnosticReporter? = null
+    private val failedComponents = java.util.Collections.newSetFromMap(
+        java.util.IdentityHashMap<GameComponent, Boolean>()
+    )
 
     private val components = mutableListOf<GameComponent>()
     private val pendingComponentAdds = mutableListOf<GameComponent>()
@@ -128,8 +134,13 @@ open class GameObject(
         if (containsIdentity(components, component)) {
             return false
         }
-        attachComponent(component)
-        return true
+        return try {
+            attachComponent(component)
+            true
+        } catch (exception: Exception) {
+            reportComponentFailure("component.attach", exception)
+            false
+        }
     }
 
     /**
@@ -150,7 +161,12 @@ open class GameObject(
 
         val removed = components.removeAll { it === component }
         if (removed) {
-            component.onDetach(this)
+            failedComponents.remove(component)
+            try {
+                component.onDetach(this)
+            } catch (exception: Exception) {
+                reportComponentFailure("component.detach", exception)
+            }
         }
         return removed || pendingAddRemoved
     }
@@ -224,7 +240,15 @@ open class GameObject(
         try {
             var index = 0
             while (index < components.size) {
-                action(components[index])
+                val component = components[index]
+                if (component !in failedComponents) {
+                    try {
+                        action(component)
+                    } catch (exception: Exception) {
+                        failedComponents.add(component)
+                        reportComponentFailure("component.update-render", exception)
+                    }
+                }
                 index += 1
             }
         } finally {
@@ -237,14 +261,14 @@ open class GameObject(
         if (pendingComponentRemovals.isNotEmpty()) {
             val removals = pendingComponentRemovals.toList()
             pendingComponentRemovals.clear()
-            removals.forEachIndexed { index, component ->
+            removals.forEach { component ->
                 val removed = components.removeAll { it === component }
+                failedComponents.remove(component)
                 if (removed) {
                     try {
                         component.onDetach(this)
                     } catch (exception: Exception) {
-                        pendingComponentRemovals.addAll(removals.drop(index + 1))
-                        throw exception
+                        reportComponentFailure("component.detach", exception)
                     }
                 }
             }
@@ -253,13 +277,12 @@ open class GameObject(
         if (pendingComponentAdds.isNotEmpty()) {
             val additions = pendingComponentAdds.toList()
             pendingComponentAdds.clear()
-            additions.forEachIndexed { index, component ->
+            additions.forEach { component ->
                 if (!containsIdentity(components, component)) {
                     try {
                         attachComponent(component)
                     } catch (exception: Exception) {
-                        pendingComponentAdds.addAll(additions.drop(index + 1))
-                        throw exception
+                        reportComponentFailure("component.attach", exception)
                     }
                 }
             }
@@ -267,6 +290,7 @@ open class GameObject(
     }
 
     private fun attachComponent(component: GameComponent) {
+        failedComponents.remove(component)
         components.add(component)
         try {
             component.onAttach(this)
@@ -279,6 +303,12 @@ open class GameObject(
             }
             throw exception
         }
+    }
+
+    private fun reportComponentFailure(subsystem: String, exception: Exception) {
+        val reporter = diagnostics
+        if (reporter == null) throw exception
+        reporter.reportException(subsystem, exception)
     }
 
     private fun containsIdentity(
