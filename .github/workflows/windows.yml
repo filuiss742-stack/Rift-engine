@@ -19,7 +19,10 @@ jobs:
         run: gradle :desktop-app:installDist
       - name: Package Windows app image
         shell: pwsh
-        run: jpackage --type app-image --name RiftEngine --input desktop-app/build/install/desktop-app/lib --main-jar desktop-app.jar --main-class com.rift.engine.desktop.MainKt --dest build/windows
+        run: |
+          $mainJar = Get-ChildItem desktop-app/build/install/desktop-app/lib -Filter "desktop-app*.jar" | Select-Object -First 1
+          if (-not $mainJar) { throw "Desktop application JAR was not found in the install distribution." }
+          jpackage --type app-image --name RiftEngine --input desktop-app/build/install/desktop-app/lib --main-jar $mainJar.Name --main-class com.rift.engine.desktop.MainKt --dest build/windows
       - uses: actions/upload-artifact@v4
         with:
           name: rift-engine-windows
