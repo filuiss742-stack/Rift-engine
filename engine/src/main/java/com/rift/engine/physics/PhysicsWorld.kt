@@ -504,7 +504,8 @@ class PhysicsWorld(
                 }
                 if (staticBody != null) {
                     val staticBounds = bodyBounds(staticBody)
-                    staticBounds.width < staticBounds.height
+                    (staticBounds.right - staticBounds.left) <
+                        (staticBounds.bottom - staticBounds.top)
                 } else {
                     abs(second.gameObject.velocityX - first.gameObject.velocityX) >=
                         abs(second.gameObject.velocityY - first.gameObject.velocityY)
