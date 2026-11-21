@@ -36,7 +36,7 @@ class DesktopGameWindow(private val engine:GameEngine,scene:Scene):JFrame("Rift 
  }
  init{
   engine.scenes.setInitialScene(scene);defaultCloseOperation=WindowConstants.EXIT_ON_CLOSE;contentPane.add(panel);panel.isFocusable=true
-  panel.addMouseListener(object:MouseAdapter(){override fun mousePressed(e:MouseEvent){engine.onTouch(e.x.toFloat(),e.y.toFloat(),panel.width.toFloat(),panel.height.toFloat())}})
+  panel.addMouseListener(object:MouseAdapter(){override fun mousePressed(e:MouseEvent){panel.requestFocusInWindow();engine.onTouch(e.x.toFloat(),e.y.toFloat(),panel.width.toFloat(),panel.height.toFloat())}})
   panel.addMouseMotionListener(object:MouseAdapter(){override fun mouseDragged(e:MouseEvent){engine.onTouch(e.x.toFloat(),e.y.toFloat(),panel.width.toFloat(),panel.height.toFloat())}})
   panel.addKeyListener(object:KeyAdapter(){
    override fun keyPressed(e:KeyEvent){mapKey(e.keyCode)?.let{engine.onKey(it,true)}}
