@@ -76,6 +76,20 @@ class AssetManagerTest {
         assertFalse(assets.unloadTexture("hero"))
     }
 
+
+    @Test
+    fun rejectsTextureHandleAlreadyOwnedByAnotherId() {
+        val texture = FakeTexture()
+        val assets = AssetManager(TextureLoader { texture })
+        assets.loadTexture("first", "first.png")
+
+        assertNull(assets.loadTexture("second", "second.png"))
+        assertEquals(0, texture.closes)
+
+        assets.close()
+        assertEquals(1, texture.closes)
+    }
+
     @Test
     fun closeDisposesAllTexturesOnlyOnce() {
         val first = FakeTexture()
