@@ -215,6 +215,31 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
   KeyEvent.KEYCODE_BUTTON_R1->EngineKey.CTRL
   KeyEvent.KEYCODE_BUTTON_START->EngineKey.ENTER
   KeyEvent.KEYCODE_BUTTON_SELECT->EngineKey.TAB
+  KeyEvent.KEYCODE_B->EngineKey.B;KeyEvent.KEYCODE_C->EngineKey.C;KeyEvent.KEYCODE_G->EngineKey.G
+  KeyEvent.KEYCODE_H->EngineKey.H;KeyEvent.KEYCODE_I->EngineKey.I;KeyEvent.KEYCODE_J->EngineKey.J
+  KeyEvent.KEYCODE_K->EngineKey.K;KeyEvent.KEYCODE_L->EngineKey.L;KeyEvent.KEYCODE_M->EngineKey.M
+  KeyEvent.KEYCODE_N->EngineKey.N;KeyEvent.KEYCODE_O->EngineKey.O;KeyEvent.KEYCODE_P->EngineKey.P
+  KeyEvent.KEYCODE_T->EngineKey.T;KeyEvent.KEYCODE_U->EngineKey.U;KeyEvent.KEYCODE_V->EngineKey.V
+  KeyEvent.KEYCODE_X->EngineKey.X;KeyEvent.KEYCODE_Y->EngineKey.Y;KeyEvent.KEYCODE_Z->EngineKey.Z
+  KeyEvent.KEYCODE_0->EngineKey.DIGIT_0;KeyEvent.KEYCODE_1->EngineKey.DIGIT_1
+  KeyEvent.KEYCODE_2->EngineKey.DIGIT_2;KeyEvent.KEYCODE_3->EngineKey.DIGIT_3
+  KeyEvent.KEYCODE_4->EngineKey.DIGIT_4;KeyEvent.KEYCODE_5->EngineKey.DIGIT_5
+  KeyEvent.KEYCODE_6->EngineKey.DIGIT_6;KeyEvent.KEYCODE_7->EngineKey.DIGIT_7
+  KeyEvent.KEYCODE_8->EngineKey.DIGIT_8;KeyEvent.KEYCODE_9->EngineKey.DIGIT_9
+  KeyEvent.KEYCODE_F1->EngineKey.F1;KeyEvent.KEYCODE_F2->EngineKey.F2
+  KeyEvent.KEYCODE_F3->EngineKey.F3;KeyEvent.KEYCODE_F4->EngineKey.F4
+  KeyEvent.KEYCODE_F5->EngineKey.F5;KeyEvent.KEYCODE_F6->EngineKey.F6
+  KeyEvent.KEYCODE_F7->EngineKey.F7;KeyEvent.KEYCODE_F8->EngineKey.F8
+  KeyEvent.KEYCODE_F9->EngineKey.F9;KeyEvent.KEYCODE_F10->EngineKey.F10
+  KeyEvent.KEYCODE_F11->EngineKey.F11;KeyEvent.KEYCODE_F12->EngineKey.F12
+  KeyEvent.KEYCODE_DEL->EngineKey.BACKSPACE
+  KeyEvent.KEYCODE_FORWARD_DEL->EngineKey.DELETE
+  KeyEvent.KEYCODE_MOVE_HOME->EngineKey.HOME
+  KeyEvent.KEYCODE_MOVE_END->EngineKey.END
+  KeyEvent.KEYCODE_PAGE_UP->EngineKey.PAGE_UP
+  KeyEvent.KEYCODE_PAGE_DOWN->EngineKey.PAGE_DOWN
+  KeyEvent.KEYCODE_INSERT->EngineKey.INSERT
+  KeyEvent.KEYCODE_CAPS_LOCK->EngineKey.CAPS_LOCK
   else->null
  }
  override fun onGenericMotionEvent(event:MotionEvent):Boolean {
