@@ -17,9 +17,16 @@ class SandboxScene : Scene() {
         color = 0xFF6996FF.toInt()
     )
 
-    private val pressedKeys = mutableSetOf<Int>()
-
     init {
+        input.bindKey("move.left", EngineKey.A)
+        input.bindKey("move.left", EngineKey.LEFT)
+        input.bindKey("move.right", EngineKey.D)
+        input.bindKey("move.right", EngineKey.RIGHT)
+        input.bindKey("move.up", EngineKey.W)
+        input.bindKey("move.up", EngineKey.UP)
+        input.bindKey("move.down", EngineKey.S)
+        input.bindKey("move.down", EngineKey.DOWN)
+
         add(player)
         add(GameObject(420f, 170f, 100f, 100f, 0xFFFFAA50.toInt()))
         add(GameObject(650f, 350f, 80f, 80f, 0xFF78DCAA.toInt()))
@@ -31,16 +38,16 @@ class SandboxScene : Scene() {
         val movementSpeed = 240f
         val distance = movementSpeed * deltaSeconds
 
-        if (EngineKey.A in pressedKeys || EngineKey.LEFT in pressedKeys) {
+        if (input.isDown("move.left")) {
             player.x -= distance
         }
-        if (EngineKey.D in pressedKeys || EngineKey.RIGHT in pressedKeys) {
+        if (input.isDown("move.right")) {
             player.x += distance
         }
-        if (EngineKey.W in pressedKeys || EngineKey.UP in pressedKeys) {
+        if (input.isDown("move.up")) {
             player.y -= distance
         }
-        if (EngineKey.S in pressedKeys || EngineKey.DOWN in pressedKeys) {
+        if (input.isDown("move.down")) {
             player.y += distance
         }
     }
@@ -102,16 +109,5 @@ class SandboxScene : Scene() {
     ) {
         player.x = x - player.width / 2
         player.y = y - player.height / 2
-    }
-
-    override fun onKey(
-        keyCode: Int,
-        pressed: Boolean
-    ) {
-        if (pressed) {
-            pressedKeys.add(keyCode)
-        } else {
-            pressedKeys.remove(keyCode)
-        }
     }
 }
