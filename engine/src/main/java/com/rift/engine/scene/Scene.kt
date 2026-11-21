@@ -14,18 +14,15 @@ import com.rift.engine.state.GameState
 import com.rift.engine.ui.UiCanvas
 
 /**
- * A scene owns its game objects.
- *
- * Add/remove requests made while objects are being updated or rendered are
- * deferred until the current traversal finishes. This keeps iteration stable
- * without allocating a copied object list every frame.
+ * A scene owns its game objects, physics world, camera, input map, and UI.
+ * Mutations requested during traversal are deferred to a safe boundary.
  */
 abstract class Scene {
-    /** Named actions bound by this scene; physical key events are forwarded by SceneManager. */
     val input = InputActionMap()
     val camera = Camera()
     val physics = PhysicsWorld()
     val ui = UiCanvas()
+
     var gameState: GameState = GameState()
         internal set
     var assets: AssetManager? = null
@@ -35,42 +32,63 @@ abstract class Scene {
     internal var diagnostics: DiagnosticReporter? = null
 
     protected val objects = mutableListOf<GameObject>()
-
     private val pendingAdds = mutableListOf<GameObject>()
     private val pendingRemovals = mutableSetOf<GameObject>()
     private var traversingObjects = false
 
     protected fun add(gameObject: GameObject) {
-        if (traversingObjects) {
-            pendingAdds.add(gameObject)
-        } else {
-            objects.add(gameObject)
-        }
+        if (objects.any { it === gameObject } || pendingAdds.any { it === gameObject }) return
+        if (pendingRemovals.remove(gameObject)) return
+        gameObject.diagnostics = diagnostics
+        if (traversingObjects) pendingAdds.add(gameObject) else objects.add(gameObject)
     }
 
     protected fun remove(gameObject: GameObject) {
+        if (pendingAdds.removeAll { it === gameObject }) {
+            physics.removeBody(gameObject)
+            gameObject.diagnostics = null
+            return
+        }
         if (traversingObjects) {
-            pendingAdds.remove(gameObject)
-            pendingRemovals.add(gameObject)
-        } else {
-            objects.remove(gameObject)
+            if (objects.any { it === gameObject }) pendingRemovals.add(gameObject)
+        } else if (objects.removeAll { it === gameObject }) {
             physics.removeBody(gameObject)
             gameObject.diagnostics = null
         }
     }
 
-    open fun onEnter() = Unit
+    internal fun attachRuntime(
+        reporter: DiagnosticReporter,
+        sharedState: GameState,
+        assetManager: AssetManager,
+        audioManager: AudioManager
+    ) {
+        diagnostics = reporter
+        gameState = sharedState
+        assets = assetManager
+        audio = audioManager
+        objects.forEach { it.diagnostics = reporter }
+        pendingAdds.forEach { it.diagnostics = reporter }
+    }
 
+    open fun onEnter() = Unit
     open fun onExit() = Unit
 
     open fun update(deltaSeconds: Float) {
+        require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
+            "deltaSeconds must be finite and non-negative."
+        }
         applyPendingMutations()
         traversingObjects = true
 
         try {
             var index = 0
             while (index < objects.size) {
-                objects[index].update(deltaSeconds)
+                try {
+                    objects[index].update(deltaSeconds)
+                } catch (exception: Exception) {
+                    reportSceneFailure("scene.object.update", exception)
+                }
                 index += 1
             }
         } finally {
@@ -91,16 +109,13 @@ abstract class Scene {
     }
 
     internal fun dispatchPointer(event: PointerEvent) {
-        if (!ui.dispatchPointer(event)) {
-            onPointer(event)
-        }
+        if (!ui.dispatchPointer(event)) onPointer(event)
     }
 
     open fun render(context: RenderContext) {
         camera.withTransform(context) {
             applyPendingMutations()
             traversingObjects = true
-
             try {
                 var index = 0
                 while (index < objects.size) {
@@ -116,6 +131,7 @@ abstract class Scene {
                 applyPendingMutations()
             }
         }
+
         try {
             ui.render(context)
         } catch (exception: Exception) {
@@ -123,30 +139,16 @@ abstract class Scene {
         }
     }
 
-    open fun onTouch(
-        x: Float,
-        y: Float,
-        width: Float,
-        height: Float
-    ) = Unit
+    open fun onTouch(x: Float, y: Float, width: Float, height: Float) = Unit
 
     open fun onPointer(event: PointerEvent) {
         if (event.type != PointerEventType.CANCEL) {
-            onTouch(
-                event.x,
-                event.y,
-                event.viewportWidth,
-                event.viewportHeight
-            )
+            onTouch(event.x, event.y, event.viewportWidth, event.viewportHeight)
         }
     }
 
     open fun onFocusLost() = Unit
-
-    open fun onKey(
-        keyCode: Int,
-        pressed: Boolean
-    ) = Unit
+    open fun onKey(keyCode: Int, pressed: Boolean) = Unit
 
     private fun reportSceneFailure(subsystem: String, exception: Exception) {
         val reporter = diagnostics
@@ -156,14 +158,24 @@ abstract class Scene {
 
     private fun applyPendingMutations() {
         if (pendingRemovals.isNotEmpty()) {
-            pendingRemovals.forEach(physics::removeBody)
-            objects.removeAll(pendingRemovals)
+            val removals = pendingRemovals.toList()
             pendingRemovals.clear()
+            removals.forEach { gameObject ->
+                objects.removeAll { it === gameObject }
+                physics.removeBody(gameObject)
+                gameObject.diagnostics = null
+            }
         }
 
         if (pendingAdds.isNotEmpty()) {
-            objects.addAll(pendingAdds)
+            val additions = pendingAdds.toList()
             pendingAdds.clear()
+            additions.forEach { gameObject ->
+                if (objects.none { it === gameObject }) {
+                    gameObject.diagnostics = diagnostics
+                    objects.add(gameObject)
+                }
+            }
         }
     }
 }
