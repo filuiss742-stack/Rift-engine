@@ -4,11 +4,11 @@ A minimal independent game-code project demonstrating RiftGame, Scene, GameObjec
 
 ## Build
 
-From this directory:
+From this directory, with Gradle 8.9 and JDK 17 installed:
 
 ```shell
-./gradlew test
-./gradlew build
+gradle test
+gradle build
 ```
 
 The template currently uses a Gradle composite build pointing to ../../engine so it can be validated inside the Rift repository without publishing artifacts. A copied template outside the repository needs the engine artifact published to a Maven repository; the public distribution workflow is still being completed.
