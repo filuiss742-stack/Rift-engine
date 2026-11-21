@@ -98,6 +98,20 @@ class AudioManagerTest {
         assertEquals("RIFT_AUDIO_NOT_FOUND", diagnostics.latestError()?.code)
     }
 
+
+    @Test
+    fun rejectsAudioHandleAlreadyOwnedByAnotherId() {
+        val audio = FakeAudio()
+        val manager = AudioManager(AudioLoader { _, _ -> audio })
+        manager.loadSound("first", "first.wav")
+
+        assertNull(manager.loadSound("second", "second.wav"))
+        assertEquals(0, audio.closes)
+
+        manager.close()
+        assertEquals(1, audio.closes)
+    }
+
     @Test
     fun closeReleasesSoundAndMusicResourcesOnce() {
         val sound = FakeAudio()
