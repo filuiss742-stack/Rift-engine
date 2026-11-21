@@ -152,9 +152,9 @@ class SceneManagerTest {
         val scene = object : Scene() {
             init {
                 input.bindKey("jump", EngineKey.SPACE)
-                ui.add(com.rift.engine.ui.UiButton(10f, 10f, 80f, 40f, "Play") {
+                ui.add(com.rift.engine.ui.UiButton(10f, 10f, 80f, 40f, "Play", onClick = {
                     clicks += 1
-                })
+                }))
             }
         }
         manager.setInitialScene(scene)
