@@ -2,7 +2,7 @@
 
 Rift Engine is a modular Kotlin 2D game engine targeting **Android (APK)** and **Windows (desktop application image with an EXE launcher)**. Linux and macOS are not current targets.
 
-The same game logic, scenes, entities, movement profiles, plugins and save API are shared. Platform modules supply rendering, input, persistence and application hosting. The architecture is intended for mixed-style games combining top-down exploration, side-view platforming, action combat and isometric presentation without duplicating game state.
+The same game logic, scenes, entities, movement profiles, plugins and save API are shared. Platform modules supply rendering, input, persistence and application hosting. The architecture is intended for mixed-style games combining top-down exploration, side-view platforming, action combat, isometric presentation, and branching story gameplay without duplicating game state.
 
 ## Start here
 
@@ -11,6 +11,7 @@ The same game logic, scenes, entities, movement profiles, plugins and save API a
 - [Create your first scene](docs/getting-started/create-a-scene.md).
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
+- [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
 - [Saves and plugins](docs/getting-started/saves-plugins.md).
 - [Practical cookbook](docs/cookbook.md).
 - [Change matrix](docs/architecture/change-matrix.md) — module choice and validation.
