@@ -2,7 +2,9 @@ package com.rift.engine.android
 import android.content.Context
 import android.graphics.*
 import android.view.*
+import com.rift.engine.assets.AssetManager
 import com.rift.engine.core.*
+import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.game.RiftGame
 import com.rift.engine.input.EngineKey
@@ -158,7 +160,10 @@ class AndroidSaveStore(context:Context):SaveStore {
  override fun getFloat(key:String,defaultValue:Float)=prefs.getFloat(key,defaultValue)
 }
 class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
- private val engine=GameEngine(AndroidSaveStore(context));private val clock=FixedStepAccumulator()
+ private val diagnostics=DiagnosticReporter()
+ private val assets=AssetManager(AndroidTextureLoader(context),diagnostics)
+ private val engine=GameEngine(AndroidSaveStore(context),diagnostics,assets)
+ private val clock=FixedStepAccumulator()
  @Volatile private var running=false;private var thread:Thread?=null
  init{holder.addCallback(this);isFocusable=true;isFocusableInTouchMode=true;engine.scenes.setInitialScene(game.createInitialScene());requestFocus()}
  override fun surfaceCreated(h:SurfaceHolder){resume()}
