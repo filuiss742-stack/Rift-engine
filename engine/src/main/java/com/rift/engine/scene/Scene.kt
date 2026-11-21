@@ -89,6 +89,7 @@ abstract class Scene {
                 applyPendingMutations()
             }
         }
+        ui.render(context)
     }
 
     open fun onTouch(
