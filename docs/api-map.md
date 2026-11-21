@@ -102,7 +102,7 @@ Current asset limitations: synchronous texture loading only; no font pipeline, c
 |---|---|---|
 | EngineKey | com.rift.engine.input | Device-independent identifiers for common keyboard keys. |
 | PointerEvent / PointerEventType / PointerButtons | com.rift.engine.input | Device-independent mouse/touch pointer lifecycle and button identifiers, including multi-touch pointer IDs. |
-| InputActionMap | com.rift.engine.input | Maps named actions to keyboard keys and pointer buttons; exposes held/pressed/released state and pointer position/delta. Gamepad bindings are not implemented. |
+| InputActionMap | com.rift.engine.input | Maps named actions to keyboard keys, pointer buttons, and normalized analog axes with dead zones; exposes held/pressed/released state and pointer position/delta. |
 
 ## Audio
 
@@ -111,7 +111,7 @@ Current asset limitations: synchronous texture loading only; no font pipeline, c
 | AudioResource / AudioLoader | com.rift.engine.audio | Platform-neutral playback handle and host-supplied audio decoder. |
 | AudioManager | com.rift.engine.audio | ID-based sound/music cache, playback controls, volume, and disposal. |
 
-Current audio limitations: synchronous loading, Android MediaPlayer for both effects and music, Java Sound formats on Windows, and no mixer buses/spatial audio/cross-fades.
+Current input limitations: Android forwards common gamepad buttons and axes; Windows native XInput/DirectInput enumeration is not bundled. Windows adapters can feed the public GameEngine axis/key entrypoints.\n\nCurrent audio limitations: synchronous loading, Android MediaPlayer for both effects and music, Java Sound formats on Windows, and no mixer buses/spatial audio/cross-fades.
 
 ## Storage, plugins, and diagnostics
 
