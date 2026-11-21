@@ -40,6 +40,7 @@ class CombatTrialScene : Scene() {
     private var touchAttack = false
     private var touchDodge = false
     private var touchSkill = false
+    private var touchInteract = false
     private var dialogueOpen = false
     private val walk = TopDownMovementProfile(178f)
     private val dodge = TopDownMovementProfile(470f)
@@ -50,8 +51,9 @@ class CombatTrialScene : Scene() {
     private val dodgeBtn = VirtualButton(682f, 468f, 82f, 82f, "DODGE", onPressed = { touchDodge = true })
     private val attackBtn = VirtualButton(774f, 468f, 82f, 82f, "ATTACK", onPressed = { touchAttack = true })
     private val skillBtn = VirtualButton(866f, 468f, 82f, 82f, "SKILL", onPressed = { touchSkill = true })
+    private val interactBtn = VirtualButton(866f, 370f, 82f, 76f, "USE", onPressed = { touchInteract = true })
     private val hud = UiLabel(18f, 16f, 900f, 26f, "RIFT TRIAL • HP 100 • GOLEM 60", 0xFFFFFFFF.toInt(), 18f, true)
-    private val hints = UiLabel(18f, 44f, 900f, 22f, "WASD / joystick • SPACE attack • SHIFT dodge • Q skill • E interact", 0xFFDCE6E4.toInt(), 13f)
+    private val hints = UiLabel(18f, 44f, 900f, 22f, "WASD / joystick • SPACE attack • SHIFT dodge • Q skill • E / USE interact", 0xFFDCE6E4.toInt(), 13f)
     private val endingLabel = UiLabel(18f, 72f, 900f, 24f, "", 0xFFFFD6A5.toInt(), 16f, true)
 
     private val story = StoryState()
@@ -84,7 +86,7 @@ class CombatTrialScene : Scene() {
         player.addComponent(playerHealth); enemy.addComponent(enemyHealth)
         add(player); add(enemy); add(npc)
         combat.addHurtbox(enemy, teamId = "enemy")
-        ui.add(hud); ui.add(hints); ui.add(endingLabel); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn)
+        ui.add(hud); ui.add(hints); ui.add(endingLabel); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn); ui.add(interactBtn)
         story.setValue("relationship", 0); dialogue.start("meet")
         panel.add(line); panel.add(help); panel.add(dismiss); panel.add(relation); panel.add(close)
         panel.visible = false; close.visible = false; ui.add(panel)
@@ -117,8 +119,8 @@ class CombatTrialScene : Scene() {
         val doAttack = input.wasPressed("attack") || touchAttack
         val doDodge = input.wasPressed("dodge") || touchDodge
         val doSkill = input.wasPressed("skill") || touchSkill
-        val interact = input.wasPressed("interact")
-        touchAttack = false; touchDodge = false; touchSkill = false
+        val interact = input.wasPressed("interact") || touchInteract
+        touchAttack = false; touchDodge = false; touchSkill = false; touchInteract = false
 
         if (!dialogueOpen) {
             if (doDodge && dodgeCooldown <= 0f) { dodgeRemaining = 0.24f; dodgeCooldown = 0.82f }
@@ -198,12 +200,12 @@ class CombatTrialScene : Scene() {
         dialogue.start(if (story.hasFlag("mira_helped")) "trusted" else if (story.hasFlag("mira_dismissed")) "distant" else "meet")
         line.text = dialogue.currentNode?.text ?: ""
         help.visible = !alreadyAnswered; dismiss.visible = !alreadyAnswered; close.visible = alreadyAnswered; panel.visible = true
-        stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false
+        stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false; interactBtn.visible = false
     }
 
     private fun closeDialogue() {
         dialogueOpen = false; panel.visible = false
-        stick.visible = true; dodgeBtn.visible = true; attackBtn.visible = true; skillBtn.visible = true
+        stick.visible = true; dodgeBtn.visible = true; attackBtn.visible = true; skillBtn.visible = true; interactBtn.visible = true
     }
 
     private fun attack() {
@@ -279,9 +281,11 @@ class CombatTrialScene : Scene() {
 class DungeonTrialScene : Scene() {
     internal val player = GameObject(72f, 452f, 44f, 54f)
     private var touchJump = false
+    private var touchInteract = false
     private var animator: SpriteAnimationComponent? = null
     private val stick = VirtualJoystick(22f, 458f, 112f)
     private val jump = VirtualButton(820f, 462f, 116f, 88f, "JUMP", onPressed = { touchJump = true })
+    private val use = VirtualButton(700f, 370f, 96f, 72f, "USE", onPressed = { touchInteract = true })
     private val status = UiLabel(18f, 16f, 900f, 26f, "DUNGEON TRIAL • JUMP THE BLOCKERS", 0xFFFFFFFF.toInt(), 18f, true)
     private val hint = UiLabel(18f, 44f, 900f, 22f, "A/D or joystick • SPACE / JUMP • E near exit: return", 0xFFDCE6E4.toInt(), 13f)
 
@@ -298,7 +302,7 @@ class DungeonTrialScene : Scene() {
         val b2 = GameObject(405f, 438f, 82f, 82f); physics.addBody(b2, PhysicsBodyType.STATIC); add(b2)
         val platform = GameObject(590f, 410f, 150f, 18f); physics.addBody(platform, PhysicsBodyType.STATIC); add(platform)
         val b3 = GameObject(820f, 468f, 72f, 52f); physics.addBody(b3, PhysicsBodyType.STATIC); add(b3)
-        add(player); ui.add(status); ui.add(hint); ui.add(stick); ui.add(jump)
+        add(player); ui.add(status); ui.add(hint); ui.add(stick); ui.add(jump); ui.add(use)
         camera.zoom = 1.16f
     }
 
@@ -318,7 +322,9 @@ class DungeonTrialScene : Scene() {
         super.update(deltaSeconds)
         player.renderLayer = player.y.toInt()
         camera.x = (player.x - 360f).coerceAtLeast(0f); camera.y = 0f
-        if (input.wasPressed("interact") && player.x >= 928f) {
+        val interactPressed = input.wasPressed("interact") || touchInteract
+        touchInteract = false
+        if (interactPressed && player.x >= 928f) {
             gameState.putBoolean("dungeon.cleared", true)
             val relation = gameState.int("story.relationship")
             gameState.putString("story.ending", when {
