@@ -83,6 +83,22 @@ class SceneManager(
         pendingScenes.offer(scene)
     }
 
+    /**
+     * Releases a scene retained for possible future transitions.
+     *
+     * The active scene cannot be disposed. Once disposed, a scene cannot be
+     * scheduled again; create a new instance when it is needed again.
+     */
+    @Synchronized
+    fun disposeScene(scene: Scene): Boolean {
+        if (closed || current === scene) return false
+        val wasPending = pendingScenes.removeAll { it === scene }
+        val wasOwned = knownScenes.remove(scene)
+        if (!wasPending && !wasOwned) return false
+        scene.disposeRuntime()
+        return true
+    }
+
     @Synchronized
     override fun close() {
         if (closed) return
