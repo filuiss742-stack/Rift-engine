@@ -5,5 +5,5 @@ import com.rift.engine.scene.Scene
 
 /** Main playable showcase for the current Rift Engine development build. */
 class SandboxGame : RiftGame {
-    override fun createInitialScene(): Scene = CombatTrialScene()
+    override fun createInitialScene(): Scene = SandboxScene()
 }
