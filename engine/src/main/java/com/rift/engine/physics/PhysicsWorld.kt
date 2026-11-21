@@ -220,6 +220,16 @@ class PhysicsWorld(
         return true
     }
 
+    /** Removes every body and resets contact state when the owning scene is disposed. */
+    fun clear() {
+        bodies.forEach { it.gameObject.physicsControlled = false }
+        bodies.clear()
+        currentContacts = emptyList()
+        previousContactPairs.clear()
+        currentContactEvents = emptyList()
+        lastBroadPhaseCandidateCount = 0
+    }
+
     fun bodyOf(gameObject: GameObject): PhysicsBody? {
         return bodies.firstOrNull { it.gameObject === gameObject }
     }
