@@ -148,16 +148,16 @@ class CombatWorld(
         }
 
         val expired = mutableListOf<CombatHitbox>()
-        hitboxes.toList().forEach { hitbox ->
+        hitboxes.toList().forEach hitboxLoop@ { hitbox ->
             if (!hitbox.enabled || !hitbox.owner.active) {
                 if (hitbox.remainingSeconds != null) {
                     hitbox.remainingSeconds = hitbox.remainingSeconds!! - deltaSeconds
                     if (hitbox.remainingSeconds!! <= 0f) expired += hitbox
                 }
-                return@forEach
+                return@hitboxLoop
             }
 
-            hurtboxes.toList().forEach { hurtbox ->
+            hurtboxes.toList().forEach hurtboxLoop@ { hurtbox ->
                 if (!hurtbox.enabled || !hurtbox.owner.active ||
                     hurtbox.owner === hitbox.owner ||
                     hurtbox.teamId == hitbox.teamId ||
@@ -165,7 +165,7 @@ class CombatWorld(
                     hurtbox.owner in hitbox.hitTargets ||
                     !hurtbox.health.isAlive
                 ) {
-                    return@forEach
+                    return@hurtboxLoop
                 }
 
                 if (Collision.intersects(hitbox.owner.bounds(), hurtbox.owner.bounds())) {
