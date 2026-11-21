@@ -4,7 +4,7 @@ import android.graphics.*
 import android.view.*
 import com.rift.engine.core.*
 import com.rift.engine.graphics.RenderContext
-import com.rift.engine.scene.Scene
+import com.rift.engine.game.RiftGame
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.locks.LockSupport
 
@@ -26,10 +26,10 @@ class AndroidSaveStore(context:Context):SaveStore {
  override fun putFloat(key:String,value:Float){prefs.edit().putFloat(key,value).apply()}
  override fun getFloat(key:String,defaultValue:Float)=prefs.getFloat(key,defaultValue)
 }
-class RiftSurfaceView(context:Context,scene:Scene):SurfaceView(context),SurfaceHolder.Callback {
+class RiftSurfaceView(context:Context,game:RiftGame):SurfaceView(context),SurfaceHolder.Callback {
  private val engine=GameEngine(AndroidSaveStore(context));private val clock=FixedStepAccumulator()
  @Volatile private var running=false;private var thread:Thread?=null
- init{holder.addCallback(this);isFocusable=true;engine.scenes.setInitialScene(scene)}
+ init{holder.addCallback(this);isFocusable=true;engine.scenes.setInitialScene(game.createInitialScene())}
  override fun surfaceCreated(h:SurfaceHolder){resume()}
  override fun surfaceDestroyed(h:SurfaceHolder){pause()}
  override fun surfaceChanged(h:SurfaceHolder,f:Int,w:Int,hh:Int)=Unit
