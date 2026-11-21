@@ -35,7 +35,7 @@ override fun update(deltaSeconds: Float) {
 ```
 
 Available queries:
-- isDown(action): at least one bound key is held.
+- isDown(action): at least one bound keyboard key or pointer button is held.
 - wasPressed(action): a bound key began the action during this update frame.
 - wasReleased(action): the last held key for the action was released during this update frame.
 
@@ -53,23 +53,35 @@ override fun onKey(keyCode: Int, pressed: Boolean) {
 
 The current EngineKey set includes WASD, arrow keys, Space, Enter, Escape, Tab, E, Q, F, R, Shift, Ctrl, and Alt. Android hardware keyboards and Windows keyboard input are forwarded by their platform adapters.
 
-## Touch input
+## Pointer and touch input
 
-Override onTouch for pointer/tap behavior:
+Mouse buttons and touch contacts can also drive named actions:
 
 ```kotlin
-override fun onTouch(x: Float, y: Float, width: Float, height: Float) {
-    player.x = x - player.width / 2f
-    player.y = y - player.height / 2f
+import com.rift.engine.input.PointerButtons
+
+init {
+    input.bindPointerButton("attack", PointerButtons.PRIMARY) // desktop mouse
+    input.bindPointerButton("touch", PointerButtons.TOUCH)    // Android touch
+}
+
+override fun onPointer(event: PointerEvent) {
+    if (event.type == PointerEventType.DOWN && input.wasPressed("attack")) {
+        val worldX = camera.screenToWorldX(event.x)
+        val worldY = camera.screenToWorldY(event.y)
+        // Aim or interact in world coordinates.
+    }
 }
 ```
 
-The platform adapter translates the device event and forwards it through GameEngine to the active scene.
+`PointerEvent` reports pointer ID, event type (DOWN/MOVE/UP/CANCEL), coordinates, and viewport size. Android forwards simultaneous touch pointers; desktop forwards mouse press, release, drag, and movement. `input.pointerX/Y` and `pointerDeltaX/Y` expose the most recent pointer position and movement. Focus loss clears held input so keys or buttons cannot remain stuck.
+
+The legacy `onTouch(x, y, width, height)` callback remains available and receives non-cancel pointer events. New projects should prefer `onPointer` when they need press/release semantics.
 
 ## Current limitations
 
-- Named action mapping currently supports key bindings; pointer buttons, gamepad bindings, persistence/remapping UI, and input profiles are not implemented.
-- Touch events are delivered as scene pointer callbacks; virtual joystick and virtual button widgets are not implemented.
-- Pointer coordinates are currently screen/view coordinates; camera/viewport conversion is a later rendering milestone.
+- Named action mapping supports keyboard and pointer buttons; gamepad bindings, saved remapping, and input-profile UI are not implemented.
+- Virtual joystick and virtual button widgets are not implemented yet.
+- Pointer coordinates are view/screen coordinates. Use Camera.screenToWorldX/Y for the current top-left anchored camera; automatic viewport scaling and rotated-camera conversion are not implemented.
 
-See [the API map](../api-map.md), [movement guide](movement.md), and [the 1.0 release gates](../roadmap/1.0.0-release-gates.md).
+See [the API map](../api-map.md), [movement guide](movement.md), and [0.5.0 release gates](../roadmap/0.5.0-release-gates.md).
