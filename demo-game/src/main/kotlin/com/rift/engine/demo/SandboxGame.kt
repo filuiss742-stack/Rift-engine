@@ -3,9 +3,7 @@ package com.rift.engine.demo
 import com.rift.engine.game.RiftGame
 import com.rift.engine.scene.Scene
 
-/**
- * Example game composition used by the Android and Windows demo apps.
- */
+/** Main playable showcase for the current Rift Engine development build. */
 class SandboxGame : RiftGame {
-    override fun createInitialScene(): Scene = SandboxScene()
+    override fun createInitialScene(): Scene = CombatTrialScene()
 }
