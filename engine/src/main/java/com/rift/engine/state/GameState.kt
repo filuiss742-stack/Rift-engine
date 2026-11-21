@@ -5,8 +5,8 @@ import java.util.LinkedHashMap
 /**
  * Small typed state bag shared by scenes and gameplay modes.
  *
- * Values are primitive immutable types so snapshots are safe to copy. This is
- * runtime state only; serialization is handled by a later save/codec layer.
+ * Values are primitive immutable types so snapshots are safe to copy.
+ * GameStateCodec provides bounded, versioned persistence for these values.
  */
 class GameState {
     private val values = LinkedHashMap<String, Any>()
