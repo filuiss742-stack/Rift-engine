@@ -3,6 +3,8 @@ package com.rift.engine.demo
 import com.rift.engine.core.SceneManager
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,6 +23,39 @@ class SandboxSceneInputTest {
         manager.render(renderer)
 
         assertEquals(260f, renderer.firstRoundedRectLeft!!, 0.001f)
+    }
+
+    @Test
+    fun tappingWorldDoesNotTeleportPlayer() {
+        val scene = SandboxScene()
+        val renderer = RecordingRenderContext()
+        val manager = SceneManager()
+        manager.setInitialScene(scene)
+
+        manager.onPointer(
+            PointerEvent(
+                pointerId = 1,
+                type = PointerEventType.DOWN,
+                x = 700f,
+                y = 300f,
+                viewportWidth = 960f,
+                viewportHeight = 600f
+            )
+        )
+        manager.onPointer(
+            PointerEvent(
+                pointerId = 1,
+                type = PointerEventType.UP,
+                x = 700f,
+                y = 300f,
+                viewportWidth = 960f,
+                viewportHeight = 600f
+            )
+        )
+        manager.update(1f / 60f)
+        manager.render(renderer)
+
+        assertEquals(140f, renderer.firstRoundedRectLeft!!, 0.001f)
     }
 
     private class RecordingRenderContext : RenderContext {
