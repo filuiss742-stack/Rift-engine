@@ -46,8 +46,11 @@ class VirtualJoystick(
     override fun onPointer(event: PointerEvent): Boolean {
         return when (event.type) {
             PointerEventType.DOWN -> {
-                if (!enabled || !visible || activePointerId != null || !insideBase(event.x, event.y)) {
+                if (!enabled || !visible || !insideBase(event.x, event.y)) {
                     false
+                } else if (activePointerId != null) {
+                    // Consume additional fingers on the joystick without stealing ownership.
+                    true
                 } else {
                     activePointerId = event.pointerId
                     updateAxes(event.x, event.y)
