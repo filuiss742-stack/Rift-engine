@@ -7,7 +7,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 | API | Package | Purpose |
 |---|---|---|
 | GameEngine | com.rift.engine.core | Shared runtime entry point; exposes scenes, plugins, gameplay modules, saves, and diagnostics. |
-| SceneManager | com.rift.engine.core | Sets the first scene and switches the active scene. |
+| SceneManager | com.rift.engine.core | Sets the first scene, queues safe transitions, and owns shared GameState. |
 | Scene | com.rift.engine.scene | Base class for game scenes; subclasses implement lifecycle, update, render, and input callbacks. |
 | FixedStepAccumulator | com.rift.engine.core | Runs update callbacks using a fixed time step. |
 
@@ -15,7 +15,7 @@ This page lists APIs verified in the current development branch. It is a navigat
 
 | API | Package | Purpose |
 |---|---|---|
-| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, rotation/scale transform, optional movement profile, and lifecycle-managed components. |
+| GameState | com.rift.engine.state | Typed runtime state shared across all scenes managed by one SceneManager; not automatically persisted. |\n| GameObject | com.rift.engine.entity | Basic entity with position, size, color, active flag, movement body, rotation/scale transform, optional movement profile, and lifecycle-managed components. |
 | Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
 | GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and externally supplied grounded state. |
