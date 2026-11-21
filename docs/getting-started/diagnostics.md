@@ -25,11 +25,11 @@ Ordinary ERROR entries remain visible but do not automatically stop the whole ga
 ## Failure isolation
 
 - A GameComponent that throws during update or render is quarantined on its owning GameObject and reported once; other components continue.
-- A GameObject update/render failure is reported by its Scene; other objects continue.
+- A GameObject update/render failure is reported and that object is quarantined; other objects continue. Call `scene.retryObject(object)` after correcting the cause to resume it.
 - UI, physics, and asset/audio failures are reported through the same diagnostic history where the subsystem can safely recover.
 - The diagnostics overlay uses the normal RenderContext and does not depend on game assets.
 
-A quarantined component remains attached but is skipped until it is removed and attached again. This is deliberate: Rift reports the failure and prevents repeated exceptions, but does not silently rewrite or delete game code.
+A quarantined component remains attached but is skipped until it is removed and attached again. A quarantined GameObject is skipped for both update and render until `retryObject()` succeeds or the object is removed. This is deliberate: Rift reports the failure and prevents repeated exceptions, but does not silently rewrite or delete game code.
 
 ## Important limitations
 
