@@ -1,5 +1,6 @@
 package com.rift.engine.core
 
+import com.rift.engine.assets.AssetManager
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticsOverlay
 import com.rift.engine.graphics.RenderContext
@@ -25,11 +26,12 @@ private sealed interface InputEvent {
  */
 class GameEngine(
     val saves: SaveStore = InMemorySaveStore(),
-    val diagnostics: DiagnosticReporter = DiagnosticReporter()
+    val diagnostics: DiagnosticReporter = DiagnosticReporter(),
+    val assets: AssetManager = AssetManager(diagnostics = diagnostics)
 ) {
     val plugins = PluginManager(diagnostics)
     val gameplayModules = GameplayModuleManager(diagnostics)
-    val scenes = SceneManager(diagnostics)
+    val scenes = SceneManager(diagnostics, assets)
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
 
