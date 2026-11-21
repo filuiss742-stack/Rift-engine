@@ -40,6 +40,31 @@ class DiagnosticReporterTest {
         assertFalse(reporter.hasFatalErrors())
     }
 
+
+    @Test
+    fun storesActionableSuggestionsWithDiagnostics() {
+        val reporter = DiagnosticReporter()
+        val entry = reporter.report(
+            severity = DiagnosticSeverity.ERROR,
+            code = "ASSET_MISSING",
+            subsystem = "assets",
+            message = "Texture was not found.",
+            location = "sprites/hero.png",
+            suggestion = "Check the path and ensure the file is packaged."
+        )
+
+        assertEquals("Check the path and ensure the file is packaged.", entry.suggestion)
+        assertEquals(entry, reporter.latestError())
+    }
+
+    @Test
+    fun runtimeExceptionsReceiveDefaultRepairGuidance() {
+        val reporter = DiagnosticReporter()
+        val entry = reporter.reportException("scene.update", IllegalStateException("test"))
+
+        assertTrue(entry.suggestion?.contains("source location") == true)
+    }
+
     @Test
     fun fatalSeverityIsDistinctFromRecoverableErrors() {
         val reporter = DiagnosticReporter()
