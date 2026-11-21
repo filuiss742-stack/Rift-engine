@@ -127,6 +127,16 @@ class SceneManager(
         }
     }
 
+    fun onAxis(axisId: String, value: Float) {
+        applyPendingTransitions()
+        val activeScene = current ?: return
+        activeScene.input.onAxis(axisId, value)
+        safe("scene.input.axis") {
+            activeScene.onAxis(axisId, value)
+        }
+        applyPendingTransitions()
+    }
+
     fun onKey(
         keyCode: Int,
         pressed: Boolean
