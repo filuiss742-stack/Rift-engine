@@ -23,6 +23,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
 - [Multi-mode demo](docs/getting-started/multi-mode-demo.md) — switch between top-down and side-view gameplay while retaining shared progression.
 - [Assets and animation](docs/getting-started/assets-and-animation.md) — texture loading, sprites, sprite sheets, and frame animation.
+- [Tile maps](docs/getting-started/tile-maps.md) — build regular 2D tile grids from sprite-sheet frames.
 - [Screen-space UI](docs/getting-started/ui.md) — panels, labels, buttons, images, and pointer routing.
 - [Audio](docs/getting-started/audio.md) — sound effects, background music, volume, and resource lifetime.
 - [Rift Diagnostics](docs/getting-started/diagnostics.md) — structured errors, suggestions, and failure isolation.
