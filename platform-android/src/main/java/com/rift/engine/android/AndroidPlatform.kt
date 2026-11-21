@@ -9,16 +9,104 @@ import com.rift.engine.input.EngineKey
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.locks.LockSupport
 
-class AndroidRenderContext(private val canvas:Canvas):RenderContext {
- private val p=Paint(Paint.ANTI_ALIAS_FLAG)
- override val width get()=canvas.width
- override val height get()=canvas.height
- override fun clear(color:Int){canvas.drawColor(color)}
- override fun drawRect(left:Float,top:Float,right:Float,bottom:Float,color:Int){p.color=color;p.style=Paint.Style.FILL;canvas.drawRect(left,top,right,bottom,p)}
- override fun drawRoundRect(left:Float,top:Float,right:Float,bottom:Float,radius:Float,color:Int){p.color=color;p.style=Paint.Style.FILL;canvas.drawRoundRect(RectF(left,top,right,bottom),radius,radius,p)}
- override fun drawLine(x1:Float,y1:Float,x2:Float,y2:Float,color:Int,strokeWidth:Float){p.color=color;p.strokeWidth=strokeWidth;canvas.drawLine(x1,y1,x2,y2,p)}
- override fun drawText(text:String,x:Float,y:Float,color:Int,size:Float,bold:Boolean){p.color=color;p.textSize=size;p.typeface=if(bold)Typeface.DEFAULT_BOLD else Typeface.DEFAULT;canvas.drawText(text,x,y,p)}
- override fun measureText(text:String,size:Float,bold:Boolean):Float{p.textSize=size;p.typeface=if(bold)Typeface.DEFAULT_BOLD else Typeface.DEFAULT;return p.measureText(text)}
+class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val saveCounts = mutableListOf<Int>()
+
+    override val width: Int
+        get() = canvas.width
+
+    override val height: Int
+        get() = canvas.height
+
+    override fun clear(color: Int) {
+        canvas.drawColor(color)
+    }
+
+    override fun drawRect(
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        color: Int
+    ) {
+        paint.color = color
+        paint.style = Paint.Style.FILL
+        canvas.drawRect(left, top, right, bottom, paint)
+    }
+
+    override fun drawRoundRect(
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        radius: Float,
+        color: Int
+    ) {
+        paint.color = color
+        paint.style = Paint.Style.FILL
+        canvas.drawRoundRect(RectF(left, top, right, bottom), radius, radius, paint)
+    }
+
+    override fun drawLine(
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        color: Int,
+        strokeWidth: Float
+    ) {
+        paint.color = color
+        paint.strokeWidth = strokeWidth
+        paint.style = Paint.Style.STROKE
+        canvas.drawLine(x1, y1, x2, y2, paint)
+        paint.style = Paint.Style.FILL
+    }
+
+    override fun drawText(
+        text: String,
+        x: Float,
+        y: Float,
+        color: Int,
+        size: Float,
+        bold: Boolean
+    ) {
+        paint.color = color
+        paint.textSize = size
+        paint.typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        canvas.drawText(text, x, y, paint)
+    }
+
+    override fun measureText(text: String, size: Float, bold: Boolean): Float {
+        paint.textSize = size
+        paint.typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        return paint.measureText(text)
+    }
+
+    override fun pushState() {
+        saveCounts.add(canvas.save())
+    }
+
+    override fun popState() {
+        check(saveCounts.isNotEmpty()) { "Render state stack is empty." }
+        canvas.restoreToCount(saveCounts.removeAt(saveCounts.lastIndex))
+    }
+
+    override fun translate(x: Float, y: Float) {
+        canvas.translate(x, y)
+    }
+
+    override fun rotate(degrees: Float) {
+        canvas.rotate(degrees)
+    }
+
+    override fun scale(x: Float, y: Float) {
+        canvas.scale(x, y)
+    }
+
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) {
+        canvas.clipRect(left, top, right, bottom)
+    }
 }
 class AndroidSaveStore(context:Context):SaveStore {
  private val prefs=context.applicationContext.getSharedPreferences("rift_engine_save",Context.MODE_PRIVATE)
