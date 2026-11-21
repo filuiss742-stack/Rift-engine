@@ -1,10 +1,9 @@
 package com.rift.engine.input
 
 /**
- * Small platform-independent key identifiers used by the current demo.
- *
- * This is not the final action-mapping API. Device bindings and named actions
- * will be introduced in the dedicated input-system milestone.
+ * Platform-independent identifiers for the keyboard keys currently supported
+ * by the engine adapters. Bind them to game-owned named actions with
+ * [InputActionMap]; this list is intentionally small and is not exhaustive.
  */
 object EngineKey {
     const val A = 1
