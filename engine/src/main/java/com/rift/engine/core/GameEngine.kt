@@ -106,7 +106,7 @@ class GameEngine(
 
     fun render(context: RenderContext) {
         if (diagnostics.hasFatalErrors()) {
-            DiagnosticsOverlay.render(context, diagnostics.snapshot())
+            DiagnosticsOverlay.render(context, diagnostics.snapshot(), blocking = true)
             return
         }
 
