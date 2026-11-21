@@ -60,6 +60,59 @@ class SceneManagerTest {
         assertSame(finalScene, manager.current)
     }
 
+
+    @Test
+    fun pointerEventsReachSceneAndNamedPointerActions() {
+        val manager = SceneManager()
+        var receivedType: com.rift.engine.input.PointerEventType? = null
+        val scene = object : Scene() {
+            init {
+                input.bindPointerButton(
+                    "interact",
+                    com.rift.engine.input.PointerButtons.TOUCH
+                )
+            }
+
+            override fun onPointer(event: com.rift.engine.input.PointerEvent) {
+                receivedType = event.type
+            }
+        }
+        manager.setInitialScene(scene)
+
+        manager.onPointer(
+            com.rift.engine.input.PointerEvent(
+                pointerId = 4,
+                type = com.rift.engine.input.PointerEventType.DOWN,
+                x = 12f,
+                y = 24f,
+                viewportWidth = 100f,
+                viewportHeight = 100f,
+                button = com.rift.engine.input.PointerButtons.TOUCH
+            )
+        )
+
+        assertEquals(com.rift.engine.input.PointerEventType.DOWN, receivedType)
+        assertTrue(scene.input.isDown("interact"))
+        assertTrue(scene.input.wasPressed("interact"))
+    }
+
+    @Test
+    fun focusLossClearsHeldInput() {
+        val manager = SceneManager()
+        val scene = object : Scene() {
+            init {
+                input.bindKey("move", 1)
+            }
+        }
+        manager.setInitialScene(scene)
+        manager.onKey(1, true)
+        assertTrue(scene.input.isDown("move"))
+
+        manager.resetInput()
+
+        assertTrue(!scene.input.isDown("move"))
+    }
+
     @Test
     fun sameSceneRequestDoesNotRepeatLifecycle() {
         val manager = SceneManager()
