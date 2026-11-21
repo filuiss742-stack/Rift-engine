@@ -21,7 +21,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
 - [Assets and animation](docs/getting-started/assets-and-animation.md) — texture loading, sprites, sprite sheets, and frame animation.
 - [Screen-space UI](docs/getting-started/ui.md) — panels, labels, buttons, images, and pointer routing.
-- [Audio](docs/getting-started/audio.md) — sound effects, background music, volume, and resource lifetime.
+- [Audio](docs/getting-started/audio.md) — sound effects, background music, volume, and resource lifetime.\n- [Rift Diagnostics](docs/getting-started/diagnostics.md) — structured errors, suggestions, and failure isolation.
 - [Gameplay modules](docs/getting-started/gameplay-modules.md) — installable and replaceable gameplay packs.
 - [Shared game state](docs/getting-started/shared-game-state.md) — retain progression across scenes and gameplay modes.
 - [Dialogue and choices](docs/getting-started/dialogue-and-choices.md) — branching conversations and story consequences.
