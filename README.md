@@ -16,6 +16,7 @@ The same shared runtime is used by both platform hosts. Platform modules supply 
 - [GameObject components](docs/getting-started/components.md) — compose reusable behavior without genre-specific inheritance.
 - [2D transforms](docs/getting-started/transforms.md) — object rotation, scale, render state, and transformed bounds.
 - [2D camera](docs/getting-started/camera.md) — zoom, world/screen conversion, and screen-space overlays.
+- [Render layers](docs/getting-started/render-layers.md) — stable world-object draw order.
 - [Input guide](docs/getting-started/input.md).
 - [Movement guide](docs/getting-started/movement.md).
 - [2D physics](docs/getting-started/physics.md) — bodies, collision filtering, sensors, contacts, queries, and raycasts.
