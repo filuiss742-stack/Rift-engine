@@ -176,6 +176,20 @@ open class GameObject(
         return removed || pendingAddRemoved
     }
 
+    /**
+     * Retries an attached component that was quarantined after an update or
+     * render exception. Returns false when the component is not attached or
+     * was not quarantined.
+     */
+    fun retryComponent(component: GameComponent): Boolean {
+        if (!containsIdentity(components, component)) return false
+        return failedComponents.remove(component)
+    }
+
+    /** Returns whether this attached component is currently quarantined. */
+    fun isComponentQuarantined(component: GameComponent): Boolean =
+        containsIdentity(components, component) && component in failedComponents
+
     fun components(): List<GameComponent> = components.toList()
 
     inline fun <reified T : GameComponent> component(): T? {
