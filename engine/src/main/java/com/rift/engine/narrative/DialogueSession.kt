@@ -17,10 +17,19 @@ class DialogueSession(
         return true
     }
 
+    /** Advances to the next line, or closes a terminal line. Choice nodes wait for a choice. */
     fun advance(): Boolean {
-        val nextId = currentNode?.nextNodeId ?: return false
-        currentNode = graph.node(nextId)
-        return currentNode != null
+        val node = currentNode ?: return false
+        val nextId = node.nextNodeId
+        if (nextId != null) {
+            currentNode = graph.node(nextId)
+            return currentNode != null
+        }
+        if (node.choices.isEmpty()) {
+            currentNode = null
+            return true
+        }
+        return false
     }
 
     fun availableChoices(): List<DialogueChoice> {
