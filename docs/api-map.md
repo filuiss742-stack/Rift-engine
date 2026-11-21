@@ -20,10 +20,10 @@ This page lists APIs verified in the current development branch. It is a navigat
 | Transform2D | com.rift.engine.entity | Local rotation and scale; transforms local points and computes rotated axis-aligned bounds. |
 | GameComponent | com.rift.engine.entity | Optional behavior attached to a GameObject with attach, detach, update, and render callbacks. |
 | MovementBody | com.rift.engine.movement | Position, velocity, and grounded state. |
-| MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent and one-update jump press. |
+| MovementInput | com.rift.engine.movement | Device-independent horizontal/vertical intent, one-update jump press, and held-jump state for variable jump height. |
 | MovementProfile | com.rift.engine.movement | Contract for converting input intent into body velocity. |
 | TopDownMovementProfile | com.rift.engine.movement | Normalized free 2D movement. |
-| PlatformerMovementProfile | com.rift.engine.movement | Basic horizontal movement, gravity, and jump velocity; grounded state can be supplied by PhysicsWorld. |
+| PlatformerMovementProfile | com.rift.engine.movement | Basic side-view movement, gravity, and jump velocity; automatically leaves gravity to PhysicsWorld when the body is registered there. |\n| ResponsivePlatformerProfile | com.rift.engine.movement | Acceleration/deceleration, air control, coyote time, jump buffering, and optional variable jump height. |
 
 ## Physics
 
@@ -79,7 +79,7 @@ The gameplay-module registry is a runtime extension point, not a dynamic binary 
 | API | Package | Purpose |
 |---|---|---|
 | RenderContext | com.rift.engine.graphics | Platform-neutral primitive, text, and texture drawing plus scoped state, transforms, and clipping. |
-| Camera | com.rift.engine.graphics | Top-left anchored zoom camera applied to Scene world-object rendering; exposes world/screen coordinate conversions. |
+| Camera | com.rift.engine.graphics | Top-left anchored zoom camera applied to Scene world-object rendering; exposes world/screen coordinate conversions. |\n| CameraRig | com.rift.engine.graphics | Optional camera follow with smoothing, dead zone, world bounds, snap-to-target, and fading shake. |
 | TextureResource / TextureLoader | com.rift.engine.graphics | Platform-neutral texture handle and platform-supplied decoding contract. |
 | TextureRegion / Sprite / SpriteSheet | com.rift.engine.graphics | Atlas rectangles, drawable sprites, and regular grid indexing. |
 | SpriteAnimation / SpriteAnimationComponent | com.rift.engine.animation | Time-based frame animation and reusable GameObject component. |\n| TileMapComponent | com.rift.engine.tilemap | Sprite-sheet-backed tile grid attached to a GameObject; caches frame sprites and skips empty cells. |
@@ -137,4 +137,4 @@ Current input limitations: Android forwards common gamepad buttons and axes; Win
 
 ## Not present yet
 
-Do not invent or use these as existing APIs: gamepad action bindings, collision callbacks, continuous collision detection, polygon collision shapes, camera-follow smoothing/bounds, render layers, font assets, audio buses/spatial audio/cross-fades, advanced UI layout/focus navigation, combat framework, mode-transition framework, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
+Do not invent or use these as existing APIs: gamepad action bindings, collision callbacks, continuous collision detection, polygon collision shapes, font assets, audio buses/spatial audio/cross-fades, advanced UI layout/focus navigation, combat knockback/invulnerability/combo systems, automatic mode-transition effects, scene serialization, visual dialogue editor, or a complete visual-novel presentation layer. A hybrid 2D/3D renderer is a long-term direction, not an implemented capability.
