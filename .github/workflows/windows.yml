@@ -47,6 +47,9 @@ jobs:
       - name: Test game template independently
         working-directory: templates/kotlin-game
         run: gradle test
+      - name: Test independent AI game acceptance project
+        working-directory: examples/ai-game
+        run: gradle test build
       - name: Build desktop distribution
         run: gradle :desktop-app:installDist
       - name: Package Windows app image
