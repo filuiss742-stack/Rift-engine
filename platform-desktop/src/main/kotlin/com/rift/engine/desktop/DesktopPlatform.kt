@@ -33,20 +33,23 @@ import javax.swing.Timer
 import javax.swing.WindowConstants
 
 class DesktopRenderContext(
-    private val graphics: Graphics2D,
+    graphics: Graphics2D,
     override val width: Int,
     override val height: Int
 ) : RenderContext {
+    private var currentGraphics = graphics
+    private val graphicsStack = mutableListOf<Graphics2D>()
+
     init {
-        graphics.setRenderingHint(
+        currentGraphics.setRenderingHint(
             RenderingHints.KEY_ANTIALIASING,
             RenderingHints.VALUE_ANTIALIAS_ON
         )
     }
 
     override fun clear(color: Int) {
-        graphics.color = Color(color, true)
-        graphics.fillRect(0, 0, width, height)
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fillRect(0, 0, width, height)
     }
 
     override fun drawRect(
@@ -56,8 +59,8 @@ class DesktopRenderContext(
         bottom: Float,
         color: Int
     ) {
-        graphics.color = Color(color, true)
-        graphics.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
     }
 
     override fun drawRoundRect(
@@ -68,8 +71,8 @@ class DesktopRenderContext(
         radius: Float,
         color: Int
     ) {
-        graphics.color = Color(color, true)
-        graphics.fill(
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fill(
             RoundRectangle2D.Float(
                 left,
                 top,
@@ -89,9 +92,9 @@ class DesktopRenderContext(
         color: Int,
         strokeWidth: Float
     ) {
-        graphics.color = Color(color, true)
-        graphics.stroke = BasicStroke(strokeWidth)
-        graphics.draw(Line2D.Float(x1, y1, x2, y2))
+        currentGraphics.color = Color(color, true)
+        currentGraphics.stroke = BasicStroke(strokeWidth)
+        currentGraphics.draw(Line2D.Float(x1, y1, x2, y2))
     }
 
     override fun drawText(
@@ -102,13 +105,13 @@ class DesktopRenderContext(
         size: Float,
         bold: Boolean
     ) {
-        graphics.color = Color(color, true)
-        graphics.font = Font(
+        currentGraphics.color = Color(color, true)
+        currentGraphics.font = Font(
             Font.SANS_SERIF,
             if (bold) Font.BOLD else Font.PLAIN,
             size.toInt().coerceAtLeast(1)
         )
-        graphics.drawString(text, x, y)
+        currentGraphics.drawString(text, x, y)
     }
 
     override fun measureText(
@@ -121,7 +124,34 @@ class DesktopRenderContext(
             if (bold) Font.BOLD else Font.PLAIN,
             size.toInt().coerceAtLeast(1)
         )
-        return graphics.getFontMetrics(font).stringWidth(text).toFloat()
+        return currentGraphics.getFontMetrics(font).stringWidth(text).toFloat()
+    }
+
+    override fun pushState() {
+        graphicsStack.add(currentGraphics)
+        currentGraphics = currentGraphics.create() as Graphics2D
+    }
+
+    override fun popState() {
+        check(graphicsStack.isNotEmpty()) { "Render state stack is empty." }
+        currentGraphics.dispose()
+        currentGraphics = graphicsStack.removeAt(graphicsStack.lastIndex)
+    }
+
+    override fun translate(x: Float, y: Float) {
+        currentGraphics.translate(x.toDouble(), y.toDouble())
+    }
+
+    override fun rotate(degrees: Float) {
+        currentGraphics.rotate(Math.toRadians(degrees.toDouble()))
+    }
+
+    override fun scale(x: Float, y: Float) {
+        currentGraphics.scale(x.toDouble(), y.toDouble())
+    }
+
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) {
+        currentGraphics.clip(Rectangle2D.Float(left, top, right - left, bottom - top))
     }
 }
 
