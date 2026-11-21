@@ -6,6 +6,9 @@ import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerButtons
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
 import com.rift.engine.game.RiftGame
 import com.rift.engine.storage.SaveStore
 import java.awt.BasicStroke
@@ -15,6 +18,7 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.event.FocusAdapter
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -313,13 +317,27 @@ class DesktopGameWindow(
         panel.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
                 panel.requestFocusInWindow()
-                sendPointerInput(event)
+                engine.onPointer(pointerEvent(event, PointerEventType.DOWN, mapPointerButton(event.button)))
+            }
+
+            override fun mouseReleased(event: MouseEvent) {
+                engine.onPointer(pointerEvent(event, PointerEventType.UP, mapPointerButton(event.button)))
             }
         })
 
         panel.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseDragged(event: MouseEvent) {
-                sendPointerInput(event)
+                engine.onPointer(pointerEvent(event, PointerEventType.MOVE))
+            }
+
+            override fun mouseMoved(event: MouseEvent) {
+                engine.onPointer(pointerEvent(event, PointerEventType.MOVE))
+            }
+        })
+
+        panel.addFocusListener(object : FocusAdapter() {
+            override fun focusLost(event: java.awt.event.FocusEvent) {
+                engine.onFocusLost()
             }
         })
 
@@ -351,13 +369,25 @@ class DesktopGameWindow(
         }.start()
     }
 
-    private fun sendPointerInput(event: MouseEvent) {
-        engine.onTouch(
-            event.x.toFloat(),
-            event.y.toFloat(),
-            panel.width.toFloat(),
-            panel.height.toFloat()
-        )
+    private fun pointerEvent(
+        event: MouseEvent,
+        type: PointerEventType,
+        button: Int = PointerButtons.NONE
+    ) = PointerEvent(
+        pointerId = 0,
+        type = type,
+        x = event.x.toFloat(),
+        y = event.y.toFloat(),
+        viewportWidth = panel.width.toFloat(),
+        viewportHeight = panel.height.toFloat(),
+        button = button
+    )
+
+    private fun mapPointerButton(button: Int): Int = when (button) {
+        MouseEvent.BUTTON1 -> PointerButtons.PRIMARY
+        MouseEvent.BUTTON2 -> PointerButtons.MIDDLE
+        MouseEvent.BUTTON3 -> PointerButtons.SECONDARY
+        else -> PointerButtons.NONE
     }
 
     private fun mapKey(keyCode: Int): Int? {
