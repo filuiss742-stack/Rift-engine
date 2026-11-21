@@ -36,6 +36,10 @@ class MovementBody(
 
     var isGrounded: Boolean = false
 
+    /** True while a PhysicsWorld owns position integration and gravity. */
+    var isPhysicsControlled: Boolean = false
+        internal set
+
     init {
         require(x.isFinite() && y.isFinite()) { "Position must be finite." }
     }
