@@ -12,14 +12,20 @@ class PluginManagerTest {
         val diagnostics = DiagnosticReporter()
         val manager = PluginManager(diagnostics)
 
+        var cleanupCalled = false
         manager.install(object : EnginePlugin {
             override val id = "test.broken"
 
             override fun onInstall() {
                 error("activation failed")
             }
+
+            override fun onUninstall() {
+                cleanupCalled = true
+            }
         })
 
+        assertTrue(cleanupCalled)
         assertTrue(manager.all().isEmpty())
         assertTrue(diagnostics.hasErrors())
     }
