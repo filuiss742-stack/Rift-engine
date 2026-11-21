@@ -2,6 +2,7 @@ package com.rift.engine.demo
 
 import com.rift.engine.input.EngineKey
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -41,6 +42,7 @@ class CombatTrialAcceptanceTest {
     @Test fun dialogueChoiceChangesRelationshipAndEnding() {
         val helped = CombatTrialScene()
         assertTrue(helped.chooseDialogue("help"))
+        assertFalse("A completed conversation must not award relationship points twice.", helped.chooseDialogue("dismiss"))
         assertEquals(2, helped.gameState.int("story.relationship"))
         assertEquals("GOOD ENDING — TRUST", helped.endingForRelationship(2))
         val dismissed = CombatTrialScene()
