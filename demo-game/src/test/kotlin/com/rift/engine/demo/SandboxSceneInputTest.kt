@@ -1,6 +1,7 @@
 package com.rift.engine.demo
 
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.input.EngineKey
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -10,13 +11,13 @@ class SandboxSceneInputTest {
         val scene = SandboxScene()
         val renderer = RecordingRenderContext()
 
-        scene.onKey(2, true) // EngineKey.D
+        scene.onKey(EngineKey.D, true)
         scene.update(0.5f)
-        scene.onKey(2, false)
+        scene.onKey(EngineKey.D, false)
         scene.update(0.5f)
         scene.render(renderer)
 
-        assertEquals(260f, renderer.firstRoundedRectLeft, 0.001f)
+        assertEquals(260f, renderer.firstRoundedRectLeft!!, 0.001f)
     }
 
     private class RecordingRenderContext : RenderContext {
