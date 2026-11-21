@@ -195,16 +195,20 @@ class SceneManager(
     ) {
         if (closed) return
         applyPendingTransitions()
-        if (pressed) {
-            heldKeys.add(keyCode)
-        } else {
-            heldKeys.remove(keyCode)
-        }
-
         val activeScene = current ?: return
-        activeScene.input.onKey(keyCode, pressed)
-        safe("scene.input.key") {
-            activeScene.onKey(keyCode, pressed)
+        val uiConsumed = activeScene.ui.dispatchKey(keyCode, pressed)
+        if (uiConsumed) {
+            if (!pressed) heldKeys.remove(keyCode)
+        } else {
+            if (pressed) {
+                heldKeys.add(keyCode)
+            } else {
+                heldKeys.remove(keyCode)
+            }
+            activeScene.input.onKey(keyCode, pressed)
+            safe("scene.input.key") {
+                activeScene.onKey(keyCode, pressed)
+            }
         }
         applyPendingTransitions()
     }
