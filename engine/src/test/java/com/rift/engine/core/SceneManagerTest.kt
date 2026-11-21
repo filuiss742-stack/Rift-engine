@@ -34,6 +34,31 @@ class SceneManagerTest {
         assertSame(nextScene, manager.current)
     }
 
+
+    @Test
+    fun sceneCanRequestItsOwnSafeTransition() {
+        val manager = SceneManager()
+        var nextEntered = false
+        val nextScene = object : Scene() {
+            override fun onEnter() {
+                nextEntered = true
+            }
+        }
+        val firstScene = object : Scene() {
+            override fun update(deltaSeconds: Float) {
+                requestSceneChange(nextScene)
+                assertSame(this, manager.current)
+            }
+        }
+
+        manager.setInitialScene(firstScene)
+        manager.update(1f / 60f)
+
+        assertTrue(nextEntered)
+        assertSame(nextScene, manager.current)
+        assertSame(manager.gameState, nextScene.gameState)
+    }
+
     @Test
     fun transitionRequestedDuringOnEnterIsAppliedInOrder() {
         val manager = SceneManager()
