@@ -12,7 +12,7 @@ class Camera3DTest {
             aspectRatio = 2f
         )
 
-        assertEquals(4, camera.viewProjectionMatrix.toFloatArray().size)
+        assertEquals(16, camera.viewProjectionMatrix.toFloatArray().size)
         assertEquals(2f, camera.aspectRatio, 0.0001f)
     }
 
