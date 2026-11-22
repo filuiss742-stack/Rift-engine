@@ -18,7 +18,9 @@ class CombatTrialScene : Scene() {
     internal val player = GameObject(220f, 290f, 48f, 54f)
     internal val enemy = GameObject(520f, 290f, 62f, 62f)
     internal val npc = GameObject(155f, 205f, 48f, 54f)
-    internal val playerHealth = HealthComponent(100f)
+    internal val playerHealth = HealthComponent(100f, onDeath = ::onPlayerDefeated)
+    internal var playerDefeated = false
+        private set
     internal val enemyHealth = HealthComponent(60f, onDeath = ::onEnemyDefeated)
     internal var enemyDefeated = false
         private set
@@ -55,6 +57,7 @@ class CombatTrialScene : Scene() {
     private val hud = UiLabel(18f, 16f, 900f, 26f, "RIFT TRIAL • HP 100 • GOLEM 60", 0xFFFFFFFF.toInt(), 18f, true)
     private val hints = UiLabel(18f, 44f, 900f, 22f, "WASD / joystick • SPACE attack • SHIFT dodge • Q skill • E / USE interact", 0xFFDCE6E4.toInt(), 13f)
     private val endingLabel = UiLabel(18f, 72f, 900f, 24f, "", 0xFFFFD6A5.toInt(), 16f, true)
+    private val defeatLabel = UiLabel(250f, 250f, 460f, 64f, "DEFEATED — PRESS R TO RETRY", 0xFFFFA0A0.toInt(), 24f, true)
 
     private val story = StoryState()
     private val dialogue = DialogueSession(
@@ -81,12 +84,14 @@ class CombatTrialScene : Scene() {
         input.bindKey("up", EngineKey.W); input.bindKey("up", EngineKey.UP)
         input.bindKey("down", EngineKey.S); input.bindKey("down", EngineKey.DOWN)
         input.bindKey("attack", EngineKey.SPACE); input.bindKey("dodge", EngineKey.SHIFT)
+        input.bindKey("restart", EngineKey.R)
         input.bindKey("skill", EngineKey.Q); input.bindKey("interact", EngineKey.E)
         player.movementProfile = walk
         player.addComponent(playerHealth); enemy.addComponent(enemyHealth)
         add(player); add(enemy); add(npc)
         combat.addHurtbox(enemy, teamId = "enemy")
-        ui.add(hud); ui.add(hints); ui.add(endingLabel); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn); ui.add(interactBtn)
+        ui.add(hud); ui.add(hints); ui.add(endingLabel); ui.add(defeatLabel); ui.add(stick); ui.add(dodgeBtn); ui.add(attackBtn); ui.add(skillBtn); ui.add(interactBtn)
+        defeatLabel.visible = false
         story.setValue("relationship", 0); dialogue.start("meet")
         panel.add(line); panel.add(help); panel.add(dismiss); panel.add(relation); panel.add(close)
         panel.visible = false; close.visible = false; ui.add(panel)
@@ -96,6 +101,7 @@ class CombatTrialScene : Scene() {
     override fun onEnter() {
         loadSprites()
         playerHealth.reset(gameState.int("player.hp", 100).coerceIn(1, 100).toFloat())
+        playerDefeated = false; defeatLabel.visible = false
         story.setValue("relationship", gameState.int("story.relationship"))
         story.setFlag("mira_helped", gameState.boolean("story.mira_helped"))
         story.setFlag("mira_dismissed", gameState.boolean("story.mira_dismissed"))
@@ -122,7 +128,8 @@ class CombatTrialScene : Scene() {
         val interact = input.wasPressed("interact") || touchInteract
         touchAttack = false; touchDodge = false; touchSkill = false; touchInteract = false
 
-        if (!dialogueOpen) {
+        if (playerDefeated && input.wasPressed("restart")) restartTrial()
+        if (!dialogueOpen && !playerDefeated) {
             if (doDodge && dodgeCooldown <= 0f) { dodgeRemaining = 0.24f; dodgeCooldown = 0.82f }
             val evading = dodgeRemaining > 0f
             player.movementProfile = if (evading) dodge else walk
@@ -141,7 +148,7 @@ class CombatTrialScene : Scene() {
             }
         } else player.movementInput = MovementInput()
 
-        updateEnemy(deltaSeconds)
+        if (!playerDefeated) updateEnemy(deltaSeconds)
         super.update(deltaSeconds)
         player.renderLayer = player.y.toInt(); enemy.renderLayer = enemy.y.toInt(); npc.renderLayer = npc.y.toInt()
         rig.update(player, deltaSeconds)
@@ -256,6 +263,30 @@ class CombatTrialScene : Scene() {
             }
             EnemyState.DEFEATED -> Unit
         }
+    }
+
+    private fun onPlayerDefeated() {
+        playerDefeated = true
+        player.movementInput = MovementInput()
+        player.velocityX = 0f; player.velocityY = 0f
+        defeatLabel.visible = true
+        stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false; interactBtn.visible = false
+    }
+
+    private fun restartTrial() {
+        playerDefeated = false; defeatLabel.visible = false
+        playerHealth.reset(); player.x = 220f; player.y = 290f
+        player.velocityX = 0f; player.velocityY = 0f; player.movementInput = MovementInput()
+        enemyHealth.reset(); enemyDefeated = false; enemyState = EnemyState.IDLE
+        enemyAttackCooldown = 1.8f; telegraphRemaining = 0f; recoveryRemaining = 0f; deathRemaining = 0.55f
+        enemy.x = 520f; enemy.y = 290f; enemy.active = true; enemy.movementInput = MovementInput()
+        if (combat.hurtboxes().none { it.owner === enemy }) combat.addHurtbox(enemy, teamId = "enemy")
+        add(enemy)
+        combat.clear()
+        combat.addHurtbox(enemy, teamId = "enemy")
+        playerAnim?.play("idle"); enemyAnim?.play("idle")
+        stick.visible = true; dodgeBtn.visible = true; attackBtn.visible = true; skillBtn.visible = true; interactBtn.visible = true
+        rig.snapTo(player)
     }
 
     private fun onEnemyDefeated() {
