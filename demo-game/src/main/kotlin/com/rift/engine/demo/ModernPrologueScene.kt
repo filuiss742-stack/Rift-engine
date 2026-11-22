@@ -122,6 +122,7 @@ class ModernPrologueScene : Scene() {
         heroine.movementInput = MovementInput(dx, dy)
         super.update(deltaSeconds)
         resolveMovement(oldX, oldY)
+        if (sleepFade > 0f) sleepFade = (sleepFade - deltaSeconds * 1.6f).coerceAtLeast(0f)
         heroine.renderLayer = heroine.y.toInt() + 100
         updateCamera()
 
@@ -204,6 +205,7 @@ class ModernPrologueScene : Scene() {
     private fun finishIntro() {
         if (phase != Phase.INTRO) return
         phase = Phase.APARTMENT
+        sleepFade = 1f
         skipButton.visible = false
         joystick.visible = true
         interactButton.visible = true
