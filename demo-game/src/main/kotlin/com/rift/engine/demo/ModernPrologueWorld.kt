@@ -34,8 +34,8 @@ object ModernPrologueWorld {
         background = "prologue/maps/apartment_room.png",
         width = 960f,
         height = 600f,
-        spawnX = 462f,
-        spawnY = 420f,
+        spawnX = 230f,
+        spawnY = 180f,
         objects = listOf(
             PrologueObject("bed", "bed", 86f, 72f, 128f, 112f, 92f),
             PrologueObject("desk", "desk", 692f, 70f, 112f, 88f, 90f),
