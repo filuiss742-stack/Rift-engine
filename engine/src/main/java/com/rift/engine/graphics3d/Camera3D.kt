@@ -17,20 +17,20 @@ class Camera3D(
 ) {
     var position: Vector3 = position
         set(value) {
+            validateView(value, target, up)
             field = value
-            validateView()
         }
 
     var target: Vector3 = target
         set(value) {
+            validateView(position, value, up)
             field = value
-            validateView()
         }
 
     var up: Vector3 = up
         set(value) {
+            validateView(position, target, value)
             field = value
-            validateView()
         }
 
     var verticalFovRadians: Float = verticalFovRadians
@@ -75,15 +75,19 @@ class Camera3D(
         target = nextTarget
     }
 
-    private fun validateView() {
-        require((target - position).lengthSquared() > VIEW_EPSILON) {
+    private fun validateView(
+        cameraPosition: Vector3 = position,
+        cameraTarget: Vector3 = target,
+        cameraUp: Vector3 = up
+    ) {
+        require((cameraTarget - cameraPosition).lengthSquared() > VIEW_EPSILON) {
             "Camera position and target must differ."
         }
-        require(up.lengthSquared() > VIEW_EPSILON) {
+        require(cameraUp.lengthSquared() > VIEW_EPSILON) {
             "Camera up vector must be non-zero."
         }
         require(
-            (target - position).cross(up).lengthSquared() > VIEW_EPSILON
+            (cameraTarget - cameraPosition).cross(cameraUp).lengthSquared() > VIEW_EPSILON
         ) {
             "Camera direction and up vector must not be parallel."
         }
