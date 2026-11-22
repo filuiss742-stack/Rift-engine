@@ -265,6 +265,8 @@ class CombatTrialScene : Scene() {
     }
 
     private fun loadSprites() {
+        // A scene instance can be re-entered after a transition. Keep its attached animators.
+        if (playerAnim != null && enemyAnim != null) return
         val texture = assets?.loadTexture("rift.trial.sheet", "sprites/rift_trial_sheet.png") ?: return
         val sheet = SpriteSheet(texture, 64, 64)
         player.renderDefaultVisual = false; enemy.renderDefaultVisual = false; npc.renderDefaultVisual = false
@@ -316,6 +318,8 @@ class DungeonTrialScene : Scene() {
     }
 
     override fun onEnter() {
+        // Avoid attaching another animator when this same scene instance is revisited.
+        if (animator != null) return
         val texture = assets?.loadTexture("rift.trial.sheet", "sprites/rift_trial_sheet.png") ?: return
         val sheet = SpriteSheet(texture, 64, 64); player.renderDefaultVisual = false
         animator = anim(sheet, mapOf("idle" to listOf(0,1), "walk" to listOf(0,1,2,1), "jump" to listOf(2,3)), "idle")
