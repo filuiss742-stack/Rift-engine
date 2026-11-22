@@ -102,6 +102,7 @@ class CombatTrialScene : Scene() {
         loadSprites()
         playerHealth.reset(gameState.int("player.hp", 100).coerceIn(1, 100).toFloat())
         playerDefeated = false; defeatLabel.visible = false
+        stick.visible = true; dodgeBtn.visible = true; attackBtn.visible = true; skillBtn.visible = true; interactBtn.visible = true
         story.setValue("relationship", gameState.int("story.relationship"))
         story.setFlag("mira_helped", gameState.boolean("story.mira_helped"))
         story.setFlag("mira_dismissed", gameState.boolean("story.mira_dismissed"))
@@ -271,6 +272,8 @@ class CombatTrialScene : Scene() {
         player.velocityX = 0f; player.velocityY = 0f
         enemy.movementInput = MovementInput()
         enemy.velocityX = 0f; enemy.velocityY = 0f
+        combat.clear()
+        if (!enemyDefeated) combat.addHurtbox(enemy, teamId = "enemy")
         defeatLabel.visible = true
         stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false; interactBtn.visible = false
     }
@@ -282,7 +285,6 @@ class CombatTrialScene : Scene() {
         enemyHealth.reset(); enemyDefeated = false; enemyState = EnemyState.IDLE
         enemyAttackCooldown = 1.8f; telegraphRemaining = 0f; recoveryRemaining = 0f; deathRemaining = 0.55f
         enemy.x = 520f; enemy.y = 290f; enemy.active = true; enemy.movementInput = MovementInput()
-        if (combat.hurtboxes().none { it.owner === enemy }) combat.addHurtbox(enemy, teamId = "enemy")
         add(enemy)
         combat.clear()
         combat.addHurtbox(enemy, teamId = "enemy")
