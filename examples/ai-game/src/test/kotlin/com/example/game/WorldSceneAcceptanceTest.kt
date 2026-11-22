@@ -58,6 +58,33 @@ class WorldSceneAcceptanceTest {
     }
 
     @Test
+    fun joystickMovementAndAttackButtonWorkAtTheSameTimeOnSeparatePointers() {
+        val scene = WorldScene()
+        scene.enemy.x = scene.player.x + 10f
+        scene.enemy.y = scene.player.y
+        val playerStart = scene.player.x
+
+        scene.ui.dispatchPointer(pointer(1, PointerEventType.DOWN, 80f, 516f))
+        scene.ui.dispatchPointer(pointer(1, PointerEventType.MOVE, 136f, 516f))
+        scene.ui.dispatchPointer(
+            pointer(
+                2,
+                PointerEventType.DOWN,
+                scene.attackButton.x + scene.attackButton.width / 2f,
+                scene.attackButton.y + scene.attackButton.height / 2f
+            )
+        )
+
+        scene.update(frame)
+
+        assertTrue("The joystick should keep moving while another pointer presses attack.", scene.player.x > playerStart)
+        assertEquals(20f, scene.enemyHealth.currentHealth, 0.001f)
+
+        scene.ui.dispatchPointer(pointer(2, PointerEventType.UP, scene.attackButton.x + 50f, scene.attackButton.y + 50f))
+        scene.ui.dispatchPointer(pointer(1, PointerEventType.UP, 136f, 516f))
+    }
+
+    @Test
     fun keyboardDodgeUsesShortSpeedBurst() {
         val scene = WorldScene()
         scene.input.onKey(EngineKey.D, true)
