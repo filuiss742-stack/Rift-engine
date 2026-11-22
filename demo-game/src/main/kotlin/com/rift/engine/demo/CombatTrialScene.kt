@@ -269,6 +269,8 @@ class CombatTrialScene : Scene() {
         playerDefeated = true
         player.movementInput = MovementInput()
         player.velocityX = 0f; player.velocityY = 0f
+        enemy.movementInput = MovementInput()
+        enemy.velocityX = 0f; enemy.velocityY = 0f
         defeatLabel.visible = true
         stick.visible = false; dodgeBtn.visible = false; attackBtn.visible = false; skillBtn.visible = false; interactBtn.visible = false
     }

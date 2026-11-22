@@ -39,6 +39,23 @@ class CombatTrialAcceptanceTest {
         assertEquals(24f, scene.enemyHealth.currentHealth, 0.001f)
     }
 
+    @Test fun playerDefeatStopsCombatAndRestartRestoresTheEncounter() {
+        val scene = CombatTrialScene()
+        scene.enemyHealth.applyDamage(24f)
+        scene.playerHealth.applyDamage(100f)
+        assertTrue(scene.playerDefeated)
+        assertEquals(0f, scene.playerHealth.currentHealth, 0.001f)
+
+        scene.input.onKey(EngineKey.R, true)
+        scene.update(frame)
+
+        assertFalse(scene.playerDefeated)
+        assertEquals(100f, scene.playerHealth.currentHealth, 0.001f)
+        assertEquals(60f, scene.enemyHealth.currentHealth, 0.001f)
+        assertFalse(scene.enemyDefeated)
+        assertTrue(scene.combat.hurtboxes().any { it.owner === scene.enemy })
+    }
+
     @Test fun dialogueChoiceChangesRelationshipAndEnding() {
         val helped = CombatTrialScene()
         assertTrue(helped.chooseDialogue("help"))
