@@ -379,7 +379,8 @@ class HybridPrologueScene : Scene() {
         val centerX=context.width*.5f; val centerY=context.height*.48f
         val strength=(introTime/2.6f).coerceIn(0f,1f)
         val half=2f+strength*42f
-        context.drawLine(centerX,centerY-half,centerX+3f,centerY+half,0xFFFFFFFF.toInt(),3f)
+        context.drawLine(centerX-2f,centerY-half,centerX+4f,centerY+half,0xFF7B102B.toInt(),9f)
+        context.drawLine(centerX,centerY-half,centerX+3f,centerY+half,0xFFFF294F.toInt(),3f)
         for(i in 0 until 48) {
             val side=if(i%2==0)-1f else 1f
             val distance=(1f-((introTime*.65f+i*.063f)%1f))*250f
@@ -393,6 +394,7 @@ class HybridPrologueScene : Scene() {
             val hx = centerX + 8f + reach * 62f
             val hy = centerY + 12f - reach * 20f
             val handColor = 0xFFE5DCE8.toInt()
+            context.drawLine(centerX+2f,centerY+3f,hx,hy,handColor,13f)
             context.drawLine(hx,hy,hx+42f,hy-18f,handColor,11f)
             context.drawLine(hx+30f,hy-12f,hx+52f,hy-35f,handColor,7f)
             context.drawLine(hx+34f,hy-8f,hx+62f,hy-24f,handColor,7f)
