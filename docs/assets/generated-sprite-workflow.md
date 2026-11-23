@@ -130,6 +130,8 @@ An importer/CI validator should report:
 
 Diagnostics must distinguish confirmed failures from warnings. Never silently skip an invalid frame.
 
-## Status
+## Tooling status
 
-This document defines the required workflow. It does **not** claim that a fully automatic atlas importer, metadata generator, or art-quality validator is already implemented. Until those tools exist, agents must follow the workflow manually and report which checks were actually performed.
+A first deterministic builder exists at `tools/assets/build_character_atlas.py`. It packs validated per-frame PNGs from one character directory into one atlas PNG and JSON manifest. It checks filenames, action folders, consistent dimensions, transparency, edge padding, missing frame indices, and near-identical adjacent frames. It preserves source PNGs.
+
+This is not an art-quality validator: it cannot reliably judge anatomy, costume consistency, whether a pose is semantically correct, or whether an animation feels natural. Those checks still require visual review. The builder also requires Pillow and has not yet been wired into CI or the runtime importer. Report these limitations honestly.
