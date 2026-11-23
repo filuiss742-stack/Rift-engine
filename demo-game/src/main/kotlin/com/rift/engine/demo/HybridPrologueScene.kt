@@ -126,6 +126,7 @@ class HybridPrologueScene : Scene() {
             fade = (fade - deltaSeconds * 1.2f).coerceAtLeast(0f)
             if (fade <= 0f) {
                 phase = Phase.FANTASY_CAMP
+                showUse = false
                 joystick.visible = true; useButton.visible = true
                 attackButton.visible = true; dodgeButton.visible = true
                 objective.visible = true; hint.visible = true
@@ -199,8 +200,11 @@ class HybridPrologueScene : Scene() {
     }
 
     override fun onPointer(event: PointerEvent) {
-        if (phase == Phase.INTRO && event.type == PointerEventType.DOWN) beginApartment()
-        if ((phase == Phase.FANTASY_WAKE || dialogueOpen) && event.type == PointerEventType.DOWN) showUse = true
+        if (event.type == PointerEventType.DOWN) {
+            if (phase == Phase.INTRO) beginApartment()
+            else if (dialogueOpen) showUse = true
+            else if (phase == Phase.FANTASY_WAKE) showUse = true
+        }
         super.onPointer(event)
     }
 
