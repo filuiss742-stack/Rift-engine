@@ -6,7 +6,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 try:
     from PIL import Image
@@ -36,7 +35,6 @@ def edge_difference(image: Image.Image) -> tuple[float, float]:
 
 def validate_manifest(manifest_path: Path) -> list[str]:
     errors: list[str] = []
-    warnings: list[str] = []
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -89,13 +87,14 @@ def validate_manifest(manifest_path: Path) -> list[str]:
             if not path.is_file():
                 errors.append(f"{material_id}: missing {map_name} image: {relative}")
                 continue
+            assignment = f"{material_id}.{map_name}"
             previous = seen_paths.get(str(path))
-            if previous and previous != material_id:
+            if previous and previous != assignment:
                 errors.append(
-                    f"{material_id}: image {relative} is also assigned to {previous}; "
-                    "reuse only when both surfaces intentionally share one physical material"
+                    f"{material_id}: image {relative} is assigned to both {previous} and {assignment}; "
+                    "each PBR map must have its own aligned source image"
                 )
-            seen_paths[str(path)] = material_id
+            seen_paths[str(path)] = assignment
             try:
                 with Image.open(path) as source:
                     source.verify()
@@ -123,11 +122,9 @@ def validate_manifest(manifest_path: Path) -> list[str]:
                     f"limit={tile_threshold:.2f})"
                 )
 
-        if material.get("tileable") not in (True, False):
+        if not isinstance(material.get("tileable"), bool):
             errors.append(f"{material_id}: tileable must be explicitly true or false")
 
-    for warning in warnings:
-        print(f"WARNING: {warning}")
     return errors
 
 
