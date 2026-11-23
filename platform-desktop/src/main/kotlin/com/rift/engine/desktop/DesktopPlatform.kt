@@ -73,6 +73,15 @@ class DesktopRenderContext(
         currentGraphics.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
     }
 
+    override fun drawTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int) {
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fillPolygon(
+            intArrayOf(x1.toInt(), x2.toInt(), x3.toInt()),
+            intArrayOf(y1.toInt(), y2.toInt(), y3.toInt()),
+            3
+        )
+    }
+
     override fun drawRoundRect(
         left: Float,
         top: Float,
