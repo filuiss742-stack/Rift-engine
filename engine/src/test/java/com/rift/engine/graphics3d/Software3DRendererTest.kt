@@ -5,6 +5,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import com.rift.engine.graphics.TextureResource
+import com.rift.engine.graphics.RenderContext
+import java.lang.reflect.Proxy
 import org.junit.Test
 
 class Software3DRendererTest {
@@ -57,6 +59,46 @@ class Software3DRendererTest {
         assertTrue(mesh.triangles.all { it.texture === texture })
         assertEquals(4f, mesh.triangles[0].uvB.u, 0f)
         assertEquals(3f, mesh.triangles[0].uvC.v, 0f)
+    }
+
+    @Test
+    fun rendererForwardsMeshUvsToTexturedPlatformPrimitive() {
+        val texture = TestTexture()
+        val calls = mutableListOf<Array<Any?>>()
+        val context = Proxy.newProxyInstance(
+            RenderContext::class.java.classLoader,
+            arrayOf(RenderContext::class.java)
+        ) { _, method, args ->
+            when (method.name) {
+                "getWidth" -> 640
+                "getHeight" -> 360
+                "drawTexturedTriangle" -> { calls += args ?: emptyArray(); null }
+                "drawTriangle" -> null
+                else -> null
+            }
+        } as RenderContext
+        val camera = Camera3D(
+            position = Vector3(0f, 0f, 5f),
+            target = Vector3.ZERO,
+            aspectRatio = 16f / 9f
+        )
+        val triangle = MeshTriangle(
+            Vector3(-1f,-1f,0f),
+            Vector3(1f,-1f,0f),
+            Vector3(0f,1f,0f),
+            0xFFFFFFFF.toInt(),
+            texture,
+            TextureUv(.1f,.2f),
+            TextureUv(.9f,.2f),
+            TextureUv(.5f,.8f)
+        )
+
+        renderer.render(context, camera, listOf(Mesh3D(listOf(triangle))))
+
+        assertEquals(1, calls.size)
+        assertTrue(calls.single()[0] === texture)
+        assertEquals(.1f, calls.single()[3] as Float, 0f)
+        assertEquals(.2f, calls.single()[4] as Float, 0f)
     }
 
     private class TestTexture : TextureResource {
