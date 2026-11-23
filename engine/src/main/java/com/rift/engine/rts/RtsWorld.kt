@@ -133,6 +133,7 @@ class RtsWorld(
 
     var status: RtsMatchStatus = RtsMatchStatus.RUNNING
         private set
+    private var matchStarted = false
     var elapsedSeconds: Double = 0.0
         private set
 
@@ -143,21 +144,29 @@ class RtsWorld(
             "Only one campaign hero per team is supported in this match."
         }
         mutableUnits[unit.id] = unit
-        evaluateTerminalState()
     }
 
     fun addBuilding(building: RtsBuilding) {
         check(status == RtsMatchStatus.RUNNING) { "Cannot add buildings after match end." }
         require(!mutableBuildings.containsKey(building.id)) { "Duplicate RTS building id: ${building.id}" }
         mutableBuildings[building.id] = building
-        evaluateTerminalState()
+    }
+
+    /** Locks the initial setup and evaluates mission start conditions. */
+    fun start(): Boolean {
+        if (status != RtsMatchStatus.RUNNING) return false
+        if (!matchStarted) {
+            matchStarted = true
+            evaluateTerminalState()
+        }
+        return status == RtsMatchStatus.RUNNING
     }
 
     fun unit(id: String): RtsUnit? = mutableUnits[id]
     fun building(id: String): RtsBuilding? = mutableBuildings[id]
 
     fun issueOrder(unitId: String, order: RtsOrder): Boolean {
-        if (status != RtsMatchStatus.RUNNING) return false
+        if (!start()) return false
         val unit = mutableUnits[unitId] ?: return false
         if (!unit.isAlive || unit.team == RtsTeam.NEUTRAL) return false
         when (order) {
@@ -177,7 +186,7 @@ class RtsWorld(
     }
 
     fun queueProduction(buildingId: String, unitSpec: RtsUnitSpec): Boolean {
-        if (status != RtsMatchStatus.RUNNING) return false
+        if (!start()) return false
         val building = mutableBuildings[buildingId] ?: return false
         if (building.team == RtsTeam.NEUTRAL || building.spec.productionCapacity <= 0) return false
         if (building.productionQueue.size >= building.spec.productionCapacity) return false
@@ -191,7 +200,7 @@ class RtsWorld(
     /** Applies one bounded simulation step. Hosts should call this from a fixed-step accumulator. */
     fun update(deltaSeconds: Float) {
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f)
-        if (status != RtsMatchStatus.RUNNING || deltaSeconds == 0f) return
+        if (!start() || deltaSeconds == 0f) return
         var remaining = deltaSeconds
         while (remaining > 0f && status == RtsMatchStatus.RUNNING) {
             val step = min(remaining, MAX_STEP_SECONDS)
@@ -203,7 +212,7 @@ class RtsWorld(
     /** Explicitly applies gameplay damage, allowing abilities and scripted events to share rules. */
     fun applyDamage(targetId: String, amount: Float): Boolean {
         require(amount.isFinite() && amount >= 0f)
-        if (status != RtsMatchStatus.RUNNING) return false
+        if (!start()) return false
         val target = mutableUnits[targetId] ?: return false
         if (!target.isAlive || amount == 0f) return false
         target.health = max(0f, target.health - amount)
@@ -214,7 +223,7 @@ class RtsWorld(
 
     fun heal(unitId: String, amount: Float): Boolean {
         require(amount.isFinite() && amount >= 0f)
-        if (status != RtsMatchStatus.RUNNING) return false
+        if (!start()) return false
         val target = mutableUnits[unitId] ?: return false
         if (!target.isAlive || amount == 0f) return false
         target.health = min(target.spec.maxHealth, target.health + amount)
