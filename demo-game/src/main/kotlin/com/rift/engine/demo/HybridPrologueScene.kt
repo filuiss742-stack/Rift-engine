@@ -369,28 +369,63 @@ class HybridPrologueScene : Scene() {
             val y=centerY+kotlin.math.sin(i*2.7f+introTime*4f)*distance*.12f
             context.drawRect(x,y,x+4f,y+2f,if(i%3==0)0xFFFF355C.toInt() else 0xFFB71E4D.toInt())
         }
-        context.drawText("ИСКАЖЕНИЕ",centerX-90f,centerY+130f,0xFFEDE8F5.toInt(),25f,true)
-        context.drawText("НУЛЕВАЯ ГРАНЬ",centerX-105f,centerY+162f,0xFFBBAEC9.toInt(),14f,true)
-        context.drawText("Нажми или нажми E, чтобы начать",centerX-155f,context.height-36f,0xFFBBAEC9.toInt(),15f)
+        // Teia reaches through the tear; the image stays unexplained.
+        if (introTime > 1.1f && introTime < 4.35f) {
+            val reach = ((introTime - 1.1f) / 1.2f).coerceIn(0f,1f)
+            val hx = centerX + 8f + reach * 62f
+            val hy = centerY + 12f - reach * 20f
+            val handColor = 0xFFE5DCE8.toInt()
+            context.drawLine(hx,hy,hx+42f,hy-18f,handColor,11f)
+            context.drawLine(hx+30f,hy-12f,hx+52f,hy-35f,handColor,7f)
+            context.drawLine(hx+34f,hy-8f,hx+62f,hy-24f,handColor,7f)
+            context.drawLine(hx+37f,hy-2f,hx+64f,hy-10f,handColor,7f)
+            context.drawLine(hx+35f,hy+5f,hx+58f,hy+6f,handColor,7f)
+            context.drawLine(hx,hy+12f,hx+32f,hy+18f,handColor,10f)
+        }
+        if (introTime > 4.35f) {
+            context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0xFF000000.toInt())
+            return
+        }
+        context.drawText("ТРЕЩИНА",centerX-60f,centerY+130f,0xFFEDE8F5.toInt(),25f,true)
+        context.drawText("Нажми или E, чтобы начать",centerX-135f,context.height-36f,0xFFBBAEC9.toInt(),15f)
     }
 
     private fun renderFantasyWake(context:RenderContext) {
         context.clear(0xFF171824.toInt())
         val wakeCamera=Camera3D(Vector3(0f,4f,7f),Vector3(0f,0f,0f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
-        val ruin=listOf(
-            groundPlaneMesh(Vector3(0f,0f,0f),16f,14f,0xFF45434A.toInt()),
+        val ruin=mutableListOf(
+            groundPlaneMesh(Vector3(0f,0f,0f),18f,16f,0xFF45434A.toInt()),
             cuboidMesh(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
             cuboidMesh(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt())
+            cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt()),
+            cuboidMesh(Vector3(-2.2f,1.8f,-3.2f),Vector3(.28f,3.6f,.28f),0xFF514B50.toInt()),
+            cuboidMesh(Vector3(2.8f,1.1f,-4.8f),Vector3(.3f,2.2f,.3f),0xFF514B50.toInt()),
+            cuboidMesh(Vector3(-1.6f,.12f,.3f),Vector3(1.1f,.18f,.18f),0xFF65462F.toInt()),
+            cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt()),
+            cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt()),
+            cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
         )
+        if (phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
+            ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
+            ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
+        }
         renderer.render(context,wakeCamera,ruin)
-        context.drawText("...",context.width*.5f-5f,context.height-70f,0xFFFFFFFF.toInt(),28f,true)
+        context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        if (glitchTimer > 0f) {
+            context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x55FF174F.toInt())
+            context.drawText("СИГНАЛ НЕ СОВПАДАЕТ",context.width*.5f-145f,context.height*.35f,0xFFFF526B.toInt(),20f,true)
+        }
     }
 
     private fun updateObjective() {
         when(phase) {
-            Phase.APARTMENT -> { objective.text="СОВРЕМЕННЫЙ МИР • КВАРТИРА"; hint.text="Исследуй комнату и закончи повседневные дела (${apartmentTasks.size}/3)." }
-            Phase.STREET -> { objective.text="СОВРЕМЕННЫЙ МИР • УЛИЦА"; hint.text="Закончи дела снаружи (${streetTasks.size}/2), затем возвращайся домой." }
+            Phase.APARTMENT -> { objective.text="ЗЕМЛЯ • ДОМ ЛИЗЫ"; hint.text="Утро: телефон, завтрак и новости (" + apartmentTasks.size + "/3)." }
+            Phase.STREET -> { objective.text="ЗЕМЛЯ • ГОРОД"; hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." }
+            Phase.FANTASY_CAMP -> {
+                objective.text="НЕИЗВЕСТНЫЙ МИР • РУИНЫ"
+                hint.text=if (enemyHealth>0) "WASD — движение • SPACE/HIT — атака • SHIFT/DODGE — уклонение"
+                    else "Первый глитч. Нажми E, чтобы осмотреть разлом."
+            }
             else -> Unit
         }
     }
