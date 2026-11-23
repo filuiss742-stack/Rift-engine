@@ -22,7 +22,7 @@ import kotlin.math.sqrt
  * Dialogue copy is deliberately neutral until the author supplies final text.
  */
 class HybridPrologueScene : Scene() {
-    private enum class Phase { INTRO, APARTMENT, STREET, FANTASY_WAKE, COMPLETE }
+    private enum class Phase { INTRO, APARTMENT, STREET, FANTASY_WAKE, FANTASY_CAMP, COMPLETE }
 
     private data class Prop(
         val id: String,
@@ -39,6 +39,19 @@ class HybridPrologueScene : Scene() {
     private var toastTimer = 0f
     private var showUse = false
     private var returnedHome = false
+    private var dialogueOpen = false
+    private var dialogueLines = emptyList<Pair<String, String>>()
+    private var dialogueIndex = 0
+    private var dialogueAfter: (() -> Unit)? = null
+    private var touchAttack = false
+    private var touchDodge = false
+    private var enemyHealth = 3
+    private var enemyAttackTimer = 2.2f
+    private var enemyTelegraph = 0f
+    private var dodgeTimer = 0f
+    private var attackCooldown = 0f
+    private var glitchTimer = 0f
+    private var glitchTriggered = false
     private val apartmentTasks = linkedSetOf<String>()
     private val streetTasks = linkedSetOf<String>()
     private var props = emptyList<Prop>()
@@ -64,6 +77,10 @@ class HybridPrologueScene : Scene() {
     private val objective = UiLabel(18f, 16f, 760f, 28f, "", 0xFFF1EAF6.toInt(), 17f, true)
     private val hint = UiLabel(18f, 46f, 820f, 24f, "", 0xFFD7C9E1.toInt(), 13f)
     private val toast = UiLabel(210f, 510f, 540f, 34f, "", 0xFFFFFFFF.toInt(), 17f, true)
+    private val dialogueName = UiLabel(48f, 420f, 240f, 28f, "", 0xFFFFC5D0.toInt(), 16f, true)
+    private val dialogueText = UiLabel(48f, 452f, 860f, 86f, "", 0xFFF5F0F8.toInt(), 18f)
+    private val attackButton = VirtualButton(700f, 465f, 92f, 76f, "HIT", onPressed = { touchAttack = true })
+    private val dodgeButton = VirtualButton(802f, 382f, 92f, 76f, "DODGE", onPressed = { touchDodge = true })
     private val endLabel = UiLabel(120f, 250f, 720f, 84f, "", 0xFFFFFFFF.toInt(), 24f, true)
 
     init {
@@ -73,9 +90,14 @@ class HybridPrologueScene : Scene() {
         input.bindKey("back", EngineKey.S); input.bindKey("back", EngineKey.DOWN)
         input.bindKey("use", EngineKey.E); input.bindKey("use", EngineKey.ENTER)
         input.bindKey("skip", EngineKey.ESCAPE)
-        ui.add(objective); ui.add(hint); ui.add(toast); ui.add(joystick); ui.add(useButton); ui.add(endLabel)
+        input.bindKey("attack", EngineKey.SPACE)
+        input.bindKey("dodge", EngineKey.SHIFT)
+        ui.add(objective); ui.add(hint); ui.add(toast); ui.add(joystick); ui.add(useButton)
+        ui.add(dialogueName); ui.add(dialogueText); ui.add(attackButton); ui.add(dodgeButton); ui.add(endLabel)
         objective.visible = false; hint.visible = false; toast.visible = false
-        joystick.visible = false; useButton.visible = false; endLabel.visible = false
+        dialogueName.visible = false; dialogueText.visible = false
+        joystick.visible = false; useButton.visible = false; attackButton.visible = false; dodgeButton.visible = false
+        endLabel.visible = false
     }
 
     override fun onEnter() {
