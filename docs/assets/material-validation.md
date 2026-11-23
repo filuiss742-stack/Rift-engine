@@ -28,7 +28,7 @@ A material manifest is JSON:
 }
 ```
 
-Only `base_color` is mandatory in the first pass. Add the other maps when authored. All supplied maps for one material must have identical dimensions and UV alignment. Unique surfaces should use their own material IDs; reusing one image for different IDs is rejected unless the validator is deliberately extended with an explicit shared-material declaration.
+Only `base_color` is mandatory in the first pass. Add the other maps when authored. All supplied maps for one material must have identical dimensions and UV alignment. Unique surfaces should use their own material IDs and independent source images. The current validator rejects reusing one image path across different material IDs or across different PBR map slots. If multiple meshes intentionally share one physical material, they should reference the same single material ID at the mesh/material-binding layer rather than duplicating the image entry.
 
 ## Run validation
 
