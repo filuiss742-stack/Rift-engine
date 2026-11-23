@@ -82,6 +82,65 @@ class DesktopRenderContext(
         )
     }
 
+    override fun drawTexturedTriangle(
+        texture: com.rift.engine.graphics.TextureResource,
+        x1: Float, y1: Float, u1: Float, v1: Float,
+        x2: Float, y2: Float, u2: Float, v2: Float,
+        x3: Float, y3: Float, u3: Float, v3: Float,
+        alpha: Float
+    ) {
+        val source = texture as? DesktopTexture
+            ?: throw IllegalArgumentException("Texture was not created by the desktop texture loader.")
+        check(!source.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f)
+        val values = floatArrayOf(x1,y1,u1,v1,x2,y2,u2,v2,x3,y3,u3,v3)
+        require(values.all(Float::isFinite)) { "Triangle coordinates and UVs must be finite." }
+
+        val sx0 = u1 * texture.width
+        val sy0 = v1 * texture.height
+        val sx1 = u2 * texture.width
+        val sy1 = v2 * texture.height
+        val sx2 = u3 * texture.width
+        val sy2 = v3 * texture.height
+        val sdx1 = sx1 - sx0
+        val sdy1 = sy1 - sy0
+        val sdx2 = sx2 - sx0
+        val sdy2 = sy2 - sy0
+        val determinant = sdx1 * sdy2 - sdx2 * sdy1
+        require(kotlin.math.abs(determinant) > 1e-6f) { "Texture mapping triangle is degenerate." }
+
+        val dx1 = x2 - x1
+        val dy1 = y2 - y1
+        val dx2 = x3 - x1
+        val dy2 = y3 - y1
+        val m00 = (dx1 * sdy2 - dx2 * sdy1) / determinant
+        val m01 = (dx2 * sdx1 - dx1 * sdx2) / determinant
+        val m10 = (dy1 * sdy2 - dy2 * sdy1) / determinant
+        val m11 = (dy2 * sdx1 - dy1 * sdx2) / determinant
+        val m02 = x1 - m00 * sx0 - m01 * sy0
+        val m12 = y1 - m10 * sx0 - m11 * sy0
+        val transform = AffineTransform(
+            m00.toDouble(), m10.toDouble(), m01.toDouble(), m11.toDouble(),
+            m02.toDouble(), m12.toDouble()
+        )
+
+        val child = currentGraphics.create() as Graphics2D
+        try {
+            val clip = java.awt.geom.Path2D.Float().apply {
+                moveTo(x1.toDouble(), y1.toDouble())
+                lineTo(x2.toDouble(), y2.toDouble())
+                lineTo(x3.toDouble(), y3.toDouble())
+                closePath()
+            }
+            child.clip(clip)
+            child.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
+            child.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            child.drawImage(source.image, transform, null)
+        } finally {
+            child.dispose()
+        }
+    }
+
     override fun drawRoundRect(
         left: Float,
         top: Float,
