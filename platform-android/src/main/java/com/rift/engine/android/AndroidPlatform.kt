@@ -43,6 +43,13 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
         canvas.drawRect(left, top, right, bottom, paint)
     }
 
+    override fun drawTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int) {
+        paint.color = color
+        paint.style = Paint.Style.FILL
+        val path = Path().apply { moveTo(x1, y1); lineTo(x2, y2); lineTo(x3, y3); close() }
+        canvas.drawPath(path, paint)
+    }
+
     override fun drawRoundRect(
         left: Float,
         top: Float,
