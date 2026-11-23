@@ -72,7 +72,7 @@ class Software3DRendererTest {
             when (method.name) {
                 "getWidth" -> 640
                 "getHeight" -> 360
-                "drawTexturedTriangle" -> { calls += args ?: emptyArray(); null }
+                "drawTexturedTriangle" -> { calls.add(args?.toList()?.toTypedArray() ?: emptyArray()); null }
                 "drawTriangle" -> null
                 else -> null
             }
