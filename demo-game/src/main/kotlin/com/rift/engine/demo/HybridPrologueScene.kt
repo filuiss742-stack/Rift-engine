@@ -509,6 +509,10 @@ class HybridPrologueScene : Scene() {
     }
 
     private fun updateFantasyCombat(delta: Float) {
+        if (toastTimer > 0f) {
+            toastTimer = (toastTimer - delta).coerceAtLeast(0f)
+            toast.visible = toastTimer > 0f
+        }
         if (fade > 0f) fade = (fade - delta * 1.4f).coerceAtLeast(0f)
         if (glitchTimer > 0f) glitchTimer = (glitchTimer - delta).coerceAtLeast(0f)
         attackCooldown = (attackCooldown - delta).coerceAtLeast(0f)
