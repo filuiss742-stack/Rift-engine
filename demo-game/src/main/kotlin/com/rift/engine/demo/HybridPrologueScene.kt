@@ -115,14 +115,29 @@ class HybridPrologueScene : Scene() {
             if (input.wasPressed("skip") || input.wasPressed("use") || introTime >= 5.5f) beginApartment()
             return
         }
+        if (dialogueOpen) {
+            if (input.wasPressed("use") || input.wasPressed("attack") || showUse) advanceDialogue()
+            showUse = false
+            return
+        }
         if (phase == Phase.FANTASY_WAKE) {
             fade = (fade - deltaSeconds * 1.2f).coerceAtLeast(0f)
-            if (input.wasPressed("use") || showUse) {
-                showUse = false
-                phase = Phase.COMPLETE
-                endLabel.text = "ПРОЛОГ ЗАВЕРШЁН — ПРОБУЖДЕНИЕ ВО ВТОРОМ МИРЕ"
-                endLabel.visible = true
+            if (fade <= 0f) {
+                phase = Phase.FANTASY_CAMP
+                joystick.visible = true; useButton.visible = true
+                attackButton.visible = true; dodgeButton.visible = true
+                objective.visible = true; hint.visible = true
+                updateObjective()
+                startDialogue(listOf(
+                    "Лиза" to "Я помню, как легла спать. Это точно не моя комната.",
+                    "Лиза" to "Костёр... руины... И почему я чувствую чужую усталость?",
+                    "Лиза" to "Ладно. Сначала надо понять, где я и как отсюда выбраться."
+                ))
             }
+            return
+        }
+        if (phase == Phase.FANTASY_CAMP) {
+            updateFantasyCombat(deltaSeconds)
             return
         }
         if (phase == Phase.COMPLETE) return
@@ -156,11 +171,11 @@ class HybridPrologueScene : Scene() {
         context.clear(0xFF10121B.toInt())
         when (phase) {
             Phase.INTRO -> renderIntro(context)
-            Phase.FANTASY_WAKE, Phase.COMPLETE -> {
+            Phase.FANTASY_WAKE, Phase.FANTASY_CAMP, Phase.COMPLETE -> {
                 renderFantasyWake(context)
-                if (phase == Phase.FANTASY_WAKE) {
-                    context.drawRoundRect(190f, 480f, 770f, 566f, 12f, 0xDD171421.toInt())
-                    context.drawText("Нажми USE, чтобы продолжить", 260f, 530f, 0xFFF1EAF6.toInt(), 19f, true)
+                if (phase == Phase.COMPLETE) {
+                    endLabel.text = "ПРОЛОГ ЗАВЕРШЁН"
+                    endLabel.visible = true
                 }
             }
             else -> {
@@ -178,7 +193,7 @@ class HybridPrologueScene : Scene() {
 
     override fun onPointer(event: PointerEvent) {
         if (phase == Phase.INTRO && event.type == PointerEventType.DOWN) beginApartment()
-        if (phase == Phase.FANTASY_WAKE && event.type == PointerEventType.DOWN) showUse = true
+        if ((phase == Phase.FANTASY_WAKE || dialogueOpen) && event.type == PointerEventType.DOWN) showUse = true
         super.onPointer(event)
     }
 
