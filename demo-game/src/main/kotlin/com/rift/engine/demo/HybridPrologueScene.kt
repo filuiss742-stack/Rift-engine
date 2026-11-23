@@ -430,6 +430,112 @@ class HybridPrologueScene : Scene() {
         }
     }
 
+
+    private fun startDialogue(lines: List<Pair<String, String>>, after: (() -> Unit)? = null) {
+        dialogueLines = lines
+        dialogueIndex = 0
+        dialogueAfter = after
+        dialogueOpen = lines.isNotEmpty()
+        if (dialogueOpen) {
+            dialogueName.text = lines[0].first
+            dialogueText.text = lines[0].second
+            dialogueName.visible = true
+            dialogueText.visible = true
+            joystick.visible = false
+            useButton.visible = true
+            attackButton.visible = false
+            dodgeButton.visible = false
+        }
+    }
+
+    private fun advanceDialogue() {
+        if (!dialogueOpen) return
+        dialogueIndex++
+        if (dialogueIndex >= dialogueLines.size) {
+            dialogueOpen = false
+            dialogueName.visible = false
+            dialogueText.visible = false
+            val callback = dialogueAfter
+            dialogueAfter = null
+            callback?.invoke()
+            if (phase == Phase.FANTASY_CAMP) {
+                joystick.visible = true; useButton.visible = true
+                attackButton.visible = true; dodgeButton.visible = true
+            } else if (phase == Phase.APARTMENT || phase == Phase.STREET) {
+                joystick.visible = true; useButton.visible = true
+            }
+            return
+        }
+        dialogueName.text = dialogueLines[dialogueIndex].first
+        dialogueText.text = dialogueLines[dialogueIndex].second
+    }
+
+    private fun updateFantasyCombat(delta: Float) {
+        if (fade > 0f) fade = (fade - delta * 1.4f).coerceAtLeast(0f)
+        if (glitchTimer > 0f) glitchTimer = (glitchTimer - delta).coerceAtLeast(0f)
+        attackCooldown = (attackCooldown - delta).coerceAtLeast(0f)
+        dodgeTimer = (dodgeTimer - delta).coerceAtLeast(0f)
+        val ix = ((if (input.isDown("right")) 1f else 0f) -
+            (if (input.isDown("left")) 1f else 0f) + joystick.axisX).coerceIn(-1f,1f)
+        val iz = ((if (input.isDown("back")) 1f else 0f) -
+            (if (input.isDown("forward")) 1f else 0f) + joystick.axisY).coerceIn(-1f,1f)
+        val length = sqrt(ix*ix+iz*iz)
+        val nx = if (length>1f) ix/length else ix
+        val nz = if (length>1f) iz/length else iz
+        val speed = if (dodgeTimer>0f) 7.5f else 3.1f
+        val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
+        if (kotlin.math.abs(candidate.x)<6.2f && kotlin.math.abs(candidate.z)<5.2f) heroPosition=candidate
+        worldCamera.position=Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f)
+        worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
+
+        val doDodge=input.wasPressed("dodge") || touchDodge
+        val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
+        val doUse=input.wasPressed("use") || showUse
+        touchDodge=false; touchAttack=false; showUse=false
+        if (doDodge && dodgeTimer<=0f) dodgeTimer=.38f
+        val enemyPos=Vector3(2.4f,0f,-1.5f)
+        val dx=enemyPos.x-heroPosition.x; val dz=enemyPos.z-heroPosition.z
+        val distanceToEnemy=sqrt(dx*dx+dz*dz)
+        if (enemyHealth>0) {
+            if (doAttack && attackCooldown<=0f && distanceToEnemy<2.5f) {
+                enemyHealth--
+                attackCooldown=.52f
+                if (enemyHealth<=0 && !glitchTriggered) {
+                    glitchTriggered=true; glitchTimer=1.2f
+                    startDialogue(listOf(
+                        "Лиза" to "Что это было?.. Оно словно рассыпалось ещё до того, как я коснулась его.",
+                        "Лиза" to "И эта вспышка... На секунду всё вокруг стало неправильным."
+                    ))
+                }
+            }
+            enemyAttackTimer-=delta
+            if (enemyAttackTimer<=0f && distanceToEnemy<2.8f && enemyTelegraph<=0f) {
+                enemyTelegraph=.75f
+            }
+            if (enemyTelegraph>0f) {
+                enemyTelegraph-=delta
+                if (enemyTelegraph<=0f) {
+                    if (distanceToEnemy<2.8f && dodgeTimer<=0f) {
+                        startDialogue(listOf("Лиза" to "Ай! Оно собирается перед ударом — можно успеть уйти с линии атаки."))
+                    }
+                    enemyAttackTimer=2.6f
+                }
+            }
+        } else if (doUse && glitchTriggered && !dialogueOpen) {
+            startDialogue(listOf(
+                "Лиза" to "Трещина в воздухе. Нет... не в воздухе. Будто сам мир на секунду забыл, каким должен быть.",
+                "Лиза" to "Я просто хотела проснуться. Почему это происходит со мной?"
+            )) {
+                phase=Phase.COMPLETE
+                joystick.visible=false; useButton.visible=false; attackButton.visible=false; dodgeButton.visible=false
+                objective.visible=false; hint.visible=false
+                endLabel.text="ПРОЛОГ ЗАВЕРШЁН"
+                endLabel.visible=true
+            }
+        }
+        updateObjective()
+    }
+
     private fun showToast(message:String) {
         toast.text=message; toast.visible=true; toastTimer=1.8f
     }
