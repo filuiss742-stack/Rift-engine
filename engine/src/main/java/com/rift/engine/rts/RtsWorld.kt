@@ -315,6 +315,10 @@ class RtsWorld(
                 unit.order = RtsOrder.Hold
                 return@forEach
             }
+            if (building.team == unit.team) {
+                unit.order = RtsOrder.Hold
+                return@forEach
+            }
             if (!unit.isAlive || distanceOnGround(unit.position, building.position) > CAPTURE_RADIUS) return@forEach
             building.captureProgress = min(1f, building.captureProgress + dt / CAPTURE_SECONDS)
             if (building.captureProgress >= 1f) {
