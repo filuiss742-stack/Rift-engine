@@ -17,9 +17,9 @@ import com.rift.engine.ui.VirtualJoystick
 import kotlin.math.sqrt
 
 /**
- * First real-geometry prologue slice. The room, street props and furniture
- * are world-space 3D cuboids/planes. The heroine remains a 2D sprite billboard.
- * Dialogue copy is deliberately neutral until the author supplies final text.
+ * Playable narrative pass for "The Crack" and Act I, "A Strange Dream".
+ * Environments are world-space 3D meshes; the heroine remains a 2D billboard.
+ * Dialogue is authored prototype copy and deliberately avoids explaining the mystery.
  */
 class HybridPrologueScene : Scene() {
     private enum class Phase { INTRO, APARTMENT, STREET, FANTASY_WAKE, FANTASY_CAMP, COMPLETE }
