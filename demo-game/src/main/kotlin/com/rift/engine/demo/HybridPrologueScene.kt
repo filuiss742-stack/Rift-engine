@@ -104,6 +104,7 @@ class HybridPrologueScene : Scene() {
             return
         }
         if (phase == Phase.COMPLETE) return
+        if (fade > 0f) fade = (fade - deltaSeconds * 1.4f).coerceAtLeast(0f)
         if (toastTimer > 0f) { toastTimer = (toastTimer - deltaSeconds).coerceAtLeast(0f); toast.visible = toastTimer > 0f }
 
         val ix = ((if (input.isDown("right")) 1f else 0f) -
@@ -249,7 +250,7 @@ class HybridPrologueScene : Scene() {
     private fun isWalkable(p:Vector3):Boolean {
         val limit = if (phase==Phase.STREET) 14f else 5.35f
         if (kotlin.math.abs(p.x)>limit || kotlin.math.abs(p.z)>limit*.82f) return false
-        return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message") }
+        return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message","exit","home") }
     }
 
     private fun drawHeroBillboard(context:RenderContext) {
