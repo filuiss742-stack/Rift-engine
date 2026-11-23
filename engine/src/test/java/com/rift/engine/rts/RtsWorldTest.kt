@@ -76,4 +76,25 @@ class RtsWorldTest {
         assertFalse(world.issueOrder("a", RtsOrder.Attack("b")))
         assertTrue(world.issueOrder("a", RtsOrder.MoveTo(Vector3(4f, 0f, 4f))))
     }
+    @Test fun destroyingEnemyHeadquartersWinsTheMission() {
+        val world = RtsWorld()
+        addHeadquarters(world)
+        assertTrue(world.applyBuildingDamage("enemy_hq", 1000f))
+        assertEquals(RtsMatchStatus.VICTORY, world.status)
+    }
+
+    @Test fun attackOrderMovesUnitIntoRangeBeforeAttacking() {
+        val world = RtsWorld()
+        addHeadquarters(world)
+        val attacker = RtsUnit("attacker", RtsTeam.PLAYER, infantrySpec, Vector3.ZERO)
+        val defender = RtsUnit("defender", RtsTeam.ENEMY, infantrySpec, Vector3(10f, 0f, 0f))
+        world.addUnit(attacker)
+        world.addUnit(defender)
+
+        assertTrue(world.issueOrder("attacker", RtsOrder.Attack("defender")))
+        world.update(2f)
+        assertTrue(attacker.position.x > 0f)
+        assertTrue(attacker.position.x < defender.position.x)
+    }
+
 }
