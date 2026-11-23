@@ -1,13 +1,22 @@
 package com.rift.engine.graphics3d
 
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.graphics.TextureResource
 import kotlin.math.tan
+
+data class TextureUv(val u: Float, val v: Float) {
+    init { require(u.isFinite() && v.isFinite()) { "Texture UV coordinates must be finite." } }
+}
 
 data class MeshTriangle(
     val a: Vector3,
     val b: Vector3,
     val c: Vector3,
-    val color: Int
+    val color: Int,
+    val texture: TextureResource? = null,
+    val uvA: TextureUv = TextureUv(0f, 0f),
+    val uvB: TextureUv = TextureUv(1f, 0f),
+    val uvC: TextureUv = TextureUv(1f, 1f)
 )
 
 data class Mesh3D(val triangles: List<MeshTriangle>)
@@ -17,7 +26,11 @@ data class ScreenTriangle(
     val bx: Float, val by: Float,
     val cx: Float, val cy: Float,
     val depth: Float,
-    val color: Int
+    val color: Int,
+    val texture: TextureResource?,
+    val uvA: TextureUv,
+    val uvB: TextureUv,
+    val uvC: TextureUv
 )
 
 /**
@@ -68,13 +81,28 @@ class Software3DRenderer(
                 val depth = ((tri.a - camera.position).dot(forward) +
                     (tri.b - camera.position).dot(forward) +
                     (tri.c - camera.position).dot(forward)) / 3f
-                triangles += ScreenTriangle(pa.first, pa.second, pb.first, pb.second,
-                    pc.first, pc.second, depth, tri.color)
+                triangles += ScreenTriangle(
+                    pa.first, pa.second, pb.first, pb.second, pc.first, pc.second,
+                    depth, tri.color, tri.texture, tri.uvA, tri.uvB, tri.uvC
+                )
             }
         }
         triangles.sortByDescending { it.depth }
-        triangles.forEach {
-            context.drawTriangle(it.ax, it.ay, it.bx, it.by, it.cx, it.cy, it.color)
+        triangles.forEach { triangle ->
+            val texture = triangle.texture
+            if (texture == null) {
+                context.drawTriangle(
+                    triangle.ax, triangle.ay, triangle.bx, triangle.by,
+                    triangle.cx, triangle.cy, triangle.color
+                )
+            } else {
+                context.drawTexturedTriangle(
+                    texture,
+                    triangle.ax, triangle.ay, triangle.uvA.u, triangle.uvA.v,
+                    triangle.bx, triangle.by, triangle.uvB.u, triangle.uvB.v,
+                    triangle.cx, triangle.cy, triangle.uvC.u, triangle.uvC.v
+                )
+            }
         }
     }
 }
