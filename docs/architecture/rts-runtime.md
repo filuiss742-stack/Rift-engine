@@ -41,11 +41,13 @@ For the campaign event, the mission rule `heroDeathCausesDefeat` is enabled. If 
 `engine/.../rts/RtsWorld.kt` currently provides a platform-neutral first simulation slice:
 - RTS teams, unit roles, building types and match status;
 - validated unit/building specs and state;
-- move, attack, hold and capture orders;
-- resource accumulation, production queues and outpost capture;
+- move, attack, hold and capture orders, including simple target approach for attack/capture;
+- resource accumulation, production queues, building damage and outpost capture;
 - bounded deterministic update steps;
 - explicit match setup/start boundary;
-- campaign hero death defeat rule and headquarters mission rules.
+- campaign hero death defeat rule and headquarters victory/defeat rules.
+
+Unit movement is currently direct ground-plane steering without obstacle/pathfinding support; this is a tested foundation target, not yet full RTS navigation.
 
 The core is renderer-agnostic and uses the shared 3D `Vector3` ground plane (X/Z). It does not yet implement navigation/pathfinding around obstacles, formations, placement preview, selection input, camera controls, fog of war, minimap, AI, network play, or the RTS HUD. Production currently spawns at a simple offset from the building; a real spawn-point/occupancy system is still required.
 
