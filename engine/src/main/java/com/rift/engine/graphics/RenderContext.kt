@@ -20,6 +20,10 @@ interface RenderContext {
         radius: Float,
         color: Int
     )
+    fun drawTriangle(
+        x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int
+    )
+
     fun drawLine(
         x1: Float,
         y1: Float,
