@@ -116,6 +116,32 @@ class DesktopRenderContextTest {
     }
 
     @Test
+    fun texturedTriangleMapsUvCoordinatesAndClipsOutsidePixels() {
+        val source = BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB)
+        for (x in 0 until source.width) {
+            for (y in 0 until source.height) source.setRGB(x, y, 0xFFCC3366.toInt())
+        }
+        val texture = DesktopTexture(source)
+        val image = BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            val context = DesktopRenderContext(graphics, image.width, image.height)
+            context.drawTexturedTriangle(
+                texture,
+                2f, 2f, 0f, 0f,
+                20f, 2f, 1f, 0f,
+                2f, 20f, 0f, 1f
+            )
+
+            assertEquals(0xFFCC3366.toInt(), image.getRGB(5, 5))
+            assertEquals(0, image.getRGB(20, 20))
+        } finally {
+            graphics.dispose()
+            texture.close()
+        }
+    }
+
+    @Test
     fun textureDrawingHonorsAlpha() {
         val source = BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB)
         for (x in 0 until 2) {
