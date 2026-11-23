@@ -83,15 +83,23 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
         }
         val previousAlpha = paint.alpha
         val previousFilter = paint.isFilterBitmap
+        val previousShader = paint.shader
         val saveCount = canvas.save()
         try {
             canvas.clipPath(clip)
+            canvas.concat(transform)
             paint.alpha = (alpha * 255f).toInt()
             paint.isFilterBitmap = true
-            canvas.drawBitmap(source.bitmap, transform, paint)
+            paint.shader = BitmapShader(
+                source.bitmap,
+                Shader.TileMode.REPEAT,
+                Shader.TileMode.REPEAT
+            )
+            canvas.drawPaint(paint)
         } finally {
             paint.alpha = previousAlpha
             paint.isFilterBitmap = previousFilter
+            paint.shader = previousShader
             canvas.restoreToCount(saveCount)
         }
     }
