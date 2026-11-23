@@ -20,9 +20,13 @@ interface RenderContext {
         radius: Float,
         color: Int
     )
+    /**
+     * Optional filled-triangle primitive. Legacy/test render contexts may omit it;
+     * concrete 3D-capable platform backends should override it.
+     */
     fun drawTriangle(
         x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int
-    )
+    ) = Unit
 
     fun drawLine(
         x1: Float,
