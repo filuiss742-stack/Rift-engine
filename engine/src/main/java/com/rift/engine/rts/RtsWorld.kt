@@ -268,13 +268,30 @@ class RtsWorld(
     private fun updateMovement(dt: Float) {
         mutableUnits.values.forEach { unit ->
             if (!unit.isAlive) return@forEach
-            val order = unit.order
-            if (order is RtsOrder.MoveTo) {
-                unit.position = moveToward(unit.position, order.destination, unit.spec.moveSpeed * dt)
-                if (distanceOnGround(unit.position, order.destination) < ARRIVAL_EPSILON) {
-                    unit.position = order.destination
-                    unit.order = RtsOrder.Hold
+            when (val order = unit.order) {
+                is RtsOrder.MoveTo -> {
+                    unit.position = moveToward(unit.position, order.destination, unit.spec.moveSpeed * dt)
+                    if (distanceOnGround(unit.position, order.destination) < ARRIVAL_EPSILON) {
+                        unit.position = order.destination
+                        unit.order = RtsOrder.Hold
+                    }
                 }
+                is RtsOrder.Attack -> {
+                    val target = mutableUnits[order.targetId]
+                    if (target != null && target.isAlive &&
+                        distanceOnGround(unit.position, target.position) > unit.spec.attackRange
+                    ) {
+                        val stopDistance = max(0f, unit.spec.attackRange * 0.9f)
+                        unit.position = moveTowardUntil(unit.position, target.position, unit.spec.moveSpeed * dt, stopDistance)
+                    }
+                }
+                is RtsOrder.Capture -> {
+                    val target = mutableBuildings[order.buildingId]
+                    if (target != null && distanceOnGround(unit.position, target.position) > CAPTURE_RADIUS) {
+                        unit.position = moveTowardUntil(unit.position, target.position, unit.spec.moveSpeed * dt, CAPTURE_RADIUS * 0.8f)
+                    }
+                }
+                RtsOrder.Hold -> Unit
             }
         }
     }
@@ -356,6 +373,16 @@ class RtsWorld(
         val length = sqrt(dx * dx + dz * dz)
         if (length <= distance || length < 1e-5f) return Vector3(to.x, from.y, to.z)
         val ratio = distance / length
+        return Vector3(from.x + dx * ratio, from.y, from.z + dz * ratio)
+    }
+
+    private fun moveTowardUntil(from: Vector3, to: Vector3, distance: Float, stopDistance: Float): Vector3 {
+        val dx = to.x - from.x
+        val dz = to.z - from.z
+        val length = sqrt(dx * dx + dz * dz)
+        val travel = min(distance, max(0f, length - stopDistance))
+        if (length < 1e-5f || travel <= 0f) return from
+        val ratio = travel / length
         return Vector3(from.x + dx * ratio, from.y, from.z + dz * ratio)
     }
 
