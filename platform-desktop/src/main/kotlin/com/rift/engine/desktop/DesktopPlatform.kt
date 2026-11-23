@@ -135,7 +135,16 @@ class DesktopRenderContext(
             child.clip(clip)
             child.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
             child.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-            child.drawImage(source.image, transform, null)
+            child.paint = java.awt.TexturePaint(
+                source.image,
+                Rectangle2D.Float(0f, 0f, texture.width.toFloat(), texture.height.toFloat())
+            )
+            child.transform(transform)
+            val left = minOf(sx0, sx1, sx2)
+            val top = minOf(sy0, sy1, sy2)
+            val right = maxOf(sx0, sx1, sx2)
+            val bottom = maxOf(sy0, sy1, sy2)
+            child.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
         } finally {
             child.dispose()
         }
