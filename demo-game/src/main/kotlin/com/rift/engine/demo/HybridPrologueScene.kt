@@ -426,6 +426,22 @@ class HybridPrologueScene : Scene() {
         renderer.render(context,wakeCamera,ruin)
         if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
         context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
+            val marker = renderer.project(Vector3(2.4f,.05f,-1.5f),wakeCamera,context.width,context.height)
+            if (marker != null) {
+                val radius = (1f - (enemyTelegraph / .75f).coerceIn(0f,1f)) * 18f + 22f
+                var px = marker.first + radius
+                var py = marker.second
+                for (i in 1..32) {
+                    val angle = i * (Math.PI * 2.0 / 32.0)
+                    val nx = marker.first + kotlin.math.cos(angle).toFloat() * radius
+                    val ny = marker.second + kotlin.math.sin(angle).toFloat() * radius
+                    context.drawLine(px,py,nx,ny,0xFFFF425A.toInt(),3f)
+                    px=nx; py=ny
+                }
+                context.drawText("УДАР!",marker.first-24f,marker.second-radius-10f,0xFFFF9AA8.toInt(),13f,true)
+            }
+        }
         if (glitchTimer > 0f) {
             context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x55FF174F.toInt())
             context.drawText("СИГНАЛ НЕ СОВПАДАЕТ",context.width*.5f-145f,context.height*.35f,0xFFFF526B.toInt(),20f,true)
