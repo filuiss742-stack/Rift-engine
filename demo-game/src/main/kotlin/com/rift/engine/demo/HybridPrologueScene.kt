@@ -423,6 +423,10 @@ class HybridPrologueScene : Scene() {
             ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
             ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
         }
+        if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
+            ruin += cuboidMesh(Vector3(-2.8f,1.35f,-2.8f),Vector3(.07f,2.7f,.12f),0xFFFF244F.toInt(),0xFF8C1536.toInt(),0xFFFF6B86.toInt())
+            ruin += cuboidMesh(Vector3(-2.86f,1.35f,-2.8f),Vector3(.035f,2.45f,.14f),0xFFFFA0B0.toInt())
+        }
         renderer.render(context,wakeCamera,ruin)
         if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
         context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
@@ -568,6 +572,11 @@ class HybridPrologueScene : Scene() {
                 }
             }
         } else if (doUse && glitchTriggered && !dialogueOpen) {
+            val riftDistance = distance(heroPosition, Vector3(-2.8f,0f,-2.8f))
+            if (riftDistance > 3.2f) {
+                showToast("Красная трещина мерцает у разрушенной колонны. Подойди ближе.")
+                return
+            }
             startDialogue(listOf(
                 "Лиза" to "Трещина в воздухе. Нет... не в воздухе. Будто сам мир на секунду забыл, каким должен быть.",
                 "Лиза" to "Я просто хотела проснуться. Почему это происходит со мной?"
