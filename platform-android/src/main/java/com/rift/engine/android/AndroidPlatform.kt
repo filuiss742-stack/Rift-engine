@@ -50,6 +50,52 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
         canvas.drawPath(path, paint)
     }
 
+    override fun drawTexturedTriangle(
+        texture: com.rift.engine.graphics.TextureResource,
+        x1: Float, y1: Float, u1: Float, v1: Float,
+        x2: Float, y2: Float, u2: Float, v2: Float,
+        x3: Float, y3: Float, u3: Float, v3: Float,
+        alpha: Float
+    ) {
+        val source = texture as? AndroidTexture
+            ?: throw IllegalArgumentException("Texture was not created by the Android texture loader.")
+        check(!source.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f)
+        val values = floatArrayOf(x1,y1,u1,v1,x2,y2,u2,v2,x3,y3,u3,v3)
+        require(values.all(Float::isFinite)) { "Triangle coordinates and UVs must be finite." }
+
+        val sourcePoints = floatArrayOf(
+            u1 * texture.width, v1 * texture.height,
+            u2 * texture.width, v2 * texture.height,
+            u3 * texture.width, v3 * texture.height
+        )
+        val destinationPoints = floatArrayOf(x1,y1,x2,y2,x3,y3)
+        val transform = Matrix()
+        require(transform.setPolyToPoly(sourcePoints, 0, destinationPoints, 0, 3)) {
+            "Texture mapping triangle is degenerate."
+        }
+
+        val clip = Path().apply {
+            moveTo(x1, y1)
+            lineTo(x2, y2)
+            lineTo(x3, y3)
+            close()
+        }
+        val previousAlpha = paint.alpha
+        val previousFilter = paint.isFilterBitmap
+        val saveCount = canvas.save()
+        try {
+            canvas.clipPath(clip)
+            paint.alpha = (alpha * 255f).toInt()
+            paint.isFilterBitmap = true
+            canvas.drawBitmap(source.bitmap, transform, paint)
+        } finally {
+            paint.alpha = previousAlpha
+            paint.isFilterBitmap = previousFilter
+            canvas.restoreToCount(saveCount)
+        }
+    }
+
     override fun drawRoundRect(
         left: Float,
         top: Float,
