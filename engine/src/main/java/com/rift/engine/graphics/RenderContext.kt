@@ -28,6 +28,26 @@ interface RenderContext {
         x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int
     ) = Unit
 
+    /**
+     * Draws a texture-mapped triangle. UV coordinates are normalized to the
+     * texture dimensions. Backends should clip to the destination triangle.
+     * The default keeps legacy render contexts source-compatible.
+     */
+    fun drawTexturedTriangle(
+        texture: TextureResource,
+        x1: Float, y1: Float, u1: Float, v1: Float,
+        x2: Float, y2: Float, u2: Float, v2: Float,
+        x3: Float, y3: Float, u3: Float, v3: Float,
+        alpha: Float = 1f
+    ) {
+        require(!texture.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(listOf(x1,y1,u1,v1,x2,y2,u2,v2,x3,y3,u3,v3).all(Float::isFinite)) {
+            "Triangle coordinates and UVs must be finite."
+        }
+        throw UnsupportedOperationException("This RenderContext does not support textured triangles.")
+    }
+
     fun drawLine(
         x1: Float,
         y1: Float,
