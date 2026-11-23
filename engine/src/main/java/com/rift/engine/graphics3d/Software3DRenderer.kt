@@ -60,18 +60,16 @@ class Software3DRenderer(
     ) {
         val forward = (camera.target - camera.position).normalized()
         val triangles = ArrayList<ScreenTriangle>()
-        meshes.forEach { mesh ->
-            mesh.triangles.forEach { tri ->
-                val pa = project(tri.a, camera, context.width, context.height) ?: return@forEach
-                val pb = project(tri.b, camera, context.width, context.height) ?: return@forEach
-                val pc = project(tri.c, camera, context.width, context.height) ?: return@forEach
+        for (mesh in meshes) {
+            for (tri in mesh.triangles) {
+                val pa = project(tri.a, camera, context.width, context.height) ?: continue
+                val pb = project(tri.b, camera, context.width, context.height) ?: continue
+                val pc = project(tri.c, camera, context.width, context.height) ?: continue
                 val depth = ((tri.a - camera.position).dot(forward) +
                     (tri.b - camera.position).dot(forward) +
                     (tri.c - camera.position).dot(forward)) / 3f
-                triangles += ScreenTriangle(
-                    pa.first, pa.second, pb.first, pb.second, pc.first, pc.second,
-                    depth, tri.color
-                )
+                triangles += ScreenTriangle(pa.first, pa.second, pb.first, pb.second,
+                    pc.first, pc.second, depth, tri.color)
             }
         }
         triangles.sortByDescending { it.depth }
