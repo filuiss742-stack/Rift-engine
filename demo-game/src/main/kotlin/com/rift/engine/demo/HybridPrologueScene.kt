@@ -46,6 +46,8 @@ class HybridPrologueScene : Scene() {
     private var touchAttack = false
     private var touchDodge = false
     private var enemyHealth = 3
+    private var fantasyStart = Vector3.ZERO
+    private var combatStarted = false
     private var enemyAttackTimer = 2.2f
     private var enemyTelegraph = 0f
     private var dodgeTimer = 0f
@@ -209,6 +211,10 @@ class HybridPrologueScene : Scene() {
         joystick.visible = true; useButton.visible = true
         objective.visible = true; hint.visible = true
         updateObjective()
+        startDialogue(listOf(
+            "Лиза" to "Пять минут. Я заслужила хотя бы пять минут без будильника.",
+            "Лиза" to "Ладно. Встала — уже достижение."
+        ))
     }
 
     private fun buildApartment() {
@@ -279,6 +285,9 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "Хотя какое мне дело до их экспериментов?.."
                     )) {
                         phase=Phase.FANTASY_WAKE; fade=1f
+                        heroPosition=Vector3(0f,0f,1.8f)
+                        fantasyStart=heroPosition
+                        combatStarted=false; enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
                         joystick.visible=false; useButton.visible=false
                         attackButton.visible=false; dodgeButton.visible=false
                         objective.visible=false; hint.visible=false; toast.visible=false
@@ -410,7 +419,7 @@ class HybridPrologueScene : Scene() {
             cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt()),
             cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
         )
-        if (phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
             ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
             ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
         }
@@ -429,8 +438,11 @@ class HybridPrologueScene : Scene() {
             Phase.STREET -> { objective.text="ЗЕМЛЯ • ГОРОД"; hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." }
             Phase.FANTASY_CAMP -> {
                 objective.text="НЕИЗВЕСТНЫЙ МИР • РУИНЫ"
-                hint.text=if (enemyHealth>0) "WASD — движение • SPACE/HIT — атака • SHIFT/DODGE — уклонение"
-                    else "Первый глитч. Нажми E, чтобы осмотреть разлом."
+                hint.text=when {
+                    !combatStarted -> "Осмотрись и отойди от костра. WASD или виртуальный стик."
+                    enemyHealth>0 -> "SPACE / HIT — атака • SHIFT / DODGE — уклонение"
+                    else -> "Первый глитч. Нажми E, чтобы осмотреть разлом."
+                }
             }
             else -> Unit
         }
@@ -499,6 +511,18 @@ class HybridPrologueScene : Scene() {
         val doUse=input.wasPressed("use") || showUse
         touchDodge=false; touchAttack=false; showUse=false
         if (doDodge && dodgeTimer<=0f) dodgeTimer=.38f
+        val movedX=heroPosition.x-fantasyStart.x
+        val movedZ=heroPosition.z-fantasyStart.z
+        if (!combatStarted && sqrt(movedX*movedX+movedZ*movedZ)>1.25f) {
+            combatStarted=true
+            startDialogue(listOf(
+                "Лиза" to "Под ногами хрустит камень. Значит, я действительно здесь...",
+                "Лиза" to "Стой. Кто-то шевельнулся за колонной."
+            ))
+            updateObjective()
+            return
+        }
+        if (!combatStarted) { updateObjective(); return }
         val enemyPos=Vector3(2.4f,0f,-1.5f)
         val dx=enemyPos.x-heroPosition.x; val dz=enemyPos.z-heroPosition.z
         val distanceToEnemy=sqrt(dx*dx+dz*dz)
