@@ -173,15 +173,20 @@ class HybridPrologueScene : Scene() {
             Phase.INTRO -> renderIntro(context)
             Phase.FANTASY_WAKE, Phase.FANTASY_CAMP, Phase.COMPLETE -> {
                 renderFantasyWake(context)
+                if (dialogueOpen) {
+                    context.drawRoundRect(28f, 400f, context.width - 28f, context.height - 22f, 14f, 0xEE171421.toInt())
+                }
                 if (phase == Phase.COMPLETE) {
                     endLabel.text = "ПРОЛОГ ЗАВЕРШЁН"
                     endLabel.visible = true
                 }
+                super.render(context)
             }
             else -> {
                 worldCamera.aspectRatio = context.width.toFloat() / context.height.coerceAtLeast(1)
                 renderer.render(context, worldCamera, meshes)
                 drawHeroBillboard(context)
+                if (dialogueOpen) context.drawRoundRect(28f, 400f, context.width - 28f, context.height - 22f, 14f, 0xEE171421.toInt())
                 super.render(context)
             }
         }
@@ -342,9 +347,9 @@ class HybridPrologueScene : Scene() {
         return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message","exit","home") }
     }
 
-    private fun drawHeroBillboard(context:RenderContext) {
-        val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),worldCamera,context.width,context.height) ?: return
-        val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),worldCamera,context.width,context.height) ?: return
+    private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
+        val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),camera,context.width,context.height) ?: return
+        val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),camera,context.width,context.height) ?: return
         val width = (top.second-bottom.second)*.46f
         val left=bottom.first-width*.5f
         val right=bottom.first+width*.5f
@@ -392,7 +397,7 @@ class HybridPrologueScene : Scene() {
 
     private fun renderFantasyWake(context:RenderContext) {
         context.clear(0xFF171824.toInt())
-        val wakeCamera=Camera3D(Vector3(0f,4f,7f),Vector3(0f,0f,0f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
+        val wakeCamera=Camera3D(Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f),Vector3(heroPosition.x,1f,heroPosition.z-.8f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
         val ruin=mutableListOf(
             groundPlaneMesh(Vector3(0f,0f,0f),18f,16f,0xFF45434A.toInt()),
             cuboidMesh(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
@@ -410,6 +415,7 @@ class HybridPrologueScene : Scene() {
             ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
         }
         renderer.render(context,wakeCamera,ruin)
+        if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
         context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
         if (glitchTimer > 0f) {
             context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x55FF174F.toInt())
