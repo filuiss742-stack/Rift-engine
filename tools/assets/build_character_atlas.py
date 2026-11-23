@@ -147,7 +147,7 @@ def build(character_dir: Path, output_dir: Path, cell_size: tuple[int, int] | No
     atlas_path = output_dir / f"{character}_atlas.png"
     manifest_path = output_dir / f"{character}_atlas.json"
     atlas.save(atlas_path, format="PNG", optimize=True)
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return atlas_path, manifest_path
 
 
