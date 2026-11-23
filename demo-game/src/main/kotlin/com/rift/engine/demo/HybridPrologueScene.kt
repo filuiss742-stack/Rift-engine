@@ -36,6 +36,7 @@ class HybridPrologueScene : Scene() {
     private var phase = Phase.INTRO
     private var introTime = 0f
     private var fade = 0f
+    private var toastTimer = 0f
     private var showUse = false
     private var returnedHome = false
     private val apartmentTasks = linkedSetOf<String>()
@@ -83,6 +84,7 @@ class HybridPrologueScene : Scene() {
             "prologue/characters/heroine/heroine_idle.png"
         )
         buildApartment()
+        phase = Phase.INTRO
     }
 
     override fun update(deltaSeconds: Float) {
@@ -102,6 +104,7 @@ class HybridPrologueScene : Scene() {
             return
         }
         if (phase == Phase.COMPLETE) return
+        if (toastTimer > 0f) { toastTimer = (toastTimer - deltaSeconds).coerceAtLeast(0f); toast.visible = toastTimer > 0f }
 
         val ix = ((if (input.isDown("right")) 1f else 0f) -
             (if (input.isDown("left")) 1f else 0f) + joystick.axisX).coerceIn(-1f, 1f)
@@ -138,6 +141,7 @@ class HybridPrologueScene : Scene() {
                 }
             }
             else -> {
+                worldCamera.aspectRatio = context.width.toFloat() / context.height.coerceAtLeast(1)
                 renderer.render(context, worldCamera, meshes)
                 drawHeroBillboard(context)
                 super.render(context)
@@ -302,8 +306,7 @@ class HybridPrologueScene : Scene() {
     }
 
     private fun showToast(message:String) {
-        toast.text=message; toast.visible=true
-        // UI toast is dismissed when the next interaction changes the objective.
+        toast.text=message; toast.visible=true; toastTimer=1.8f
     }
 
     private fun distance(a:Vector3,b:Vector3):Float {
