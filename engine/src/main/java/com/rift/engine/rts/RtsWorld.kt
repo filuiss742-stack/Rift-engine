@@ -188,7 +188,7 @@ class RtsWorld(
     fun queueProduction(buildingId: String, unitSpec: RtsUnitSpec): Boolean {
         if (!start()) return false
         val building = mutableBuildings[buildingId] ?: return false
-        if (building.team == RtsTeam.NEUTRAL || building.spec.productionCapacity <= 0) return false
+        if (building.team == RtsTeam.NEUTRAL || building.health <= 0f || building.spec.productionCapacity <= 0) return false
         if (building.productionQueue.size >= building.spec.productionCapacity) return false
         val economy = economyFor(building.team)
         if (economy.resources < unitSpec.resourceCost) return false
@@ -217,6 +217,18 @@ class RtsWorld(
         if (!target.isAlive || amount == 0f) return false
         target.health = max(0f, target.health - amount)
         if (!target.isAlive) target.order = RtsOrder.Hold
+        evaluateTerminalState()
+        return true
+    }
+
+    /** Applies damage to a building and immediately re-evaluates headquarters mission rules. */
+    fun applyBuildingDamage(buildingId: String, amount: Float): Boolean {
+        require(amount.isFinite() && amount >= 0f)
+        if (!start()) return false
+        val target = mutableBuildings[buildingId] ?: return false
+        if (target.health <= 0f || amount == 0f) return false
+        target.health = max(0f, target.health - amount)
+        if (target.health <= 0f) target.productionQueue.clear()
         evaluateTerminalState()
         return true
     }
@@ -253,7 +265,7 @@ class RtsWorld(
 
     private fun updateProduction(dt: Float) {
         mutableBuildings.values.forEach { building ->
-            if (building.team == RtsTeam.NEUTRAL || building.productionQueue.isEmpty()) return@forEach
+            if (building.team == RtsTeam.NEUTRAL || building.health <= 0f || building.productionQueue.isEmpty()) return@forEach
             val order = building.productionQueue.first()
             order.remainingSeconds = max(0f, order.remainingSeconds - dt)
             if (order.remainingSeconds <= 0f) {
@@ -348,14 +360,14 @@ class RtsWorld(
             return
         }
         if (rules.defeatWhenNoHeadquarters) {
-            val playerHq = mutableBuildings.values.any { it.team == RtsTeam.PLAYER && it.spec.type == RtsBuildingType.HQ }
+            val playerHq = mutableBuildings.values.any { it.team == RtsTeam.PLAYER && it.spec.type == RtsBuildingType.HQ && it.health > 0f }
             if (!playerHq) {
                 status = RtsMatchStatus.DEFEAT
                 return
             }
         }
         if (rules.victoryWhenAllEnemyHeadquartersLost) {
-            val enemyHqExists = mutableBuildings.values.any { it.team == RtsTeam.ENEMY && it.spec.type == RtsBuildingType.HQ }
+            val enemyHqExists = mutableBuildings.values.any { it.team == RtsTeam.ENEMY && it.spec.type == RtsBuildingType.HQ && it.health > 0f }
             val anyEnemyHqWasAdded = mutableBuildings.values.any { it.spec.type == RtsBuildingType.HQ && it.team != RtsTeam.PLAYER }
             if (anyEnemyHqWasAdded && !enemyHqExists) status = RtsMatchStatus.VICTORY
         }
