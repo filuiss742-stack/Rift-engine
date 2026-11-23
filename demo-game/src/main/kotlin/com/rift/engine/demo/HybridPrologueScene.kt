@@ -227,6 +227,7 @@ class HybridPrologueScene : Scene() {
         prop("fridge", Vector3(4.8f,1.0f,2.4f), Vector3(.95f,2f,.9f), 0xFFB9BEC8.toInt())
         prop("sink", Vector3(2.4f,.48f,2.8f), Vector3(1.5f,.96f,.8f), 0xFF9CA9B2.toInt())
         prop("phone", Vector3(-.4f,.08f,-.2f), Vector3(.28f,.16f,.5f), 0xFF272A35.toInt(), 1.4f)
+        prop("tv", Vector3(-2.4f,1.75f,-4.72f), Vector3(2.0f,1.2f,.12f), 0xFF171923.toInt(), 2.1f)
         prop("exit", Vector3(5.8f,1.1f,-.2f), Vector3(.18f,2.2f,1.3f), 0xFF49382F.toInt(), 1.5f)
         // Window glass and sill.
         built += cuboidMesh(Vector3(0f,2.15f,-4.86f), Vector3(3.1f,1.55f,.04f), 0xFF263E59.toInt(), 0xFF263E59.toInt())
@@ -249,6 +250,8 @@ class HybridPrologueScene : Scene() {
         prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f)
         prop("bench",Vector3(2f,.55f,-1f),Vector3(2.5f,1.1f,.75f),0xFF795B45.toInt())
         prop("message",Vector3(5f,.08f,1f),Vector3(.28f,.16f,.5f),0xFF252A35.toInt())
+        prop("busstop",Vector3(-2f,.9f,-4f),Vector3(1.8f,1.8f,.35f),0xFF697786.toInt())
+        prop("shop",Vector3(5.5f,1.3f,-6f),Vector3(3.2f,2.6f,2f),0xFF8B6D5C.toInt(),2.4f)
         prop("home",Vector3(11f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF666C79.toInt(),3f)
         for (x in listOf(-13f,-4f,7f,14f)) {
             built+=cuboidMesh(Vector3(x,1.4f,-10f),Vector3(.55f,2.8f,.55f),0xFF55483D.toInt())
@@ -266,18 +269,67 @@ class HybridPrologueScene : Scene() {
         when (phase) {
             Phase.APARTMENT -> when (nearest.id) {
                 "bed" -> if (returnedHome && streetTasks.size >= 2) {
-                    phase=Phase.FANTASY_WAKE; fade=1f; joystick.visible=false; useButton.visible=true
-                    objective.visible=false; hint.visible=false; toast.visible=false
-                    props=emptyList(); meshes=emptyList()
-                } else showToast("Сначала закончи повседневные дела.")
-                "exit" -> if (apartmentTasks.size>=3) buildStreet() else showToast("Сначала закончи дела дома.")
-                else -> { apartmentTasks.add(nearest.id); showToast("Дело отмечено.") }
+                    startDialogue(listOf(
+                        "Лиза" to "Наконец-то. Завтра разберусь с этим странным институтом.",
+                        "Лиза" to "Хотя какое мне дело до их экспериментов?.."
+                    )) {
+                        phase=Phase.FANTASY_WAKE; fade=1f
+                        joystick.visible=false; useButton.visible=false
+                        attackButton.visible=false; dodgeButton.visible=false
+                        objective.visible=false; hint.visible=false; toast.visible=false
+                        props=emptyList(); meshes=emptyList()
+                    }
+                } else showToast("Сначала закончи день.")
+                "exit" -> if (apartmentTasks.containsAll(setOf("phone","fridge","tv"))) buildStreet()
+                    else showToast("Телефон, завтрак и новости. Обычное утро.")
+                "phone" -> {
+                    apartmentTasks.add("phone")
+                    startDialogue(listOf(
+                        "Сообщение • Аня" to "Ты сегодня вообще собираешься выйти из дома? Или опять объявишься, когда все уже разойдутся?",
+                        "Лиза" to "Я выйду. Просто у меня талант собираться ровно столько, сколько нужно, чтобы опоздать.",
+                        "Аня" to "Это не талант. Это стабильность."
+                    ))
+                }
+                "fridge" -> {
+                    apartmentTasks.add("fridge")
+                    startDialogue(listOf(
+                        "Лиза" to "Кофе, тост и обещание начать нормально питаться с понедельника.",
+                        "Лиза" to "Какого именно понедельника — история умалчивает."
+                    ))
+                }
+                "tv" -> {
+                    apartmentTasks.add("tv")
+                    startDialogue(listOf(
+                        "Ведущая" to "Главная новость дня: исследовательский институт подтвердил успешное открытие так называемого нейтрального пространства.",
+                        "Ведущая" to "По словам учёных, область не принадлежит ни одному из известных физических регионов. Сейчас специалисты изучают её свойства и просят граждан не приближаться к лабораторному комплексу.",
+                        "Лиза" to "Нейтральное пространство... Звучит так, будто кто-то очень хотел назвать опасную штуку безопасной.",
+                        "Ведущая" to "Пресс-конференция института состоится сегодня вечером. Мы продолжим следить за развитием событий."
+                    ))
+                }
+                else -> showToast("Пока здесь нечего делать.")
             }
             Phase.STREET -> when (nearest.id) {
                 "home" -> if (streetTasks.size>=2) {
                     returnedHome=true; buildApartment()
-                } else showToast("Ещё остались дела снаружи.")
-                else -> { streetTasks.add(nearest.id); showToast("Дело отмечено.") }
+                    startDialogue(listOf(
+                        "Аня • сообщение" to "Ты пропала. Всё нормально?",
+                        "Лиза" to "Да. Просто день какой-то длинный.",
+                        "Аня" to "Тогда не засиживайся. Отдохни хоть раз."
+                    ))
+                } else showToast("Пройдись до остановки и загляни в магазин.")
+                "busstop" -> {
+                    streetTasks.add("busstop")
+                    startDialogue(listOf("Лиза" to "Автобус опять задерживается. Удивительно. Мир меняется, а это — никогда."))
+                }
+                "shop" -> {
+                    streetTasks.add("shop")
+                    startDialogue(listOf(
+                        "Продавец" to "Пакет нужен?",
+                        "Лиза" to "Нет, спасибо. Я и так стараюсь не приносить домой лишнего.",
+                        "Продавец" to "Тогда хорошего вечера."
+                    ))
+                }
+                else -> showToast("Ничего интересного.")
             }
             else -> Unit
         }
