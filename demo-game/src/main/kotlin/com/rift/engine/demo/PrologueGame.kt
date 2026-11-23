@@ -5,5 +5,5 @@ import com.rift.engine.scene.Scene
 
 /** Android game's opening chapter. */
 class PrologueGame : RiftGame {
-    override fun createInitialScene(): Scene = ModernPrologueScene()
+    override fun createInitialScene(): Scene = HybridPrologueScene()
 }
