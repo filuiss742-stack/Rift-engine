@@ -27,7 +27,10 @@ class AssetManagerTest {
     @Test
     fun failedTextureDisposalIsReportedWithoutRestoringTheCacheEntry() {
         val diagnostics = DiagnosticReporter()
-        val texture = object : FakeTexture() {
+        val texture = object : TextureResource {
+            override val width = 16
+            override val height = 16
+            override val isDisposed = false
             override fun close() {
                 throw IllegalStateException("native texture release failed")
             }
