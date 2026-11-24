@@ -61,6 +61,7 @@ class SceneManager(
      * Queues a scene transition. The current scene remains active until the
      * current lifecycle, update, render, or input callback has returned.
      */
+    @Synchronized
     fun changeScene(scene: Scene) {
         if (scene.isDisposed) {
             diagnostics.report(

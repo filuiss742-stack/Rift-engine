@@ -43,7 +43,15 @@ class AudioManager(
         check(!closed) { "AudioManager is closed." }
         val resource = music[id]?.resource ?: return false
         if (currentMusicId != id) {
-            currentMusicId?.let { music[it]?.resource?.stop() }
+            val previousId = currentMusicId
+            val previousResource = previousId?.let { music[it]?.resource }
+            if (previousId != null && previousResource != null) {
+                val stopped = safePlayback("music.stop", previousId) {
+                    previousResource.stop()
+                }
+                if (!stopped) return false
+            }
+            currentMusicId = null
         }
         val played = safePlayback("music.play", id) {
             resource.play(looping)
@@ -71,7 +79,7 @@ class AudioManager(
         val id = currentMusicId ?: return false
         val resource = music[id]?.resource ?: return false
         val stopped = safePlayback("music.stop", id) { resource.stop() }
-        currentMusicId = null
+        if (stopped) currentMusicId = null
         return stopped
     }
 
@@ -80,7 +88,11 @@ class AudioManager(
         require(volume.isFinite() && volume in 0f..1f) {
             "Music volume must be between zero and one."
         }
-        music.values.forEach { it.resource.volume = volume }
+        music.toList().forEach { (id, loaded) ->
+            safeResourceOperation("music.volume", id) {
+                loaded.resource.volume = volume
+            }
+        }
     }
 
     @Synchronized
@@ -89,8 +101,9 @@ class AudioManager(
             "Sound volume must be between zero and one."
         }
         val resource = sounds[id]?.resource ?: return false
-        resource.volume = volume
-        return true
+        return safeResourceOperation("sound.volume", id) {
+            resource.volume = volume
+        }
     }
 
     @Synchronized
@@ -195,8 +208,42 @@ class AudioManager(
         id: String
     ): Boolean {
         val loaded = destination.remove(id) ?: return false
-        loaded.resource.close()
+        try {
+            loaded.resource.close()
+        } catch (exception: Exception) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "RIFT_AUDIO_RESOURCE_DISPOSE_FAILED",
+                "AudioManager",
+                "Audio '$id' was removed from the cache but could not be disposed.",
+                exception.toString(),
+                loaded.path,
+                "Inspect the platform audio resource and ensure close() releases its native handle safely."
+            )
+        }
         return true
+    }
+
+    private inline fun safeResourceOperation(
+        operation: String,
+        id: String,
+        block: () -> Unit
+    ): Boolean {
+        return try {
+            block()
+            true
+        } catch (exception: Exception) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "RIFT_AUDIO_RESOURCE_OPERATION_FAILED",
+                "AudioManager",
+                "Audio '$id' failed during $operation.",
+                exception.toString(),
+                id,
+                "Check the platform audio resource state and device availability."
+            )
+            false
+        }
     }
 
     private inline fun safePlayback(

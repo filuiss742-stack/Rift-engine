@@ -1,0 +1,119 @@
+name: Generate asset candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_slug:
+        description: "Safe filename, e.g. oak-floor-test"
+        required: true
+        type: string
+        default: "oak-floor-test"
+      prompt:
+        description: "One image only. Describe the asset precisely."
+        required: true
+        type: string
+        default: "Seamless top-down base-color texture of aged natural oak floorboards for a realistic 3D apartment interior game. Individual medium-width oak planks, subtle natural grain, restrained warm brown variation, no furniture, no objects, no shadows, no perspective, evenly lit diffuse albedo, edges designed to tile seamlessly, texture fills the entire square image."
+      seed:
+        description: "Reproducible integer seed"
+        required: true
+        type: string
+        default: "314159"
+      steps:
+        description: "FLUX steps (4–8)"
+        required: true
+        type: choice
+        options:
+          - "4"
+          - "5"
+          - "6"
+          - "7"
+          - "8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: asset-generation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse writes outside development/0.7.0
+        run: |
+          if [ "$GITHUB_REF_NAME" != "development/0.7.0" ]; then
+            echo "Asset generation is restricted to development/0.7.0."
+            exit 1
+          fi
+
+      - name: Check out selected development branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install image validation dependency
+        run: python -m pip install --disable-pip-version-check Pillow
+
+      - name: Validate requested asset name
+        env:
+          ASSET_SLUG: ${{ inputs.asset_slug }}
+        run: |
+          python - <<'PY'
+          import os, re, sys
+          slug = os.environ["ASSET_SLUG"]
+          if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,47}", slug):
+              sys.exit("asset_slug must be 2–48 lowercase letters, digits or hyphens")
+          PY
+
+      - name: Refuse to overwrite an existing candidate
+        env:
+          ASSET_SLUG: ${{ inputs.asset_slug }}
+        run: |
+          target="app/src/main/assets/generated/candidates/$ASSET_SLUG"
+          if [ -e "$target.png" ] || [ -e "$target.json" ]; then
+            echo "Candidate already exists. Choose a new asset_slug; existing candidates are immutable."
+            exit 1
+          fi
+
+      - name: Generate and validate PNG candidate
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PROMPT: ${{ inputs.prompt }}
+          ASSET_SLUG: ${{ inputs.asset_slug }}
+          SEED: ${{ inputs.seed }}
+          STEPS: ${{ inputs.steps }}
+        run: |
+          python tools/assets/generate_cloudflare_image.py \
+            --prompt "$PROMPT" \
+            --output "app/src/main/assets/generated/candidates/$ASSET_SLUG.png" \
+            --seed "$SEED" \
+            --steps "$STEPS"
+
+      - name: Upload candidate for visual inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-asset-candidate-${{ inputs.asset_slug }}
+          path: |
+            app/src/main/assets/generated/candidates/${{ inputs.asset_slug }}.png
+            app/src/main/assets/generated/candidates/${{ inputs.asset_slug }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit candidate to development branch
+        env:
+          ASSET_SLUG: ${{ inputs.asset_slug }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "app/src/main/assets/generated/candidates/$ASSET_SLUG.png" \
+                  "app/src/main/assets/generated/candidates/$ASSET_SLUG.json"
+          git commit -m "Add generated asset candidate: $ASSET_SLUG"
+          git push origin "HEAD:$GITHUB_REF_NAME"

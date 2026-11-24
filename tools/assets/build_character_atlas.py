@@ -23,7 +23,7 @@ except ImportError as exc:  # pragma: no cover - exercised by CLI users
     raise SystemExit("Pillow is required. Install it with: python -m pip install Pillow") from exc
 
 ACTIONS = ("idle", "walk", "run", "attack", "dodge", "hit", "interact")
-FRAME_RE = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<action>[a-z0-9]+)_(?P<index>\\d{3})\\.png$", re.I)
+FRAME_RE = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<action>[a-z0-9]+)_(?P<index>\d{3})\.png$", re.I)
 
 
 class AssetError(Exception):

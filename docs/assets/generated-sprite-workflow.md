@@ -12,6 +12,37 @@ This is the default asset-authoring workflow for Rift Engine and every game buil
 - Props and interactable objects: separate 3D models, collision/interaction data, and materials.
 - Materials/textures: separate texture assets per material and map type (base color, normal, roughness, metallic, AO, etc.).
 
+## Individual character image families
+
+Every image is authored as a separate transparent PNG. These families are distinct deliverables and must not be combined into one generated board:
+
+| Family | Intended use | Validator profile |
+|---|---|---|
+| Portrait | Dialogue, profile and inventory headshot | `portrait` |
+| Bust / medium sprite | Dialogue character shown from waist/chest upward | `bust` |
+| Full body | World character reference and animation source | `full_body` |
+| Animation frame | One pose for one action and one direction | `sprite_frame` |
+| Facial expression | Same character portrait with one approved emotion | `face_expression` |
+| Face component | Individually authored eye, mouth, brow or hair overlay | `face_component` |
+| Icon | Skill, item or status icon | `icon` |
+| Visual effect | One transparent effect frame or static effect | `vfx` |
+
+A face-expression set must preserve the same head angle, crop, face proportions, hair silhouette, lighting and palette. Only the intended expression should change. Face components are optional layered assets; they must share a documented anchor/pivot and must never be assumed to align merely because their canvas dimensions match.
+
+The image validator checks PNG readability, dimensions, aspect ratio, transparency, alpha padding, canvas occupancy and exact duplicates. It cannot detect extra fingers, identity drift, wrong emotions, or whether a picture contains exactly one character. Those remain mandatory visual-review checks.
+
+Run it on individual source files:
+
+```bash
+python tools/assets/validate_character_art.py \
+  --profile portrait \
+  --report /tmp/portrait-qa.json \
+  path/to/heroine_01_portrait_neutral.png \
+  path/to/heroine_01_portrait_happy.png
+```
+
+For medium sprites use `--profile bust`; for full-body frames use `--profile sprite_frame` or `full_body` for the neutral reference. The validator deliberately rejects contact sheets and JPEG source files.
+
 ## Character atlas output
 
 The runtime deliverable is **one PNG atlas per character** containing the distinct frames needed for that character's basic actions, plus a separate metadata file. Do not make one tiny atlas per action, and do not put multiple characters into one atlas.

@@ -2,6 +2,8 @@ package com.rift.engine.desktop
 
 import com.rift.engine.audio.AudioLoader
 import com.rift.engine.audio.AudioResource
+import com.rift.engine.audio.ProceduralMusicAsset
+import java.io.BufferedInputStream
 import java.io.File
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
@@ -11,7 +13,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 private class DesktopAudioResource(
-    private val clip: Clip
+    private val clip: Clip,
+    private val temporaryFile: File? = null
 ) : AudioResource {
     private var closed = false
 
@@ -63,29 +66,42 @@ private class DesktopAudioResource(
         closed = true
         clip.stop()
         clip.close()
+        temporaryFile?.delete()
     }
 }
 
-/** Loads WAV/PCM files below the configured project audio root. */
+/** Loads WAV assets and creates deterministic PCM music for procedural: paths. */
 class DesktopAudioLoader(root: File = File("assets")) : AudioLoader {
     private val canonicalRoot = root.canonicalFile
 
     override fun load(path: String, streaming: Boolean): AudioResource? {
-        val candidate = File(canonicalRoot, path).canonicalFile
-        val rootPrefix = canonicalRoot.path + File.separator
-        require(candidate.path.startsWith(rootPrefix) || candidate == canonicalRoot) {
-            "Audio path escapes the configured project root."
-        }
-        if (!candidate.isFile) return null
-
+        var generatedFile: File? = null
         val clip = AudioSystem.getClip()
         try {
-            AudioSystem.getAudioInputStream(candidate).use { stream ->
-                clip.open(stream)
+            val stream = if (path.startsWith("procedural:")) {
+                val world = path.substringAfter("procedural:")
+                generatedFile = File.createTempFile("rift-world-music-", ".wav")
+                ProceduralMusicAsset.write(world, generatedFile!!)
+                AudioSystem.getAudioInputStream(generatedFile!!)
+            } else {
+                val candidate = File(canonicalRoot, path).canonicalFile
+                val rootPrefix = canonicalRoot.path + File.separator
+                require(candidate.path.startsWith(rootPrefix) || candidate == canonicalRoot) {
+                    "Audio path escapes the configured project root."
+                }
+                if (candidate.isFile) {
+                    AudioSystem.getAudioInputStream(candidate)
+                } else {
+                    val loader = Thread.currentThread().contextClassLoader ?: javaClass.classLoader
+                    val resource = loader.getResourceAsStream(path) ?: return null
+                    AudioSystem.getAudioInputStream(BufferedInputStream(resource))
+                }
             }
-            return DesktopAudioResource(clip)
+            stream.use { clip.open(it) }
+            return DesktopAudioResource(clip, generatedFile)
         } catch (exception: Exception) {
             clip.close()
+            generatedFile?.delete()
             throw exception
         }
     }

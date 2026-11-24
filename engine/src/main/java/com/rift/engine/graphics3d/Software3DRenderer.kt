@@ -35,16 +35,30 @@ data class ScreenTriangle(
 
 /**
  * Deterministic CPU triangle renderer for the first hybrid-world vertical slice.
- * Geometry is projected from real 3D vertices with perspective; it is not a
- * collection of pre-rendered room/background images. Painter sorting is used
- * until the platform backends expose a depth-buffered GPU pipeline.
+ *
+ * Triangles are clipped in camera space against both camera planes before
+ * projection. This prevents an entire polygon disappearing when only one
+ * vertex crosses the near plane and avoids projecting geometry beyond far.
+ * Painter sorting remains an approximation until a depth-buffered backend is
+ * available; intersecting opaque geometry can still sort incorrectly.
  */
 class Software3DRenderer(
     private val nearPlane: Float = 0.08f
 ) {
     init {
-        require(nearPlane.isFinite() && nearPlane > 0f)
+        require(nearPlane.isFinite() && nearPlane > 0f) {
+            "Renderer near plane must be finite and positive."
+        }
     }
+
+    private data class CameraVertex(
+        val x: Float,
+        val y: Float,
+        val depth: Float,
+        val uv: TextureUv
+    )
+
+    private data class ProjectedPoint(val x: Float, val y: Float)
 
     fun project(
         point: Vector3,
@@ -53,17 +67,18 @@ class Software3DRenderer(
         viewportHeight: Int
     ): Pair<Float, Float>? {
         require(viewportWidth > 0 && viewportHeight > 0)
-        val forward = (camera.target - camera.position).normalized()
-        val right = forward.cross(camera.up).normalized()
-        val cameraUp = right.cross(forward).normalized()
+        val basis = cameraBasis(camera)
         val relative = point - camera.position
-        val depth = relative.dot(forward)
-        if (depth < nearPlane) return null
-        val focal = (viewportHeight * 0.5f) / tan(camera.verticalFovRadians * 0.5f)
-        val sx = viewportWidth * 0.5f + relative.dot(right) * focal / depth
-        val sy = viewportHeight * 0.5f - relative.dot(cameraUp) * focal / depth
-        if (!sx.isFinite() || !sy.isFinite()) return null
-        return sx to sy
+        val depth = relative.dot(basis.forward)
+        if (depth < effectiveNear(camera) || depth > camera.far) return null
+        return projectCameraPoint(
+            relative.dot(basis.right),
+            relative.dot(basis.up),
+            depth,
+            camera,
+            viewportWidth,
+            viewportHeight
+        )?.let { it.x to it.y }
     }
 
     fun render(
@@ -71,22 +86,46 @@ class Software3DRenderer(
         camera: Camera3D,
         meshes: Iterable<Mesh3D>
     ) {
-        val forward = (camera.target - camera.position).normalized()
+        require(context.width > 0 && context.height > 0) {
+            "RenderContext viewport dimensions must be positive."
+        }
+        val basis = cameraBasis(camera)
         val triangles = ArrayList<ScreenTriangle>()
+
         for (mesh in meshes) {
             for (tri in mesh.triangles) {
-                val pa = project(tri.a, camera, context.width, context.height) ?: continue
-                val pb = project(tri.b, camera, context.width, context.height) ?: continue
-                val pc = project(tri.c, camera, context.width, context.height) ?: continue
-                val depth = ((tri.a - camera.position).dot(forward) +
-                    (tri.b - camera.position).dot(forward) +
-                    (tri.c - camera.position).dot(forward)) / 3f
-                triangles += ScreenTriangle(
-                    pa.first, pa.second, pb.first, pb.second, pc.first, pc.second,
-                    depth, tri.color, tri.texture, tri.uvA, tri.uvB, tri.uvC
+                val cameraPolygon = listOf(
+                    toCameraVertex(tri.a, tri.uvA, camera, basis),
+                    toCameraVertex(tri.b, tri.uvB, camera, basis),
+                    toCameraVertex(tri.c, tri.uvC, camera, basis)
                 )
+                val bounded = clipToFrustum(cameraPolygon, camera)
+                if (bounded.size < 3) continue
+
+                val projected = bounded.mapNotNull { vertex ->
+                    projectCameraPoint(
+                        vertex.x, vertex.y, vertex.depth, camera, context.width, context.height
+                    )?.let { point ->
+                        ProjectedVertexWithUv(point.x, point.y, vertex.depth, vertex.uv)
+                    }
+                }
+                if (projected.size < 3) continue
+
+                // Clipping a triangle against two parallel planes produces a
+                // convex polygon. A fan preserves its coverage without gaps.
+                for (index in 1 until projected.lastIndex) {
+                    val a = projected[0]
+                    val b = projected[index]
+                    val c = projected[index + 1]
+                    triangles += ScreenTriangle(
+                        a.x, a.y, b.x, b.y, c.x, c.y,
+                        (a.depth + b.depth + c.depth) / 3f,
+                        tri.color, tri.texture, a.uv, b.uv, c.uv
+                    )
+                }
             }
         }
+
         triangles.sortByDescending { it.depth }
         triangles.forEach { triangle ->
             val texture = triangle.texture
@@ -104,6 +143,132 @@ class Software3DRenderer(
                 )
             }
         }
+    }
+
+    private data class ProjectedVertexWithUv(
+        val x: Float,
+        val y: Float,
+        val depth: Float,
+        val uv: TextureUv
+    )
+
+    private data class CameraBasis(
+        val right: Vector3,
+        val up: Vector3,
+        val forward: Vector3
+    )
+
+    private fun cameraBasis(camera: Camera3D): CameraBasis {
+        val forward = (camera.target - camera.position).normalized()
+        val right = forward.cross(camera.up).normalized()
+        val up = right.cross(forward).normalized()
+        return CameraBasis(right, up, forward)
+    }
+
+    private fun toCameraVertex(
+        point: Vector3,
+        uv: TextureUv,
+        camera: Camera3D,
+        basis: CameraBasis
+    ): CameraVertex {
+        val relative = point - camera.position
+        return CameraVertex(
+            relative.dot(basis.right),
+            relative.dot(basis.up),
+            relative.dot(basis.forward),
+            uv
+        )
+    }
+
+    /**
+     * Clips a polygon against all six perspective-frustum planes in camera
+     * space. UVs are interpolated at every generated intersection.
+     */
+    private fun clipToFrustum(
+        input: List<CameraVertex>,
+        camera: Camera3D
+    ): List<CameraVertex> {
+        val halfVertical = kotlin.math.tan(camera.verticalFovRadians * 0.5f)
+        val halfHorizontal = halfVertical * camera.aspectRatio
+        var polygon = clipAgainstPlane(input) { it.depth - effectiveNear(camera) }
+        polygon = clipAgainstPlane(polygon) { camera.far - it.depth }
+        polygon = clipAgainstPlane(polygon) { it.x + it.depth * halfHorizontal }
+        polygon = clipAgainstPlane(polygon) { it.depth * halfHorizontal - it.x }
+        polygon = clipAgainstPlane(polygon) { it.y + it.depth * halfVertical }
+        polygon = clipAgainstPlane(polygon) { it.depth * halfVertical - it.y }
+        return polygon
+    }
+
+    /** Sutherland-Hodgman clipping; non-negative signed distance is inside. */
+    private fun clipAgainstPlane(
+        polygon: List<CameraVertex>,
+        signedDistance: (CameraVertex) -> Float
+    ): List<CameraVertex> {
+        if (polygon.isEmpty()) return emptyList()
+        val output = ArrayList<CameraVertex>(polygon.size + 2)
+        var previous = polygon.last()
+        var previousDistance = signedDistance(previous)
+        var previousInside = previousDistance >= 0f
+
+        for (current in polygon) {
+            val currentDistance = signedDistance(current)
+            val currentInside = currentDistance >= 0f
+            if (currentInside != previousInside) {
+                val denominator = previousDistance - currentDistance
+                if (kotlin.math.abs(denominator) > CLIP_EPSILON) {
+                    val t = (previousDistance / denominator).coerceIn(0f, 1f)
+                    output += interpolate(previous, current, t)
+                }
+            }
+            if (currentInside) output += current
+            previous = current
+            previousDistance = currentDistance
+            previousInside = currentInside
+        }
+        return output
+    }
+
+    private fun interpolate(
+        from: CameraVertex,
+        to: CameraVertex,
+        t: Float
+    ): CameraVertex = CameraVertex(
+        from.x + (to.x - from.x) * t,
+        from.y + (to.y - from.y) * t,
+        from.depth + (to.depth - from.depth) * t,
+        TextureUv(
+            from.uv.u + (to.uv.u - from.uv.u) * t,
+            from.uv.v + (to.uv.v - from.uv.v) * t
+        )
+    )
+
+    private fun projectCameraPoint(
+        cameraX: Float,
+        cameraY: Float,
+        depth: Float,
+        camera: Camera3D,
+        viewportWidth: Int,
+        viewportHeight: Int
+    ): ProjectedPoint? {
+        val near = effectiveNear(camera)
+        if (!depth.isFinite() ||
+            depth < near - CLIP_EPSILON ||
+            depth > camera.far + CLIP_EPSILON
+        ) return null
+        // Plane intersections can land a few ULPs outside the exact boundary.
+        // Clamp only the projection denominator so clipped edge vertices survive.
+        val safeDepth = depth.coerceIn(near, camera.far)
+        val focal = (viewportHeight * 0.5f) / tan(camera.verticalFovRadians * 0.5f)
+        val sx = viewportWidth * 0.5f + cameraX * focal / safeDepth
+        val sy = viewportHeight * 0.5f - cameraY * focal / safeDepth
+        if (!sx.isFinite() || !sy.isFinite()) return null
+        return ProjectedPoint(sx, sy)
+    }
+
+    private fun effectiveNear(camera: Camera3D): Float = maxOf(camera.near, nearPlane)
+
+    companion object {
+        private const val CLIP_EPSILON = 1e-7f
     }
 }
 

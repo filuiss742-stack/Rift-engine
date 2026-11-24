@@ -1,0 +1,41 @@
+name: Generate prologue world soundtrack masters
+
+on:
+  push:
+    branches:
+      - development/0.7.0
+    paths:
+      - "tools/audio/**"
+      - ".github/workflows/generate-prologue-soundtracks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate original PCM WAV masters
+        run: |
+          python tools/audio/generate_prologue_soundtracks.py \
+            --output /tmp/rift-prologue-music
+
+      - name: Verify generated WAV files
+        run: python -m unittest discover -s tools/audio -p "test_*.py" -v
+
+      - name: Upload optional WAV masters
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-prologue-world-soundtracks
+          path: /tmp/rift-prologue-music/*.wav
+          if-no-files-found: error
+          retention-days: 90

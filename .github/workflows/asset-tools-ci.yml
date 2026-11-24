@@ -1,0 +1,47 @@
+name: Asset tools CI
+
+on:
+  push:
+    branches:
+      - development/0.7.0
+    paths:
+      - "tools/assets/**"
+      - ".github/workflows/asset-tools-ci.yml"
+  pull_request:
+    paths:
+      - "tools/assets/**"
+      - ".github/workflows/asset-tools-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  asset-tools-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check Pillow
+
+      - name: Run asset pipeline unit tests
+        run: python -m unittest discover -s tools/assets -p "test_*.py" -v
+
+      - name: Generate and validate a real PNG material set
+        run: |
+          python tools/assets/generate_procedural_material.py \
+            --material stone --size 512 --seed 42 --output /tmp/rift-stone-smoke
+          python tools/assets/validate_materials.py /tmp/rift-stone-smoke/material.json
+
+      - name: Upload generated PNG smoke-test asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-procedural-stone-smoke
+          path: /tmp/rift-stone-smoke/
+          if-no-files-found: error

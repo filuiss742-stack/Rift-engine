@@ -113,4 +113,113 @@ class Software3DRendererTest {
         val mesh = groundPlaneMesh(Vector3.ZERO, 10f, 10f, 0xFFFFFFFF.toInt())
         assertEquals(2, mesh.triangles.size)
     }
+    @Test
+    fun clipsTriangleCrossingNearPlaneInsteadOfDroppingWholeTriangle() {
+        val drawn = mutableListOf<Int>()
+        val context = Proxy.newProxyInstance(
+            RenderContext::class.java.classLoader,
+            arrayOf(RenderContext::class.java)
+        ) { _, method, _ ->
+            when (method.name) {
+                "getWidth" -> 640
+                "getHeight" -> 360
+                "drawTriangle" -> { drawn += 1; null }
+                else -> null
+            }
+        } as RenderContext
+        val camera = Camera3D(
+            position = Vector3.ZERO,
+            target = Vector3(0f, 0f, -1f),
+            near = 0.1f,
+            far = 10f
+        )
+        val crossing = MeshTriangle(
+            Vector3(0f, 0f, -0.05f),
+            Vector3(-0.5f, -0.5f, -2f),
+            Vector3(0.5f, -0.5f, -2f),
+            0xFFFFFFFF.toInt()
+        )
+
+        renderer.render(context, camera, listOf(Mesh3D(listOf(crossing))))
+
+        // A triangle clipped by one plane becomes a quad, rendered as a fan.
+        assertEquals(2, drawn.size)
+    }
+
+    @Test
+    fun rejectsGeometryEntirelyBeyondFarPlane() {
+        val drawn = mutableListOf<Int>()
+        val context = Proxy.newProxyInstance(
+            RenderContext::class.java.classLoader,
+            arrayOf(RenderContext::class.java)
+        ) { _, method, _ ->
+            when (method.name) {
+                "getWidth" -> 640
+                "getHeight" -> 360
+                "drawTriangle" -> { drawn += 1; null }
+                else -> null
+            }
+        } as RenderContext
+        val camera = Camera3D(
+            position = Vector3.ZERO,
+            target = Vector3(0f, 0f, -1f),
+            near = 0.1f,
+            far = 5f
+        )
+        val beyondFar = MeshTriangle(
+            Vector3(-1f, -1f, -8f),
+            Vector3(1f, -1f, -8f),
+            Vector3(0f, 1f, -8f),
+            0xFFFFFFFF.toInt()
+        )
+
+        renderer.render(context, camera, listOf(Mesh3D(listOf(beyondFar))))
+
+        assertTrue(drawn.isEmpty())
+    }
+
+    @Test
+    fun projectRejectsPointsBeyondCameraFarPlane() {
+        val camera = Camera3D(
+            position = Vector3.ZERO,
+            target = Vector3(0f, 0f, -1f),
+            near = 0.1f,
+            far = 5f
+        )
+        assertNull(renderer.project(Vector3(0f, 0f, -6f), camera, 640, 360))
+    }
+
+    @Test
+    fun rejectsTriangleEntirelyOutsideHorizontalFrustum() {
+        val drawn = mutableListOf<Int>()
+        val context = Proxy.newProxyInstance(
+            RenderContext::class.java.classLoader,
+            arrayOf(RenderContext::class.java)
+        ) { _, method, _ ->
+            when (method.name) {
+                "getWidth" -> 640
+                "getHeight" -> 360
+                "drawTriangle" -> { drawn += 1; null }
+                else -> null
+            }
+        } as RenderContext
+        val camera = Camera3D(
+            position = Vector3.ZERO,
+            target = Vector3(0f, 0f, -1f),
+            aspectRatio = 16f / 9f,
+            near = 0.1f,
+            far = 10f
+        )
+        val outside = MeshTriangle(
+            Vector3(20f, -1f, -2f),
+            Vector3(22f, -1f, -2f),
+            Vector3(21f, 1f, -2f),
+            0xFFFFFFFF.toInt()
+        )
+
+        renderer.render(context, camera, listOf(Mesh3D(listOf(outside))))
+
+        assertTrue(drawn.isEmpty())
+    }
+
 }
