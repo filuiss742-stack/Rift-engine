@@ -10,9 +10,9 @@ class PrologueSoundtrackTests(unittest.TestCase):
     def test_generates_three_decodable_world_tracks(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = generate(Path(directory), duration=2.0)
-            self.assertEqual(3, len(paths))
+            self.assertEqual(4, len(paths))
             self.assertEqual(
-                {"01_earth_everyday.wav", "02_mira_ruined_fantasy.wav", "03_thea_distortion.wav"},
+                {"01_earth_everyday.wav", "02_mira_ruined_fantasy.wav", "03_thea_distortion.wav", "04_warfront_rts.wav"},
                 {path.name for path in paths},
             )
             for path in paths:
