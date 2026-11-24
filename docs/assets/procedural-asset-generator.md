@@ -26,11 +26,9 @@ There are two ways to start a generation:
 1. Open **Actions → Generate procedural material → Run workflow** on `development/0.7.0`.
 2. Create a JSON request under `tools/assets/generation-requests/` with `material`, `size`, and `seed`. A push of that request starts the same workflow, allowing an assistant or automation to queue a generation through the repository.
 
-The workflow generates five PNG maps, validates the PBR manifest, and opens a pull request against `development/0.7.0` with the candidate under:
+The workflow generates five PNG maps, validates the PBR manifest, and uploads the complete candidate directory as a GitHub Actions artifact named `rift-<material>-pbr-<seed>`. Artifacts are retained for 90 days and can be downloaded from the workflow run page.
 
-`app/src/main/assets/generated/material-candidates/<material>-<seed>/`
-
-The development branch is protected, so the workflow does not bypass its rules or push directly to it. Generated candidates remain outside production material directories until they are reviewed and deliberately promoted.
+The request JSON remains in the protected development branch as a reproducible generation record. The binary maps are not committed automatically; download and review them before promoting them into production assets. The workflow does not bypass repository branch-creation or branch-protection rules.
 
 ## Validation
 
