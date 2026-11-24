@@ -24,14 +24,14 @@ class GameEngineTest {
         val allowUpdateToFinish = CountDownLatch(1)
         val closeStarted = CountDownLatch(1)
         val closeFinished = AtomicBoolean(false)
-        var sceneDisposed = false
+        val sceneDisposed = AtomicBoolean(false)
         engine.scenes.setInitialScene(object : Scene() {
             override fun update(deltaSeconds: Float) {
                 updateStarted.countDown()
                 check(allowUpdateToFinish.await(2, TimeUnit.SECONDS))
             }
             override fun onDispose() {
-                sceneDisposed = true
+                sceneDisposed.set(true)
             }
         })
 
@@ -47,8 +47,8 @@ class GameEngineTest {
         closeThread.start()
 
         assertTrue(closeStarted.await(2, TimeUnit.SECONDS))
-        assertFalse(closeFinished.get())
-        assertFalse(sceneDisposed)
+        assertFalse(closeFinished.await(100, TimeUnit.MILLISECONDS))
+        assertFalse(sceneDisposed.get())
 
         allowUpdateToFinish.countDown()
         updateThread.join(2000)
@@ -57,7 +57,7 @@ class GameEngineTest {
         assertFalse(updateThread.isAlive)
         assertFalse(closeThread.isAlive)
         assertTrue(closeFinished.get())
-        assertTrue(sceneDisposed)
+        assertTrue(sceneDisposed.get())
     }
 
     @Test
