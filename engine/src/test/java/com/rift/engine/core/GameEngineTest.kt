@@ -10,8 +10,55 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GameEngineTest {
+
+
+    @Test
+    fun closeWaitsForAnInFlightUpdateBeforeDisposingScenes() {
+        val engine = GameEngine()
+        val updateStarted = CountDownLatch(1)
+        val allowUpdateToFinish = CountDownLatch(1)
+        val closeStarted = CountDownLatch(1)
+        val closeFinished = AtomicBoolean(false)
+        var sceneDisposed = false
+        engine.scenes.setInitialScene(object : Scene() {
+            override fun update(deltaSeconds: Float) {
+                updateStarted.countDown()
+                check(allowUpdateToFinish.await(2, TimeUnit.SECONDS))
+            }
+            override fun onDispose() {
+                sceneDisposed = true
+            }
+        })
+
+        val updateThread = Thread { engine.update(1f / 60f) }
+        updateThread.start()
+        assertTrue(updateStarted.await(2, TimeUnit.SECONDS))
+
+        val closeThread = Thread {
+            closeStarted.countDown()
+            engine.close()
+            closeFinished.set(true)
+        }
+        closeThread.start()
+
+        assertTrue(closeStarted.await(2, TimeUnit.SECONDS))
+        assertFalse(closeFinished.get())
+        assertFalse(sceneDisposed)
+
+        allowUpdateToFinish.countDown()
+        updateThread.join(2000)
+        closeThread.join(2000)
+
+        assertFalse(updateThread.isAlive)
+        assertFalse(closeThread.isAlive)
+        assertTrue(closeFinished.get())
+        assertTrue(sceneDisposed)
+    }
 
     @Test
     fun queuesAnalogAxesForTheGameLoopThread() {
