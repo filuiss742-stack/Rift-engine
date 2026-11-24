@@ -1,6 +1,11 @@
 name: Generate procedural material
 
 on:
+  push:
+    branches:
+      - development/0.7.0
+    paths:
+      - "tools/assets/generation-requests/*.json"
   workflow_dispatch:
     inputs:
       material:
@@ -41,27 +46,68 @@ jobs:
       - name: Install Pillow
         run: python -m pip install --disable-pip-version-check Pillow
 
+      - name: Resolve and validate request
+        id: request
+        shell: bash
+        run: |
+          REQUEST_PATH=""
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            MATERIAL="${{ inputs.material }}"
+            SIZE="${{ inputs.size }}"
+            SEED="${{ inputs.seed }}"
+          else
+            REQUEST_PATH="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -E '^tools/assets/generation-requests/[^/]+\.json$' | head -n 1)"
+            test -n "$REQUEST_PATH"
+            mapfile -t VALUES < <(python - "$REQUEST_PATH" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as source:
+              request = json.load(source)
+          print(request.get("material", ""))
+          print(request.get("size", ""))
+          print(request.get("seed", ""))
+          PY
+          )
+            MATERIAL="${VALUES[0]}"
+            SIZE="${VALUES[1]}"
+            SEED="${VALUES[2]}"
+          fi
+
+          [[ "$MATERIAL" =~ ^(stone|soil|grass|wood|metal)$ ]]
+          [[ "$SIZE" =~ ^(512|1024|2048)$ ]]
+          [[ "$SEED" =~ ^[0-9]{1,9}$ ]]
+          echo "material=$MATERIAL" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "seed=$SEED" >> "$GITHUB_OUTPUT"
+          echo "request_path=$REQUEST_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Generate PNG material maps
         run: |
           python tools/assets/generate_procedural_material.py \
-            --material "${{ inputs.material }}" \
-            --size "${{ inputs.size }}" \
-            --seed "${{ inputs.seed }}" \
-            --output "app/src/main/assets/generated/material-candidates/${{ inputs.material }}-${{ inputs.seed }}"
+            --material "${{ steps.request.outputs.material }}" \
+            --size "${{ steps.request.outputs.size }}" \
+            --seed "${{ steps.request.outputs.seed }}" \
+            --output "app/src/main/assets/generated/material-candidates/${{ steps.request.outputs.material }}-${{ steps.request.outputs.seed }}"
 
       - name: Validate generated PBR set
         run: |
           python tools/assets/validate_materials.py \
-            "app/src/main/assets/generated/material-candidates/${{ inputs.material }}-${{ inputs.seed }}/material.json"
+            "app/src/main/assets/generated/material-candidates/${{ steps.request.outputs.material }}-${{ steps.request.outputs.seed }}/material.json"
 
       - name: Commit generated PNG files to development branch
+        env:
+          REQUEST_PATH: ${{ steps.request.outputs.request_path }}
+          MATERIAL: ${{ steps.request.outputs.material }}
+          SEED: ${{ steps.request.outputs.seed }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "app/src/main/assets/generated/material-candidates/${{ inputs.material }}-${{ inputs.seed }}"
+          git add "app/src/main/assets/generated/material-candidates/$MATERIAL-$SEED"
+          if [ -n "$REQUEST_PATH" ]; then
+            git rm --ignore-unmatch "$REQUEST_PATH"
+          fi
           if git diff --cached --quiet; then
             echo "No changes: this material and seed already exist."
           else
-            git commit -m "assets: generate ${{ inputs.material }} material candidate (seed ${{ inputs.seed }})"
+            git commit -m "assets: generate $MATERIAL material candidate (seed $SEED)"
             git push origin HEAD:development/0.7.0
           fi
