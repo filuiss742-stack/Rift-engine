@@ -250,10 +250,17 @@ class Software3DRenderer(
         viewportWidth: Int,
         viewportHeight: Int
     ): ProjectedPoint? {
-        if (!depth.isFinite() || depth < effectiveNear(camera) || depth > camera.far) return null
+        val near = effectiveNear(camera)
+        if (!depth.isFinite() ||
+            depth < near - CLIP_EPSILON ||
+            depth > camera.far + CLIP_EPSILON
+        ) return null
+        // Plane intersections can land a few ULPs outside the exact boundary.
+        // Clamp only the projection denominator so clipped edge vertices survive.
+        val safeDepth = depth.coerceIn(near, camera.far)
         val focal = (viewportHeight * 0.5f) / tan(camera.verticalFovRadians * 0.5f)
-        val sx = viewportWidth * 0.5f + cameraX * focal / depth
-        val sy = viewportHeight * 0.5f - cameraY * focal / depth
+        val sx = viewportWidth * 0.5f + cameraX * focal / safeDepth
+        val sy = viewportHeight * 0.5f - cameraY * focal / safeDepth
         if (!sx.isFinite() || !sy.isFinite()) return null
         return ProjectedPoint(sx, sy)
     }
