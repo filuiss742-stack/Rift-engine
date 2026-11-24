@@ -82,13 +82,18 @@ class GameplayModuleManager(
             try {
                 current.onInstall(GameplayModuleContext(diagnostics))
             } catch (restoreException: Exception) {
+                if (modules[id] === current) {
+                    modules.remove(id)
+                }
+                attemptCleanup(current, id, "failed restoration after replacement")
                 diagnostics.report(
                     DiagnosticSeverity.ERROR,
                     "MODULE_RESTORE_FAILED",
                     "GameplayModuleManager",
-                    "Replacement failed and the previous module could not be reactivated.",
+                    "Replacement failed and the previous module could not be reactivated. The inactive module was removed from the registry.",
                     restoreException.toString(),
-                    "module[" + id + "]"
+                    "module[" + id + "]",
+                    "Install a healthy module implementation before resuming gameplay."
                 )
             }
             return false
