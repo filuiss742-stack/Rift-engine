@@ -55,9 +55,4 @@ jobs:
           git commit -m "Add original music for the three game worlds"
           git fetch origin "${GITHUB_REF_NAME}"
           git rebase "origin/${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"            Adds three original, generated, looping PCM soundtrack tracks:
-            - Earth / Lisa
-            - Ruined fantasy / Mira
-            - Distortion / Thea
-
-            Generated deterministically by tools/audio/generate_prologue_soundtracks.py.
+          git push origin "HEAD:${GITHUB_REF_NAME}"
