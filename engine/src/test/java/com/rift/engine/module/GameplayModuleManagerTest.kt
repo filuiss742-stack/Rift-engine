@@ -8,6 +8,29 @@ import org.junit.Test
 
 class GameplayModuleManagerTest {
     @Test
+    fun closeUninstallsAllModulesOnceInReverseOrder() {
+        val manager = GameplayModuleManager()
+        val cleanupOrder = mutableListOf<String>()
+        val first = object : GameplayModule {
+            override val descriptor = descriptor("first")
+            override fun onUninstall() { cleanupOrder += "first" }
+        }
+        val second = object : GameplayModule {
+            override val descriptor = descriptor("second")
+            override fun onUninstall() { cleanupOrder += "second" }
+        }
+
+        assertTrue(manager.install(first))
+        assertTrue(manager.install(second))
+        manager.close()
+        manager.close()
+
+        assertEquals(listOf("second", "first"), cleanupOrder)
+        assertTrue(manager.installed().isEmpty())
+        assertFalse(manager.install(TestModule(descriptor("late"))))
+    }
+
+    @Test
     fun validatesDependenciesBeforeInstallation() {
         val diagnostics = DiagnosticReporter()
         val manager = GameplayModuleManager(diagnostics)

@@ -144,3 +144,21 @@ Rift Diagnostics is a core engine capability, not an optional plugin.
 When adding or changing a feature, update relevant API documentation, a minimal usage example, platform compatibility notes where relevant, and the roadmap when priorities change.
 
 Documentation must match actual code. Do not document planned features as implemented.
+
+## 13. Generated sprite and asset pipeline (mandatory)
+
+The default character-art workflow is **one independently generated PNG per pose or animation frame**. Do not ask an image generator to produce a crowded sheet containing many poses, expressions, or characters in one generation.
+
+1. Generate one subject, one pose, or one animation frame per image request. For animation, generate frames sequentially, using the approved character reference and the previous accepted frame as continuity references.
+2. Prefer transparent PNG output. Keep the same canvas dimensions, character scale, camera angle, lighting, palette, and visual style across a character's animation set.
+3. Keep a consistent pivot/ground-contact point and leave enough transparent padding to avoid clipping. Do not resize individual frames independently after approval.
+4. Inspect every generated frame for anatomy, duplicated/missing limbs, stray objects, background remnants, silhouette drift, and inconsistent costume details. Reject and regenerate flawed frames rather than hiding defects in an atlas.
+5. Store source frames as separate files in a predictable character/action directory. Use stable names and explicit frame ordering, for example `characters/heroine/idle/heroine_idle_000.png`.
+6. Atlas packing is a later build/import step, not an image-generation step. The importer may pack approved PNGs into an atlas and emit machine-readable frame metadata, but must preserve the original source PNGs.
+7. Animation metadata must explicitly record frame rectangles, frame durations/FPS, looping, canvas size, and pivot. Validate missing frames, inconsistent dimensions, invalid alpha, and out-of-bounds atlas regions.
+8. Never silently substitute placeholder art for approved art or claim that generated assets are committed to the repository unless the files are actually present.
+9. If a project needs multiple characters or variants, generate and approve each separately before assembling a lineup or atlas.
+10. This pipeline is the default for all AI-assisted Rift Engine projects and must be included in future agent handoffs and project-context summaries.
+
+See [Generated Sprite Workflow](docs/assets/generated-sprite-workflow.md) for the operational checklist and proposed metadata format. Tooling that automates atlas packing or validation must be described as planned until implemented and tested.
+

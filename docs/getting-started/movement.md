@@ -27,7 +27,32 @@ player.movementInput = MovementInput(horizontal = 1f, jumpPressed = true)
 
 Positive Y points down. Gravity is positive and jump velocity is negative. Set `jumpPressed` for only the update in which a new jump press occurs.
 
-**Important:** the engine does not yet detect floors or resolve collisions. Game logic must currently set `movementBody.isGrounded`; a future collision-world system will own that responsibility.
+## Responsive platformer movement
+
+For more game-feel, use `ResponsivePlatformerProfile`:
+
+```kotlin
+player.movementProfile = ResponsivePlatformerProfile(
+    maxSpeed = 220f,
+    groundAcceleration = 1800f,
+    groundDeceleration = 2200f,
+    airControl = 0.6f,
+    coyoteTimeSeconds = 0.1f,
+    jumpBufferSeconds = 0.12f,
+    variableJump = true
+)
+
+// Set jumpPressed on the press edge and jumpHeld while the control stays down.
+player.movementInput = MovementInput(
+    horizontal = horizontalAxis,
+    jumpPressed = jumpWasPressed,
+    jumpHeld = jumpIsHeld
+)
+```
+
+The responsive profile keeps per-character jump timers, so create one profile instance per character. Its default gravity is 980 logical pixels/s². When the GameObject is registered with `PhysicsWorld`, the movement body automatically detects that ownership and leaves gravity to the physics world. This also prevents double gravity in the existing `PlatformerMovementProfile`. When the body is removed from the world, profile gravity becomes active again.
+
+The physics world updates grounded state and integrates velocity for its GameObjects. `maxFallSpeed` currently clamps gravity only when the movement profile owns gravity; PhysicsWorld does not yet expose a terminal-velocity cap for physics-controlled bodies. See the [2D physics guide](physics.md) for supported behavior and limitations.
 
 ## Update timing
 

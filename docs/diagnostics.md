@@ -18,8 +18,9 @@ It does not claim to detect every possible bug and never rewrites project code.
 - The reporter is thread-safe.
 - Engine boundaries record caught exceptions.
 - Plugin ID conflicts and blank IDs are reported by `PluginManager`.
-- The fallback overlay uses `RenderContext`; it does not depend on Android UI,
-  AWT, game textures, or other platform-specific APIs.
+- Recoverable errors use a compact overlay that leaves the game visible; only FATAL errors use a blocking diagnostics screen.
+- Failing scene objects and UI elements can be quarantined and explicitly retried after the underlying issue is fixed.
+- The overlay uses `RenderContext`; it does not depend on Android UI, AWT, game textures, or other platform-specific APIs.
 
 ## Severity
 

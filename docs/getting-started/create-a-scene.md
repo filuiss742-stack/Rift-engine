@@ -73,3 +73,12 @@ Use the scene's protected `add(gameObject)` and `remove(gameObject)` helpers fro
 - Keep scene content in your game module. Only reusable, game-independent behavior belongs in `:engine`.
 
 See [the API map](../api-map.md), [movement guide](movement.md), and [input guide](input.md).
+
+
+## Scene lifecycle and disposal
+
+A scene can implement `onEnter()`, `onExit()`, and `onDispose()`. Transitions call `onExit()` on the outgoing scene and `onEnter()` on the destination. The `SceneManager` retains ownership of scenes it has activated and calls `onDispose()` when the manager closes.
+
+`GameEngine.close()` closes the SceneManager before releasing shared audio and asset resources. Scene disposal clears UI input, physics bodies, combat registrations, and attached GameObject components. Disposal is idempotent; component `onDetach()` and scene `onDispose()` callbacks are not called repeatedly.
+
+Do not close shared AssetManager or AudioManager instances from a scene's `onDispose()`; they belong to the GameEngine and are released after all scenes have been disposed.

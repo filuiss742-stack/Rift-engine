@@ -5,6 +5,76 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SceneTest {
+
+    @Test
+    fun rendersObjectsByLayerAndPreservesInsertionOrderWithinLayer() {
+        val order = mutableListOf<String>()
+        val scene = object : Scene() {
+            init {
+                add(OrderedObject("front", 5, order))
+                add(OrderedObject("back-a", -2, order))
+                add(OrderedObject("back-b", -2, order))
+                add(OrderedObject("middle", 1, order))
+            }
+        }
+
+        scene.render(RecordingRenderContext())
+
+        assertEquals(listOf("back-a", "back-b", "middle", "front"), order)
+    }
+
+    @Test
+    fun changingRenderLayerRebuildsCachedOrderOnNextFrame() {
+        val order = mutableListOf<String>()
+        val low = OrderedObject("low", 0, order)
+        val high = OrderedObject("high", 10, order)
+        val scene = object : Scene() {
+            init {
+                add(low)
+                add(high)
+            }
+        }
+        val renderer = RecordingRenderContext()
+
+        scene.render(renderer)
+        assertEquals(listOf("low", "high"), order)
+
+        order.clear()
+        low.renderLayer = 20
+        high.renderLayer = -5
+        scene.render(renderer)
+
+        assertEquals(listOf("high", "low"), order)
+    }
+
+    private class OrderedObject(
+        private val name: String,
+        layer: Int,
+        private val order: MutableList<String>
+    ) : GameObject(0f, 0f, 1f, 1f) {
+        init { renderLayer = layer }
+        override fun render(context: com.rift.engine.graphics.RenderContext) {
+            order += name
+        }
+    }
+
+    private class RecordingRenderContext : com.rift.engine.graphics.RenderContext {
+        override val width = 320
+        override val height = 200
+        override fun clear(color: Int) = Unit
+        override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, color: Int) = Unit
+        override fun drawRoundRect(left: Float, top: Float, right: Float, bottom: Float, radius: Float, color: Int) = Unit
+        override fun drawLine(x1: Float, y1: Float, x2: Float, y2: Float, color: Int, strokeWidth: Float) = Unit
+        override fun drawText(text: String, x: Float, y: Float, color: Int, size: Float, bold: Boolean) = Unit
+        override fun measureText(text: String, size: Float, bold: Boolean): Float = text.length * size
+        override fun pushState() = Unit
+        override fun popState() = Unit
+        override fun translate(x: Float, y: Float) = Unit
+        override fun rotate(degrees: Float) = Unit
+        override fun scale(x: Float, y: Float) = Unit
+        override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) = Unit
+    }
+
     @Test
     fun objectChangesDuringUpdateAreAppliedAfterTraversal() {
         val scene = MutatingScene()

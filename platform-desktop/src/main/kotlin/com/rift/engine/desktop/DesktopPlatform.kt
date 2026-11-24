@@ -5,9 +5,15 @@ import com.rift.engine.core.GameEngine
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 import com.rift.engine.graphics.RenderContext
+import com.rift.engine.graphics.ViewportRenderContext
+import com.rift.engine.graphics.ViewportTransform
 import com.rift.engine.input.EngineKey
-import com.rift.engine.scene.Scene
+import com.rift.engine.input.PointerButtons
+import com.rift.engine.input.PointerEvent
+import com.rift.engine.input.PointerEventType
+import com.rift.engine.game.RiftGame
 import com.rift.engine.storage.SaveStore
+import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
@@ -15,10 +21,14 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.event.FocusAdapter
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
+import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
@@ -33,20 +43,23 @@ import javax.swing.Timer
 import javax.swing.WindowConstants
 
 class DesktopRenderContext(
-    private val graphics: Graphics2D,
+    graphics: Graphics2D,
     override val width: Int,
     override val height: Int
 ) : RenderContext {
+    private var currentGraphics = graphics
+    private val graphicsStack = mutableListOf<Graphics2D>()
+
     init {
-        graphics.setRenderingHint(
+        currentGraphics.setRenderingHint(
             RenderingHints.KEY_ANTIALIASING,
             RenderingHints.VALUE_ANTIALIAS_ON
         )
     }
 
     override fun clear(color: Int) {
-        graphics.color = Color(color, true)
-        graphics.fillRect(0, 0, width, height)
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fillRect(0, 0, width, height)
     }
 
     override fun drawRect(
@@ -56,8 +69,85 @@ class DesktopRenderContext(
         bottom: Float,
         color: Int
     ) {
-        graphics.color = Color(color, true)
-        graphics.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
+    }
+
+    override fun drawTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int) {
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fillPolygon(
+            intArrayOf(x1.toInt(), x2.toInt(), x3.toInt()),
+            intArrayOf(y1.toInt(), y2.toInt(), y3.toInt()),
+            3
+        )
+    }
+
+    override fun drawTexturedTriangle(
+        texture: com.rift.engine.graphics.TextureResource,
+        x1: Float, y1: Float, u1: Float, v1: Float,
+        x2: Float, y2: Float, u2: Float, v2: Float,
+        x3: Float, y3: Float, u3: Float, v3: Float,
+        alpha: Float
+    ) {
+        val source = texture as? DesktopTexture
+            ?: throw IllegalArgumentException("Texture was not created by the desktop texture loader.")
+        check(!source.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f)
+        val values = floatArrayOf(x1,y1,u1,v1,x2,y2,u2,v2,x3,y3,u3,v3)
+        require(values.all(Float::isFinite)) { "Triangle coordinates and UVs must be finite." }
+
+        val sx0 = u1 * texture.width
+        val sy0 = v1 * texture.height
+        val sx1 = u2 * texture.width
+        val sy1 = v2 * texture.height
+        val sx2 = u3 * texture.width
+        val sy2 = v3 * texture.height
+        val sdx1 = sx1 - sx0
+        val sdy1 = sy1 - sy0
+        val sdx2 = sx2 - sx0
+        val sdy2 = sy2 - sy0
+        val determinant = sdx1 * sdy2 - sdx2 * sdy1
+        require(kotlin.math.abs(determinant) > 1e-6f) { "Texture mapping triangle is degenerate." }
+
+        val dx1 = x2 - x1
+        val dy1 = y2 - y1
+        val dx2 = x3 - x1
+        val dy2 = y3 - y1
+        val m00 = (dx1 * sdy2 - dx2 * sdy1) / determinant
+        val m01 = (dx2 * sdx1 - dx1 * sdx2) / determinant
+        val m10 = (dy1 * sdy2 - dy2 * sdy1) / determinant
+        val m11 = (dy2 * sdx1 - dy1 * sdx2) / determinant
+        val m02 = x1 - m00 * sx0 - m01 * sy0
+        val m12 = y1 - m10 * sx0 - m11 * sy0
+        val transform = AffineTransform(
+            m00.toDouble(), m10.toDouble(), m01.toDouble(), m11.toDouble(),
+            m02.toDouble(), m12.toDouble()
+        )
+
+        val child = currentGraphics.create() as Graphics2D
+        try {
+            val clip = java.awt.geom.Path2D.Float().apply {
+                moveTo(x1.toDouble(), y1.toDouble())
+                lineTo(x2.toDouble(), y2.toDouble())
+                lineTo(x3.toDouble(), y3.toDouble())
+                closePath()
+            }
+            child.clip(clip)
+            child.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
+            child.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            child.paint = java.awt.TexturePaint(
+                source.image,
+                Rectangle2D.Float(0f, 0f, texture.width.toFloat(), texture.height.toFloat())
+            )
+            child.transform(transform)
+            val left = minOf(sx0, sx1, sx2)
+            val top = minOf(sy0, sy1, sy2)
+            val right = maxOf(sx0, sx1, sx2)
+            val bottom = maxOf(sy0, sy1, sy2)
+            child.fill(Rectangle2D.Float(left, top, right - left, bottom - top))
+        } finally {
+            child.dispose()
+        }
     }
 
     override fun drawRoundRect(
@@ -68,8 +158,8 @@ class DesktopRenderContext(
         radius: Float,
         color: Int
     ) {
-        graphics.color = Color(color, true)
-        graphics.fill(
+        currentGraphics.color = Color(color, true)
+        currentGraphics.fill(
             RoundRectangle2D.Float(
                 left,
                 top,
@@ -89,9 +179,9 @@ class DesktopRenderContext(
         color: Int,
         strokeWidth: Float
     ) {
-        graphics.color = Color(color, true)
-        graphics.stroke = BasicStroke(strokeWidth)
-        graphics.draw(Line2D.Float(x1, y1, x2, y2))
+        currentGraphics.color = Color(color, true)
+        currentGraphics.stroke = BasicStroke(strokeWidth)
+        currentGraphics.draw(Line2D.Float(x1, y1, x2, y2))
     }
 
     override fun drawText(
@@ -102,13 +192,13 @@ class DesktopRenderContext(
         size: Float,
         bold: Boolean
     ) {
-        graphics.color = Color(color, true)
-        graphics.font = Font(
+        currentGraphics.color = Color(color, true)
+        currentGraphics.font = Font(
             Font.SANS_SERIF,
             if (bold) Font.BOLD else Font.PLAIN,
             size.toInt().coerceAtLeast(1)
         )
-        graphics.drawString(text, x, y)
+        currentGraphics.drawString(text, x, y)
     }
 
     override fun measureText(
@@ -121,7 +211,87 @@ class DesktopRenderContext(
             if (bold) Font.BOLD else Font.PLAIN,
             size.toInt().coerceAtLeast(1)
         )
-        return graphics.getFontMetrics(font).stringWidth(text).toFloat()
+        return currentGraphics.getFontMetrics(font).stringWidth(text).toFloat()
+    }
+
+    override fun pushState() {
+        graphicsStack.add(currentGraphics)
+        currentGraphics = currentGraphics.create() as Graphics2D
+    }
+
+    override fun popState() {
+        check(graphicsStack.isNotEmpty()) { "Render state stack is empty." }
+        currentGraphics.dispose()
+        currentGraphics = graphicsStack.removeAt(graphicsStack.lastIndex)
+    }
+
+    override fun translate(x: Float, y: Float) {
+        currentGraphics.translate(x.toDouble(), y.toDouble())
+    }
+
+    override fun rotate(degrees: Float) {
+        currentGraphics.rotate(Math.toRadians(degrees.toDouble()))
+    }
+
+    override fun scale(x: Float, y: Float) {
+        currentGraphics.scale(x.toDouble(), y.toDouble())
+    }
+
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float) {
+        currentGraphics.clip(Rectangle2D.Float(left, top, right - left, bottom - top))
+    }
+
+    override fun drawTextureRegion(
+        texture: com.rift.engine.graphics.TextureResource,
+        sourceLeft: Int,
+        sourceTop: Int,
+        sourceRight: Int,
+        sourceBottom: Int,
+        destinationLeft: Float,
+        destinationTop: Float,
+        destinationRight: Float,
+        destinationBottom: Float,
+        alpha: Float
+    ) {
+        val desktopTexture = texture as? DesktopTexture
+            ?: throw IllegalArgumentException("Texture was not created by the desktop texture loader.")
+        check(!desktopTexture.isDisposed) { "Cannot draw a disposed texture." }
+        require(alpha.isFinite() && alpha in 0f..1f) { "alpha must be between zero and one." }
+        require(
+            sourceLeft >= 0 && sourceTop >= 0 &&
+                sourceRight <= texture.width && sourceBottom <= texture.height &&
+                sourceLeft < sourceRight && sourceTop < sourceBottom
+        ) { "Texture source rectangle is outside the texture bounds." }
+        require(destinationRight > destinationLeft && destinationBottom > destinationTop) {
+            "Texture destination rectangle must have positive dimensions."
+        }
+
+        val sourceWidth = (sourceRight - sourceLeft).toDouble()
+        val sourceHeight = (sourceBottom - sourceTop).toDouble()
+        val scaleX = (destinationRight - destinationLeft) / sourceWidth
+        val scaleY = (destinationBottom - destinationTop) / sourceHeight
+        val transform = AffineTransform(
+            scaleX.toDouble(),
+            0.0,
+            0.0,
+            scaleY.toDouble(),
+            destinationLeft - sourceLeft * scaleX,
+            destinationTop - sourceTop * scaleY
+        )
+
+        val child = currentGraphics.create() as Graphics2D
+        try {
+            child.clip(Rectangle2D.Float(
+                destinationLeft,
+                destinationTop,
+                destinationRight - destinationLeft,
+                destinationBottom - destinationTop
+            ))
+            child.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
+            child.drawImage(desktopTexture.image, transform, null)
+        } finally {
+            child.dispose()
+        }
     }
 }
 
@@ -247,14 +417,14 @@ class DesktopSaveStore(
 
 class DesktopGameWindow(
     private val engine: GameEngine,
-    scene: Scene
+    private val game: RiftGame
 ) : JFrame("Rift Engine") {
     private val clock = FixedStepAccumulator()
     private var previousFrameNanos = System.nanoTime()
 
     private val panel = object : JPanel() {
         override fun getPreferredSize(): Dimension {
-            return Dimension(960, 600)
+            return Dimension(game.viewportWidth, game.viewportHeight)
         }
 
         override fun paintComponent(graphics: Graphics) {
@@ -264,32 +434,81 @@ class DesktopGameWindow(
             // modified color, font, stroke, or rendering hints into Swing.
             val gameGraphics = graphics.create() as Graphics2D
             try {
-                engine.render(
-                    DesktopRenderContext(gameGraphics, width, height)
+                val baseContext = DesktopRenderContext(gameGraphics, width, height)
+                val viewport = ViewportTransform(
+                    game.viewportWidth,
+                    game.viewportHeight,
+                    width.coerceAtLeast(1),
+                    height.coerceAtLeast(1)
                 )
+                val renderContext = ViewportRenderContext(baseContext, viewport)
+                try {
+                    engine.render(renderContext)
+                } finally {
+                    renderContext.close()
+                }
             } finally {
                 gameGraphics.dispose()
             }
         }
     }
 
-    init {
-        engine.scenes.setInitialScene(scene)
+    private val gameTimer = Timer(16) {
+        val now = System.nanoTime()
+        val frameDelta = (now - previousFrameNanos) / 1_000_000_000f
+        previousFrameNanos = now
+        clock.advance(frameDelta) { fixedDelta -> engine.update(fixedDelta) }
+        panel.repaint()
+    }
 
-        defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
+    init {
+        engine.scenes.setInitialScene(game.createInitialScene())
+
+        // Close runtime resources before disposing the native window.
+        defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
+        addWindowListener(object : WindowAdapter() {
+            override fun windowClosing(event: WindowEvent) {
+                try {
+                    closeRuntime()
+                } finally {
+                    dispose()
+                }
+            }
+
+            // Also covers programmatic dispose(), which does not dispatch
+            // windowClosing. GameEngine.close() is idempotent.
+            override fun windowClosed(event: WindowEvent) {
+                closeRuntime()
+            }
+        })
         contentPane.add(panel)
         panel.isFocusable = true
+        panel.background = Color.BLACK
 
         panel.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
                 panel.requestFocusInWindow()
-                sendPointerInput(event)
+                engine.onPointer(pointerEvent(event, PointerEventType.DOWN, mapPointerButton(event.button)))
+            }
+
+            override fun mouseReleased(event: MouseEvent) {
+                engine.onPointer(pointerEvent(event, PointerEventType.UP, mapPointerButton(event.button)))
             }
         })
 
         panel.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseDragged(event: MouseEvent) {
-                sendPointerInput(event)
+                engine.onPointer(pointerEvent(event, PointerEventType.MOVE))
+            }
+
+            override fun mouseMoved(event: MouseEvent) {
+                engine.onPointer(pointerEvent(event, PointerEventType.MOVE))
+            }
+        })
+
+        panel.addFocusListener(object : FocusAdapter() {
+            override fun focusLost(event: java.awt.event.FocusEvent) {
+                engine.onFocusLost()
             }
         })
 
@@ -306,28 +525,41 @@ class DesktopGameWindow(
         pack()
         setLocationRelativeTo(null)
 
-        // This simple Swing timer is adequate for the current demo. A
-        // dedicated desktop game thread is a planned host improvement before
-        // introducing expensive per-frame simulation systems.
-        Timer(16) {
-            val now = System.nanoTime()
-            val frameDelta = (now - previousFrameNanos) / 1_000_000_000f
-            previousFrameNanos = now
-
-            clock.advance(frameDelta) { fixedDelta ->
-                engine.update(fixedDelta)
-            }
-            panel.repaint()
-        }.start()
+        gameTimer.start()
     }
 
-    private fun sendPointerInput(event: MouseEvent) {
-        engine.onTouch(
-            event.x.toFloat(),
-            event.y.toFloat(),
-            panel.width.toFloat(),
-            panel.height.toFloat()
+    private fun closeRuntime() {
+        gameTimer.stop()
+        engine.close()
+    }
+
+    private fun pointerEvent(
+        event: MouseEvent,
+        type: PointerEventType,
+        button: Int = PointerButtons.NONE
+    ): PointerEvent {
+        val viewport = ViewportTransform(
+            game.viewportWidth,
+            game.viewportHeight,
+            panel.width.coerceAtLeast(1),
+            panel.height.coerceAtLeast(1)
         )
+        return PointerEvent(
+            pointerId = 0,
+            type = type,
+            x = viewport.screenToLogicalX(event.x.toFloat()),
+            y = viewport.screenToLogicalY(event.y.toFloat()),
+            viewportWidth = game.viewportWidth.toFloat(),
+            viewportHeight = game.viewportHeight.toFloat(),
+            button = button
+        )
+    }
+
+    private fun mapPointerButton(button: Int): Int = when (button) {
+        MouseEvent.BUTTON1 -> PointerButtons.PRIMARY
+        MouseEvent.BUTTON2 -> PointerButtons.MIDDLE
+        MouseEvent.BUTTON3 -> PointerButtons.SECONDARY
+        else -> PointerButtons.NONE
     }
 
     private fun mapKey(keyCode: Int): Int? {
@@ -340,6 +572,65 @@ class DesktopGameWindow(
             KeyEvent.VK_RIGHT -> EngineKey.RIGHT
             KeyEvent.VK_UP -> EngineKey.UP
             KeyEvent.VK_DOWN -> EngineKey.DOWN
+            KeyEvent.VK_SPACE -> EngineKey.SPACE
+            KeyEvent.VK_ENTER -> EngineKey.ENTER
+            KeyEvent.VK_ESCAPE -> EngineKey.ESCAPE
+            KeyEvent.VK_TAB -> EngineKey.TAB
+            KeyEvent.VK_E -> EngineKey.E
+            KeyEvent.VK_Q -> EngineKey.Q
+            KeyEvent.VK_F -> EngineKey.F
+            KeyEvent.VK_R -> EngineKey.R
+            KeyEvent.VK_B -> EngineKey.B
+            KeyEvent.VK_C -> EngineKey.C
+            KeyEvent.VK_G -> EngineKey.G
+            KeyEvent.VK_H -> EngineKey.H
+            KeyEvent.VK_I -> EngineKey.I
+            KeyEvent.VK_J -> EngineKey.J
+            KeyEvent.VK_K -> EngineKey.K
+            KeyEvent.VK_L -> EngineKey.L
+            KeyEvent.VK_M -> EngineKey.M
+            KeyEvent.VK_N -> EngineKey.N
+            KeyEvent.VK_O -> EngineKey.O
+            KeyEvent.VK_P -> EngineKey.P
+            KeyEvent.VK_T -> EngineKey.T
+            KeyEvent.VK_U -> EngineKey.U
+            KeyEvent.VK_V -> EngineKey.V
+            KeyEvent.VK_X -> EngineKey.X
+            KeyEvent.VK_Y -> EngineKey.Y
+            KeyEvent.VK_Z -> EngineKey.Z
+            KeyEvent.VK_0 -> EngineKey.DIGIT_0
+            KeyEvent.VK_1 -> EngineKey.DIGIT_1
+            KeyEvent.VK_2 -> EngineKey.DIGIT_2
+            KeyEvent.VK_3 -> EngineKey.DIGIT_3
+            KeyEvent.VK_4 -> EngineKey.DIGIT_4
+            KeyEvent.VK_5 -> EngineKey.DIGIT_5
+            KeyEvent.VK_6 -> EngineKey.DIGIT_6
+            KeyEvent.VK_7 -> EngineKey.DIGIT_7
+            KeyEvent.VK_8 -> EngineKey.DIGIT_8
+            KeyEvent.VK_9 -> EngineKey.DIGIT_9
+            KeyEvent.VK_F1 -> EngineKey.F1
+            KeyEvent.VK_F2 -> EngineKey.F2
+            KeyEvent.VK_F3 -> EngineKey.F3
+            KeyEvent.VK_F4 -> EngineKey.F4
+            KeyEvent.VK_F5 -> EngineKey.F5
+            KeyEvent.VK_F6 -> EngineKey.F6
+            KeyEvent.VK_F7 -> EngineKey.F7
+            KeyEvent.VK_F8 -> EngineKey.F8
+            KeyEvent.VK_F9 -> EngineKey.F9
+            KeyEvent.VK_F10 -> EngineKey.F10
+            KeyEvent.VK_F11 -> EngineKey.F11
+            KeyEvent.VK_F12 -> EngineKey.F12
+            KeyEvent.VK_BACK_SPACE -> EngineKey.BACKSPACE
+            KeyEvent.VK_DELETE -> EngineKey.DELETE
+            KeyEvent.VK_HOME -> EngineKey.HOME
+            KeyEvent.VK_END -> EngineKey.END
+            KeyEvent.VK_PAGE_UP -> EngineKey.PAGE_UP
+            KeyEvent.VK_PAGE_DOWN -> EngineKey.PAGE_DOWN
+            KeyEvent.VK_INSERT -> EngineKey.INSERT
+            KeyEvent.VK_CAPS_LOCK -> EngineKey.CAPS_LOCK
+            KeyEvent.VK_SHIFT -> EngineKey.SHIFT
+            KeyEvent.VK_CONTROL -> EngineKey.CTRL
+            KeyEvent.VK_ALT -> EngineKey.ALT
             else -> null
         }
     }

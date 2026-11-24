@@ -1,46 +1,88 @@
 # Handle Input
 
-The current input API forwards key and touch events to the active scene. It is intentionally small and is not yet a full action-mapping system.
+Rift routes keyboard, pointer, touch, and analog-axis events through the active scene's `InputActionMap`. Bind device-independent named actions so game logic does not depend on physical key names.
 
-## Receive key events
-
-A scene can override `onKey`:
+## Bind keyboard and pointer actions
 
 ```kotlin
 import com.rift.engine.input.EngineKey
+import com.rift.engine.input.PointerButtons
 
-private val pressedKeys = mutableSetOf<Int>()
+init {
+    input.bindKey("move.left", EngineKey.A)
+    input.bindKey("move.left", EngineKey.LEFT)
+    input.bindKey("move.right", EngineKey.D)
+    input.bindKey("move.right", EngineKey.RIGHT)
+    input.bindKey("jump", EngineKey.SPACE)
+    input.bindPointerButton("attack", PointerButtons.PRIMARY)
+}
+```
 
-override fun onKey(keyCode: Int, pressed: Boolean) {
-    if (pressed) {
-        pressedKeys.add(keyCode)
-    } else {
-        pressedKeys.remove(keyCode)
+Available queries:
+- `isDown(action)`: at least one bound key, pointer button, or analog axis is active.
+- `wasPressed(action)`: an action crossed from inactive to active during this frame.
+- `wasReleased(action)`: an action crossed from active to inactive during this frame.
+- `axisValue(action)`: combined normalized analog value in the range -1..1.
+
+One-frame edges are cleared after the scene update. Held state persists. If a key remains held during a scene transition, the new scene receives its held state without a synthetic just-pressed event.
+
+## Analog axes and gamepads
+
+Bind analog axes to actions:
+
+```kotlin
+input.bindAxis(
+    actionId = "move.horizontal",
+    axisId = "gamepad.left.x",
+    deadZone = 0.18f
+)
+input.bindAxis(
+    actionId = "move.vertical",
+    axisId = "gamepad.left.y",
+    deadZone = 0.18f
+)
+
+override fun update(deltaSeconds: Float) {
+    player.movementInput = MovementInput(
+        horizontal = input.axisValue("move.horizontal"),
+        vertical = input.axisValue("move.vertical")
+    )
+    super.update(deltaSeconds)
+}
+```
+
+The Android host forwards common joystick axes under these IDs:
+- `gamepad.left.x`, `gamepad.left.y`
+- `gamepad.right.x`, `gamepad.right.y`
+- `gamepad.left.trigger`, `gamepad.right.trigger`
+- `gamepad.dpad.x`, `gamepad.dpad.y`
+
+Android gamepad buttons map common A/B/X/Y, shoulder, Start, and Select controls to the device-independent EngineKey set. The Windows host does not currently include native XInput/DirectInput enumeration; an external Windows controller adapter can feed `GameEngine.onAxis(axisId, value)` and `GameEngine.onKey(code, pressed)`. Steam Input keyboard emulation also works through the normal key bindings.
+
+Axis values are clamped to -1..1. A configurable dead zone is removed and the remaining range is normalized. Multiple bindings for one action are summed and clamped.
+
+## Virtual touch controls
+
+Use `VirtualJoystick` and `VirtualButton` from the UI package for Android touch controls. See the [virtual controls guide](virtual-controls.md) for complete examples.
+
+## Pointer events
+
+`PointerEvent` reports pointer ID, event type (DOWN/MOVE/UP/CANCEL), coordinates, and viewport size. Android forwards simultaneous touch pointers; desktop forwards mouse press, release, drag, and movement.
+
+```kotlin
+override fun onPointer(event: PointerEvent) {
+    if (event.type == PointerEventType.DOWN && input.wasPressed("attack")) {
+        val worldX = camera.screenToWorldX(event.x)
+        val worldY = camera.screenToWorldY(event.y)
+        // Aim or interact in world coordinates.
     }
 }
 ```
 
-Use the set during `update(deltaSeconds)` to implement continuous movement. Do not rely on operating-system key-repeat events to determine movement speed.
+`input.pointerX/Y` and `pointerDeltaX/Y` expose the most recent pointer position and movement. Focus loss clears held keys, pointer buttons, and analog axes so controls cannot remain stuck.
 
-The current identifiers include `EngineKey.A`, `D`, `W`, `S`, and arrow keys.
+## Coordinate system
 
-## Receive touch/click
+Pointer coordinates are transformed by the same FIT logical viewport used for rendering. Use the game viewport coordinate system for UI. Use `Camera.screenToWorldX/Y` to convert screen-space coordinates to world coordinates.
 
-Override `onTouch`:
-
-```kotlin
-override fun onTouch(x: Float, y: Float, width: Float, height: Float) {
-    player.x = x - player.width / 2f
-    player.y = y - player.height / 2f
-}
-```
-
-The platform adapter translates its device event and forwards it through `GameEngine` to the active scene.
-
-## Current limitations
-
-- No named actions or configurable key bindings yet.
-- No shared virtual-button UI or completed gamepad mapping API.
-- Device-specific event translation belongs in platform adapters, not the shared game scene.
-
-See [the API map](../api-map.md) and [movement guide](movement.md).
+See [the API map](../api-map.md), [movement guide](movement.md), and [0.5.0 release gates](../roadmap/0.5.0-release-gates.md).

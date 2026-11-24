@@ -2,10 +2,19 @@ name: Windows Desktop
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - "development/**"
+      - "fix/**"
+      - "feature/**"
+      - "release/**"
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,6 +30,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Install texture validation dependency
+        run: python -m pip install Pillow
+      - name: Test material texture validator
+        run: python -m unittest discover -s tools/assets -p "test_validate_materials.py"
       - name: Check engine platform boundaries
         run: python scripts/check_engine_boundaries.py
       - name: Set up JDK 17
@@ -33,7 +46,19 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Run all shared JVM tests
-        run: gradle :engine:test :demo-game:test :platform-desktop:test
+        run: gradle :engine:test :demo-game:test :platform-desktop:test :tools:project-validator:test
+      - name: Validate sample project manifest
+        run: gradle :tools:project-validator:run --args="examples/ai-game/rift.project.json"
+      - name: Validate Kotlin game template manifest
+        run: gradle :tools:project-validator:run --args="templates/kotlin-game/rift.project.json"
+      - name: Publish engine to local Maven repository for template test
+        run: gradle :engine:publishToMavenLocal
+      - name: Test game template independently
+        working-directory: templates/kotlin-game
+        run: gradle test
+      - name: Test independent AI game acceptance project
+        working-directory: examples/ai-game
+        run: gradle test build
       - name: Build desktop distribution
         run: gradle :desktop-app:installDist
       - name: Package Windows app image

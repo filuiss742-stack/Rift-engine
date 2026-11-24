@@ -1,7 +1,26 @@
-pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-dependencyResolutionManagement {
- repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
- repositories { google(); mavenCentral() }
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
-rootProject.name="RiftEngine"
-include(":engine",":platform-android",":platform-desktop",":demo-game",":app",":desktop-app")
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "RiftEngine"
+include(
+    ":engine",
+    ":platform-android",
+    ":platform-desktop",
+    ":demo-game",
+    ":app",
+    ":desktop-app",
+    ":tools:project-validator"
+)
