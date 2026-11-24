@@ -14,8 +14,9 @@ The prologue requests these IDs through the host audio loader using
 `procedural:thea`, `procedural:earth`, and `procedural:mira`. Each host renders
 a 38-second, 22.05 kHz, 16-bit mono PCM WAV into a temporary file and plays it
 with its native decoder. Android uses MediaPlayer; Windows uses Java Sound.
-Resources are loaded lazily on the first transition into each world, looped,
-and released with the scene.
+Resources are loaded lazily on the first transition into each world and looped.
+Leaving a scene stops the current track; the shared AudioManager retains loaded
+handles until the game runtime closes, when it releases the players and temporary WAV files.
 
 ## Offline WAV masters
 
