@@ -72,6 +72,16 @@ jobs:
               sys.exit("asset_slug must be 2–48 lowercase letters, digits or hyphens")
           PY
 
+      - name: Refuse to overwrite an existing candidate
+        env:
+          ASSET_SLUG: ${{ inputs.asset_slug }}
+        run: |
+          target="app/src/main/assets/generated/candidates/$ASSET_SLUG"
+          if [ -e "$target.png" ] || [ -e "$target.json" ]; then
+            echo "Candidate already exists. Choose a new asset_slug; existing candidates are immutable."
+            exit 1
+          fi
+
       - name: Generate and validate PNG candidate
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
