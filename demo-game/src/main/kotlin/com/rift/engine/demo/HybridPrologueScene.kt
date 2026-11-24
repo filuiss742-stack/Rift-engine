@@ -298,19 +298,53 @@ class HybridPrologueScene : Scene() {
                 else cuboidMesh(p,size,color,shade(color,.78f),shade(color,.62f))
             built+=mesh; interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh)
         }
+        fun assembly(id:String,position:Vector3,radius:Float,vararg parts:Mesh3D) {
+            val mesh=Mesh3D(parts.flatMap { it.triangles })
+            built+=mesh
+            interactables+=Prop(id,position,radius,mesh)
+        }
         prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f,brickTexture)
-        prop("bench",Vector3(2f,.55f,-1f),Vector3(2.5f,1.1f,.75f),0xFF795B45.toInt(),1.8f,woodFloorTexture)
-        prop("message",Vector3(5f,.08f,1f),Vector3(.28f,.16f,.5f),0xFF252A35.toInt())
-        prop("busstop",Vector3(-2f,.9f,-4f),Vector3(1.8f,1.8f,.35f),0xFF697786.toInt())
+
+        // A bench is assembled from a timber seat/back and four separate metal supports.
+        val benchParts=mutableListOf<Mesh3D>()
+        val timber=woodFloorTexture
+        fun woodPart(p:Vector3,size:Vector3) = if(timber!=null)
+            texturedCuboidMesh(p,size,CuboidMaterialSet(timber,timber,timber,timber,timber,timber))
+        else cuboidMesh(p,size,0xFF795B45.toInt())
+        benchParts+=woodPart(Vector3(2f,.68f,-1f),Vector3(2.5f,.14f,.72f))
+        benchParts+=woodPart(Vector3(2f,1.02f,-1.32f),Vector3(2.5f,.68f,.12f))
+        for(x in listOf(.95f,3.05f)) for(z in listOf(-1.25f,-.78f))
+            benchParts+=cuboidMesh(Vector3(x,.36f,z),Vector3(.11f,.62f,.11f),0xFF303943.toInt())
+        assembly("bench",Vector3(2f,0f,-1f),1.8f,*benchParts.toTypedArray())
+
+        // The notice board has a post and a framed sign instead of one floating cube.
+        assembly("message",Vector3(5f,0f,1f),1.4f,
+            cuboidMesh(Vector3(5f,.75f,1f),Vector3(.10f,1.5f,.10f),0xFF343A42.toInt()),
+            cuboidMesh(Vector3(5f,1.38f,1f),Vector3(1.0f,.72f,.12f),0xFF252A35.toInt()),
+            cuboidMesh(Vector3(5f,1.38f,.925f),Vector3(.86f,.56f,.02f),0xFFD6C9AE.toInt())
+        )
+
+        // Bus stop: two supports, a roof, a glass-like dark rear panel and a small bench.
+        assembly("busstop",Vector3(-2f,0f,-4f),2.1f,
+            cuboidMesh(Vector3(-2.82f,.95f,-4f),Vector3(.10f,1.9f,.10f),0xFF65727D.toInt()),
+            cuboidMesh(Vector3(-1.18f,.95f,-4f),Vector3(.10f,1.9f,.10f),0xFF65727D.toInt()),
+            cuboidMesh(Vector3(-2f,1.95f,-4f),Vector3(2.0f,.14f,1.05f),0xFF424C59.toInt()),
+            cuboidMesh(Vector3(-2f,1.0f,-4.42f),Vector3(1.72f,1.55f,.055f),0xFF526B78.toInt()),
+            cuboidMesh(Vector3(-2f,.42f,-3.82f),Vector3(1.35f,.10f,.36f),0xFF795B45.toInt())
+        )
+
         prop("shop",Vector3(5.5f,1.3f,-6f),Vector3(3.2f,2.6f,2f),0xFF8B6D5C.toInt(),2.4f,brickTexture)
         prop("home",Vector3(11f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF666C79.toInt(),3f,concreteTexture)
         for (x in listOf(-13f,-4f,7f,14f)) {
-            built+=cuboidMesh(Vector3(x,1.4f,-10f),Vector3(.55f,2.8f,.55f),0xFF55483D.toInt())
-            built+=cuboidMesh(Vector3(x,3.1f,-10f),Vector3(1.5f,.18f,1.5f),0xFFFFD99A.toInt())
-            // Keep tall vegetation behind the street frontage, away from the follow-camera sightline.
-            // The previous z=8 row sat directly between the camera and the heroine.
-            built+=cuboidMesh(Vector3(x,1.5f,-13f),Vector3(.48f,3f,.48f),0xFF624D3D.toInt())
-            built+=cuboidMesh(Vector3(x,3.55f,-13f),Vector3(1.55f,1.75f,1.55f),0xFF315541.toInt(),0xFF284736.toInt())
+            // Street lamp with a post, short arm and lantern housing.
+            built+=cuboidMesh(Vector3(x,1.35f,-10f),Vector3(.12f,2.7f,.12f),0xFF55483D.toInt())
+            built+=cuboidMesh(Vector3(x+.30f,2.65f,-10f),Vector3(.68f,.09f,.10f),0xFF55483D.toInt())
+            built+=cuboidMesh(Vector3(x+.60f,2.48f,-10f),Vector3(.34f,.34f,.34f),0xFFFFD99A.toInt(),0xFFB98D5C.toInt())
+            // Keep low-poly trees behind the street frontage, away from the follow-camera sightline.
+            built+=cuboidMesh(Vector3(x,1.45f,-13f),Vector3(.38f,2.9f,.38f),0xFF624D3D.toInt())
+            built+=cuboidMesh(Vector3(x,3.0f,-13f),Vector3(1.35f,1.15f,1.35f),0xFF315541.toInt(),0xFF284736.toInt())
+            built+=cuboidMesh(Vector3(x-.42f,2.85f,-13.05f),Vector3(.85f,.95f,.92f),0xFF3C684B.toInt())
+            built+=cuboidMesh(Vector3(x+.40f,2.92f,-12.96f),Vector3(.82f,1.0f,.90f),0xFF284736.toInt())
         }
         props=interactables; meshes=built
     }
