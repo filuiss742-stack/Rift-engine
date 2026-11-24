@@ -80,9 +80,14 @@ class DesktopAudioLoader(root: File = File("assets")) : AudioLoader {
 
         val clip = AudioSystem.getClip()
         try {
-            AudioSystem.getAudioInputStream(candidate).use { stream ->
-                clip.open(stream)
+            val stream = if (candidate.isFile) {
+                AudioSystem.getAudioInputStream(candidate)
+            } else {
+                val loader = Thread.currentThread().contextClassLoader ?: javaClass.classLoader
+                val resource = loader.getResourceAsStream(path) ?: return null
+                AudioSystem.getAudioInputStream(java.io.BufferedInputStream(resource))
             }
+            stream.use { clip.open(it) }
             return DesktopAudioResource(clip)
         } catch (exception: Exception) {
             clip.close()
