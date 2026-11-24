@@ -5,6 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GameplayModuleManagerTest {
     @Test
@@ -122,6 +125,44 @@ class GameplayModuleManagerTest {
         assertTrue(manager.hasCapability("combat.realtime"))
         manager.update(1f / 60f)
         assertEquals(1, module.updateCount)
+    }
+
+
+    @Test
+    fun uninstallWaitsUntilAnInFlightUpdateCallbackFinishes() {
+        val manager = GameplayModuleManager()
+        val callbackStarted = CountDownLatch(1)
+        val allowCallbackToFinish = CountDownLatch(1)
+        val uninstallFinished = AtomicBoolean(false)
+        val module = object : GameplayModule {
+            override val descriptor = descriptor("blocking")
+            override fun onUpdate(deltaSeconds: Float) {
+                callbackStarted.countDown()
+                check(allowCallbackToFinish.await(2, TimeUnit.SECONDS))
+            }
+        }
+        assertTrue(manager.install(module))
+
+        val updateThread = Thread { manager.update(1f / 60f) }
+        updateThread.start()
+        assertTrue(callbackStarted.await(2, TimeUnit.SECONDS))
+
+        val uninstallThread = Thread {
+            manager.uninstall("blocking")
+            uninstallFinished.set(true)
+        }
+        uninstallThread.start()
+
+        Thread.sleep(50)
+        assertFalse(uninstallFinished.get())
+        allowCallbackToFinish.countDown()
+        updateThread.join(2000)
+        uninstallThread.join(2000)
+
+        assertFalse(updateThread.isAlive)
+        assertFalse(uninstallThread.isAlive)
+        assertTrue(uninstallFinished.get())
+        assertFalse(manager.isInstalled("blocking"))
     }
 
     @Test
