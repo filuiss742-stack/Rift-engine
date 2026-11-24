@@ -4,7 +4,7 @@ set -euo pipefail
 # Download real, photographed CC0 PBR base-colour maps from Poly Haven.
 # These are source images, not procedural/noise-generated textures.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TMP="${RUNNER_TEMP:-/tmp}/rift-cc0-materials"
+TMP="${TMPDIR:-/tmp}/rift-cc0-materials"
 mkdir -p "$TMP"
 
 BASE="https://dl.polyhaven.org/file/ph-assets/Textures/png/1k"
@@ -33,6 +33,14 @@ for destination in \
   "$ROOT/desktop-app/src/main/resources/prologue/materials"; do
   mkdir -p "$destination"
   cp "$TMP"/*.png "$destination/"
+  cat > "$destination/CC0_SOURCES.txt" <<'CREDITS'
+Photographic PBR base-colour textures downloaded from Poly Haven (https://polyhaven.com).
+All four source materials are marked CC0 on their asset pages:
+- asphalt_02: https://polyhaven.com/a/asphalt_02
+- brick_wall_001: https://polyhaven.com/a/brick_wall_001
+- concrete_wall_008: https://polyhaven.com/a/concrete_wall_008
+- wood_floor: https://polyhaven.com/a/wood_floor
+CREDITS
 done
 
 echo "Installed four real 1K PNG material maps for Android and Desktop."
