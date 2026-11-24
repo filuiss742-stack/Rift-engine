@@ -19,6 +19,14 @@ python tools/assets/generate_procedural_material.py   --material stone   --size 
 
 Each run writes separate PNGs for `base_color`, `normal`, `roughness`, `metallic`, and `height`, plus `material.json`. Output is deterministic for a fixed material, size, and seed. Supported dimensions are powers of two from 64 through 2048.
 
+## Generate and commit from GitHub Actions
+
+Open **Actions → Generate procedural material → Run workflow**. Select branch `development/0.7.0`, choose a material family and resolution, and provide an integer seed. The workflow generates five PNG maps, validates the PBR manifest, and commits the candidate under:
+
+`app/src/main/assets/generated/material-candidates/<material>-<seed>/`
+
+The workflow only runs on `development/0.7.0`. Generated candidates remain outside the runtime's production material directories until they are reviewed and deliberately promoted.
+
 ## Validation
 
 Run the existing material validator against the generated manifest:
