@@ -39,6 +39,31 @@ class AudioManagerTest {
         }
     }
 
+
+    @Test
+    fun failedAudioDisposalIsReportedAndVolumeFailuresAreContained() {
+        val diagnostics = DiagnosticReporter()
+        val audio = object : FakeAudio() {
+            override fun close() {
+                throw IllegalStateException("native audio release failed")
+            }
+
+            override var volume: Float
+                get() = super.volume
+                set(_) {
+                    throw IllegalStateException("volume control failed")
+                }
+        }
+        val manager = AudioManager(AudioLoader { _, _ -> audio }, diagnostics)
+        manager.loadSound("click", "click.wav")
+
+        assertFalse(manager.setSoundVolume("click", 0.5f))
+        assertTrue(manager.unloadSound("click"))
+        assertEquals(2, diagnostics.snapshot().size)
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_RESOURCE_OPERATION_FAILED" })
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_RESOURCE_DISPOSE_FAILED" })
+    }
+
     @Test
     fun cachesSoundsAndPlaysById() {
         val audio = FakeAudio()
