@@ -119,3 +119,4 @@ jobs:
             This is a candidate asset. Review the images visually and test in the target renderer before promoting it to production assets.
           add-paths: |
             app/src/main/assets/generated/material-candidates/${{ steps.request.outputs.material }}-${{ steps.request.outputs.seed }}/
+            ${{ steps.request.outputs.request_path }}
