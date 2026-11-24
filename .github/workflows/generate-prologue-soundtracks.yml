@@ -44,40 +44,18 @@ jobs:
           retention-days: 90
 
       - name: Commit generated soundtracks to development branch
-        id: direct_commit
-        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add demo-game/src/main/resources/music/*.wav
           if git diff --cached --quiet; then
             echo "No soundtrack changes."
-            echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "Add original music for the three game worlds"
-          if git push origin "HEAD:${GITHUB_REF_NAME}"; then
-            echo "committed=true" >> "$GITHUB_OUTPUT"
-          else
-            git reset --soft HEAD~1
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-      - name: Open a PR if branch protection blocks direct commit
-        if: steps.direct_commit.outcome == 'failure'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: development/0.7.0
-          branch: generated/prologue-world-soundtracks
-          delete-branch: true
-          add-paths: |
-            demo-game/src/main/resources/music/*.wav
-          commit-message: "Add original music for the three game worlds"
-          title: "Add original soundtracks for all three worlds"
-          body: |
-            Adds three original, generated, looping PCM soundtrack tracks:
+          git fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"            Adds three original, generated, looping PCM soundtrack tracks:
             - Earth / Lisa
             - Ruined fantasy / Mira
             - Distortion / Thea
