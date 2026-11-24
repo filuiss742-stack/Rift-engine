@@ -24,7 +24,7 @@ object ProceduralMusicAsset {
 
     @JvmStatic
     fun write(world: String, output: File, durationSeconds: Int = DEFAULT_DURATION_SECONDS): File {
-        require(world in setOf("earth", "mira", "thea")) { "Unknown world soundtrack: $world" }
+        require(world in setOf("earth", "mira", "thea", "warfront")) { "Unknown world soundtrack: $world" }
         require(durationSeconds in 1..180) { "Duration must be between 1 and 180 seconds." }
         output.parentFile?.mkdirs()
         val samples = FloatArray(SAMPLE_RATE * durationSeconds)
@@ -32,6 +32,7 @@ object ProceduralMusicAsset {
             "earth" -> composeEarth(samples, durationSeconds)
             "mira" -> composeMira(samples, durationSeconds)
             "thea" -> composeThea(samples, durationSeconds)
+            "warfront" -> composeWarfront(samples, durationSeconds)
         }
         writePcmWav(output, samples)
         return output
@@ -162,6 +163,76 @@ object ProceduralMusicAsset {
             addTone(out, time, 0.22, 62.0, 0.075, Waveform.NOISE, 0.002, 0.20, seed = hit + 200L)
             hit++
             time += 4.0
+        }
+    }
+
+    /**
+     * Fourth-world RTS score: an original retro-industrial battlefield march.
+     * A steady mechanical ostinato, low engine-like bass, dry field percussion,
+     * and a restrained minor-key signal motif evoke a desperate human campaign.
+     */
+    private fun composeWarfront(out: FloatArray, duration: Int) {
+        val bpm = 96.0
+        val beat = 60.0 / bpm
+        val bar = beat * 4.0
+        val bassNotes = doubleArrayOf(55.0, 65.41, 73.42, 61.74)
+        val chordSets = arrayOf(
+            doubleArrayOf(146.83, 174.61, 220.00),
+            doubleArrayOf(130.81, 164.81, 196.00),
+            doubleArrayOf(110.00, 146.83, 174.61),
+            doubleArrayOf(123.47, 155.56, 185.00)
+        )
+        var measure = 0
+        var start = 0.0
+        while (start < duration) {
+            val root = bassNotes[measure % bassNotes.size]
+            addTone(out, start, bar * 0.92, root, 0.17, Waveform.SOFT_SQUARE,
+                0.012, 0.32, 0.003, 700L + measure)
+            addTone(out, start + beat * 2.0, beat * 0.78, root * 1.5, 0.065,
+                Waveform.TRIANGLE, 0.008, 0.24, seed = 720L + measure)
+            addChord(out, start, bar * 0.9, chordSets[measure % chordSets.size],
+                0.035, Waveform.SOFT_SQUARE, 0.12, 0.72, 0.001, 740L + measure)
+
+            for (step in 0..3) {
+                val hit = start + step * beat
+                // A muted low thud marks the marching pulse.
+                addTone(out, hit, 0.16, if (step == 0 || step == 2) 58.0 else 46.0,
+                    if (step == 0) 0.20 else 0.12, Waveform.NOISE,
+                    0.002, 0.14, seed = 800L + measure * 8 + step)
+                // Dry metallic snare on the backbeat.
+                if (step == 1 || step == 3) {
+                    addTone(out, hit, 0.19, 190.0, 0.075, Waveform.NOISE,
+                        0.002, 0.17, seed = 900L + measure * 8 + step)
+                    addTone(out, hit, 0.12, 132.0, 0.045, Waveform.TRIANGLE,
+                        0.002, 0.11, seed = 920L + measure * 8 + step)
+                }
+                // Fine ticking texture suggests machinery and radio static.
+                addTone(out, hit + beat * 0.5, 0.045, 2400.0, 0.018,
+                    Waveform.NOISE, 0.001, 0.04, seed = 940L + measure * 8 + step)
+            }
+            measure++
+            start += bar
+        }
+
+        // Three-note command signal: memorable, but deliberately not triumphant.
+        val motif = doubleArrayOf(293.66, 261.63, 220.00, 196.00, 220.00, 261.63, 246.94, 220.00)
+        motif.forEachIndexed { index, note ->
+            val time = 1.0 + index * beat * 2.0
+            addTone(out, time, beat * 1.35, note, 0.052, Waveform.TRIANGLE,
+                0.025, 0.38, 0.002, 1000L + index)
+            addTone(out, time, beat * 1.1, note * 0.5, 0.028, Waveform.SINE,
+                0.02, 0.32, seed = 1020L + index)
+        }
+
+        // Sparse distant warning tones break the regularity without turning it
+        // into the distortion world's dissonant soundscape.
+        var warning = 0
+        var time = bar * 3.0
+        while (time < duration) {
+            addTone(out, time, 0.72, if (warning % 2 == 0) 392.0 else 349.23,
+                0.022, Waveform.SINE, 0.08, 0.58, 0.004, 1100L + warning)
+            warning++
+            time += bar * 4.0
         }
     }
 
