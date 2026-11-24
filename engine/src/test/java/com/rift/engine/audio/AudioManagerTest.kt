@@ -88,6 +88,7 @@ class AudioManagerTest {
     @Test
     fun failedPreviousTrackStopIsDiagnosedAndDoesNotBlockNextTrack() {
         val diagnostics = DiagnosticReporter()
+        var failStop = true
         val previous = object : AudioResource {
             override var volume = 1f
             override val isPlaying = true
@@ -95,7 +96,7 @@ class AudioManagerTest {
             override fun pause() = Unit
             override fun resume() = Unit
             override fun stop() {
-                throw IllegalStateException("stop failed")
+                if (failStop) throw IllegalStateException("stop failed")
             }
             override fun close() = Unit
         }
@@ -106,6 +107,9 @@ class AudioManagerTest {
         manager.loadMusic("second", "second.wav")
 
         assertTrue(manager.playMusic("first"))
+        assertFalse(manager.playMusic("second"))
+        assertEquals(0, next.plays)
+        failStop = false
         assertTrue(manager.playMusic("second"))
         assertEquals(1, next.plays)
         assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_PLAYBACK_FAILED" })
