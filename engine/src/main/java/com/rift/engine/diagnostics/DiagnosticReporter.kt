@@ -50,6 +50,8 @@ class DiagnosticReporter(
                 it.code == code &&
                 it.subsystem == subsystem &&
                 it.message == message &&
+                it.cause == cause &&
+                it.location == location &&
                 it.suggestion == suggestion
         }
         if (duplicate != null) {

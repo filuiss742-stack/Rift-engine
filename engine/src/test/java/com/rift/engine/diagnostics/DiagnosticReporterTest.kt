@@ -28,6 +28,41 @@ class DiagnosticReporterTest {
         assertEquals(1, reporter.snapshot().size)
     }
 
+
+    @Test
+    fun keepsSameMessageWhenFailureLocationDiffers() {
+        val reporter = DiagnosticReporter()
+
+        val first = reporter.report(
+            DiagnosticSeverity.ERROR, "RIFT_RUNTIME_EXCEPTION", "scene.update",
+            "IllegalStateException: failed", location = "SceneA.update (SceneA.kt:10)"
+        )
+        val second = reporter.report(
+            DiagnosticSeverity.ERROR, "RIFT_RUNTIME_EXCEPTION", "scene.update",
+            "IllegalStateException: failed", location = "SceneB.update (SceneB.kt:20)"
+        )
+
+        assertTrue(first !== second)
+        assertEquals(2, reporter.snapshot().size)
+    }
+
+    @Test
+    fun keepsSameMessageWhenUnderlyingCauseDiffers() {
+        val reporter = DiagnosticReporter()
+
+        val first = reporter.report(
+            DiagnosticSeverity.ERROR, "RIFT_RUNTIME_EXCEPTION", "assets",
+            "IOException: read failed", cause = "disk unavailable"
+        )
+        val second = reporter.report(
+            DiagnosticSeverity.ERROR, "RIFT_RUNTIME_EXCEPTION", "assets",
+            "IOException: read failed", cause = "permission denied"
+        )
+
+        assertTrue(first !== second)
+        assertEquals(2, reporter.snapshot().size)
+    }
+
     @Test
     fun clearRemovesAllEntries() {
         val reporter = DiagnosticReporter()
