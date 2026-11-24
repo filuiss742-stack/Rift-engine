@@ -99,8 +99,7 @@ class Software3DRenderer(
                     toCameraVertex(tri.b, tri.uvB, camera, basis),
                     toCameraVertex(tri.c, tri.uvC, camera, basis)
                 )
-                val clipped = clipAgainstPlane(cameraPolygon, effectiveNear(camera), keepGreater = true)
-                val bounded = clipAgainstPlane(clipped, camera.far, keepGreater = false)
+                val bounded = clipToFrustum(cameraPolygon, camera)
                 if (bounded.size < 3) continue
 
                 val projected = bounded.mapNotNull { vertex ->
@@ -181,45 +180,62 @@ class Software3DRenderer(
         )
     }
 
-    /** Sutherland-Hodgman clipping against a camera-space depth plane. */
+    /**
+     * Clips a polygon against all six perspective-frustum planes in camera
+     * space. UVs are interpolated at every generated intersection.
+     */
+    private fun clipToFrustum(
+        input: List<CameraVertex>,
+        camera: Camera3D
+    ): List<CameraVertex> {
+        val halfVertical = kotlin.math.tan(camera.verticalFovRadians * 0.5f)
+        val halfHorizontal = halfVertical * camera.aspectRatio
+        var polygon = clipAgainstPlane(input) { it.depth - effectiveNear(camera) }
+        polygon = clipAgainstPlane(polygon) { camera.far - it.depth }
+        polygon = clipAgainstPlane(polygon) { it.x + it.depth * halfHorizontal }
+        polygon = clipAgainstPlane(polygon) { it.depth * halfHorizontal - it.x }
+        polygon = clipAgainstPlane(polygon) { it.y + it.depth * halfVertical }
+        polygon = clipAgainstPlane(polygon) { it.depth * halfVertical - it.y }
+        return polygon
+    }
+
+    /** Sutherland-Hodgman clipping; non-negative signed distance is inside. */
     private fun clipAgainstPlane(
         polygon: List<CameraVertex>,
-        planeDepth: Float,
-        keepGreater: Boolean
+        signedDistance: (CameraVertex) -> Float
     ): List<CameraVertex> {
         if (polygon.isEmpty()) return emptyList()
         val output = ArrayList<CameraVertex>(polygon.size + 2)
         var previous = polygon.last()
-        var previousInside = isInside(previous.depth, planeDepth, keepGreater)
+        var previousDistance = signedDistance(previous)
+        var previousInside = previousDistance >= 0f
 
         for (current in polygon) {
-            val currentInside = isInside(current.depth, planeDepth, keepGreater)
+            val currentDistance = signedDistance(current)
+            val currentInside = currentDistance >= 0f
             if (currentInside != previousInside) {
-                val denominator = current.depth - previous.depth
-                if (kotlin.math.abs(denominator) > DEPTH_EPSILON) {
-                    val t = ((planeDepth - previous.depth) / denominator).coerceIn(0f, 1f)
-                    output += interpolate(previous, current, t, planeDepth)
+                val denominator = previousDistance - currentDistance
+                if (kotlin.math.abs(denominator) > CLIP_EPSILON) {
+                    val t = (previousDistance / denominator).coerceIn(0f, 1f)
+                    output += interpolate(previous, current, t)
                 }
             }
             if (currentInside) output += current
             previous = current
+            previousDistance = currentDistance
             previousInside = currentInside
         }
         return output
     }
 
-    private fun isInside(depth: Float, plane: Float, keepGreater: Boolean): Boolean =
-        if (keepGreater) depth >= plane else depth <= plane
-
     private fun interpolate(
         from: CameraVertex,
         to: CameraVertex,
-        t: Float,
-        depth: Float
+        t: Float
     ): CameraVertex = CameraVertex(
         from.x + (to.x - from.x) * t,
         from.y + (to.y - from.y) * t,
-        depth,
+        from.depth + (to.depth - from.depth) * t,
         TextureUv(
             from.uv.u + (to.uv.u - from.uv.u) * t,
             from.uv.v + (to.uv.v - from.uv.v) * t
@@ -245,7 +261,7 @@ class Software3DRenderer(
     private fun effectiveNear(camera: Camera3D): Float = maxOf(camera.near, nearPlane)
 
     companion object {
-        private const val DEPTH_EPSILON = 1e-7f
+        private const val CLIP_EPSILON = 1e-7f
     }
 }
 
