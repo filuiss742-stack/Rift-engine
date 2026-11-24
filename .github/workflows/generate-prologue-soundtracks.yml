@@ -1,0 +1,85 @@
+name: Generate prologue world soundtracks
+
+on:
+  push:
+    branches:
+      - development/0.7.0
+    paths:
+      - "tools/audio/**"
+      - ".github/workflows/generate-prologue-soundtracks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate original PCM soundtrack files
+        run: |
+          python tools/audio/generate_prologue_soundtracks.py \
+            --output demo-game/src/main/resources/music
+
+      - name: Verify generated WAV files
+        run: python -m unittest discover -s tools/audio -p "test_*.py" -v
+
+      - name: Upload soundtrack artifact for recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-prologue-world-soundtracks
+          path: demo-game/src/main/resources/music/*.wav
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit generated soundtracks to development branch
+        id: direct_commit
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add demo-game/src/main/resources/music/*.wav
+          if git diff --cached --quiet; then
+            echo "No soundtrack changes."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Add original music for the three game worlds"
+          if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          else
+            git reset --soft HEAD~1
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Open a PR if branch protection blocks direct commit
+        if: steps.direct_commit.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: development/0.7.0
+          branch: generated/prologue-world-soundtracks
+          delete-branch: true
+          add-paths: |
+            demo-game/src/main/resources/music/*.wav
+          commit-message: "Add original music for the three game worlds"
+          title: "Add original soundtracks for all three worlds"
+          body: |
+            Adds three original, generated, looping PCM soundtrack tracks:
+            - Earth / Lisa
+            - Ruined fantasy / Mira
+            - Distortion / Thea
+
+            Generated deterministically by tools/audio/generate_prologue_soundtracks.py.
