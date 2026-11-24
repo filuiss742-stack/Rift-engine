@@ -84,6 +84,41 @@ class GameplayModuleManagerTest {
         assertFalse(manager.isInstalled("partial"))
     }
 
+
+    @Test
+    fun failedReplacementAndFailedRestoreRemovesInactiveModule() {
+        val diagnostics = DiagnosticReporter()
+        val manager = GameplayModuleManager(diagnostics)
+        var originalInstallCount = 0
+        var originalUpdateCount = 0
+        var originalCleanupCount = 0
+        val original = object : GameplayModule {
+            override val descriptor = descriptor("combat")
+            override fun onInstall(context: GameplayModuleContext) {
+                originalInstallCount += 1
+                if (originalInstallCount > 1) error("restore failed")
+            }
+            override fun onUpdate(deltaSeconds: Float) {
+                originalUpdateCount += 1
+            }
+            override fun onUninstall() {
+                originalCleanupCount += 1
+            }
+        }
+        val replacement = TestModule(descriptor("combat", "2.0.0"), failInstall = true)
+
+        assertTrue(manager.install(original))
+        assertFalse(manager.replace("combat", replacement))
+        assertFalse(manager.isInstalled("combat"))
+        assertTrue(manager.installed().isEmpty())
+        assertEquals(1, originalUpdateCount)
+        assertEquals(2, originalCleanupCount)
+        assertTrue(diagnostics.snapshot().any { it.code == "MODULE_RESTORE_FAILED" })
+
+        manager.update(1f / 60f)
+        assertEquals(1, originalUpdateCount)
+    }
+
     @Test
     fun replacesImplementationUsingSameStableId() {
         val manager = GameplayModuleManager()
