@@ -10,7 +10,7 @@ class ProceduralMusicAssetTest {
     fun writesValidNonSilentPcmForEveryWorld() {
         val directory = createTempDir(prefix = "rift-music-test-")
         try {
-            listOf("earth", "mira", "thea").forEach { world ->
+            listOf("earth", "mira", "thea", "warfront").forEach { world ->
                 val output = File(directory, "$world.wav")
                 ProceduralMusicAsset.write(world, output, 1)
 
