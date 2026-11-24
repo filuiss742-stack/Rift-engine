@@ -88,7 +88,19 @@ class AssetManager(
     @Synchronized
     fun unloadTexture(id: String): Boolean {
         val loaded = textures.remove(id) ?: return false
-        loaded.resource.close()
+        try {
+            loaded.resource.close()
+        } catch (exception: Exception) {
+            diagnostics.report(
+                DiagnosticSeverity.ERROR,
+                "RIFT_ASSET_TEXTURE_DISPOSE_FAILED",
+                "AssetManager",
+                "Texture '$id' was removed from the cache but could not be disposed.",
+                exception.toString(),
+                loaded.path,
+                "Inspect the platform texture resource and ensure close() releases its native handle safely."
+            )
+        }
         return true
     }
 
