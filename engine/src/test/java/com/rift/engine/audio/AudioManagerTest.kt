@@ -43,16 +43,20 @@ class AudioManagerTest {
     @Test
     fun failedAudioDisposalIsReportedAndVolumeFailuresAreContained() {
         val diagnostics = DiagnosticReporter()
-        val audio = object : FakeAudio() {
-            override fun close() {
-                throw IllegalStateException("native audio release failed")
-            }
-
+        val audio = object : AudioResource {
             override var volume: Float
-                get() = super.volume
+                get() = 1f
                 set(_) {
                     throw IllegalStateException("volume control failed")
                 }
+            override val isPlaying = false
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() = Unit
+            override fun close() {
+                throw IllegalStateException("native audio release failed")
+            }
         }
         val manager = AudioManager(AudioLoader { _, _ -> audio }, diagnostics)
         manager.loadSound("click", "click.wav")
