@@ -1,8 +1,6 @@
 package com.rift.engine.physics3d
 
 import com.rift.engine.graphics3d.Vector3
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sqrt
 
 /** A normalized world-space ray. */
@@ -77,7 +75,7 @@ data class AabbCollider3D(
         val max = center + halfExtents
         if (!slab(ray.origin.x, ray.direction.x, min.x, max.x, -Vector3.RIGHT, Vector3.RIGHT)) return null
         if (!slab(ray.origin.y, ray.direction.y, min.y, max.y, -Vector3.UP, Vector3.UP)) return null
-        if (!slab(ray.origin.z, ray.direction.z, min.z, max.z, -Vector3.FORWARD, Vector3.FORWARD)) return null
+        if (!slab(ray.origin.z, ray.direction.z, min.z, max.z, Vector3.FORWARD, -Vector3.FORWARD)) return null
 
         val inside = near < 0f
         val distance = if (inside) far else near
