@@ -168,6 +168,7 @@ class GameplayModuleManagerTest {
         val manager = GameplayModuleManager()
         val callbackStarted = CountDownLatch(1)
         val allowCallbackToFinish = CountDownLatch(1)
+        val uninstallStarted = CountDownLatch(1)
         val uninstallFinished = AtomicBoolean(false)
         val module = object : GameplayModule {
             override val descriptor = descriptor("blocking")
@@ -183,12 +184,13 @@ class GameplayModuleManagerTest {
         assertTrue(callbackStarted.await(2, TimeUnit.SECONDS))
 
         val uninstallThread = Thread {
+            uninstallStarted.countDown()
             manager.uninstall("blocking")
             uninstallFinished.set(true)
         }
         uninstallThread.start()
 
-        Thread.sleep(50)
+        assertTrue(uninstallStarted.await(2, TimeUnit.SECONDS))
         assertFalse(uninstallFinished.get())
         allowCallbackToFinish.countDown()
         updateThread.join(2000)
