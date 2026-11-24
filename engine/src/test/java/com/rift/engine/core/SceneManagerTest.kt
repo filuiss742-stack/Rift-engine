@@ -24,7 +24,7 @@ class SceneManagerTest {
         manager.update(1f / 60f)
 
         assertEquals(null, manager.current)
-        assertEquals("SCENE_MANAGER_CLOSED", diagnostics.latestError()?.code)
+        assertEquals("SCENE_MANAGER_CLOSED", diagnostics.snapshot().lastOrNull()?.code)
     }
 
     @Test
