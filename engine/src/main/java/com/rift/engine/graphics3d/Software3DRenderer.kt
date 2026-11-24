@@ -233,7 +233,7 @@ class Software3DRenderer(
         camera: Camera3D,
         viewportWidth: Int,
         viewportHeight: Int
-    ): ProjectedVertex? {
+    ): ProjectedPoint? {
         if (!depth.isFinite() || depth < effectiveNear(camera) || depth > camera.far) return null
         val focal = (viewportHeight * 0.5f) / tan(camera.verticalFovRadians * 0.5f)
         val sx = viewportWidth * 0.5f + cameraX * focal / depth
