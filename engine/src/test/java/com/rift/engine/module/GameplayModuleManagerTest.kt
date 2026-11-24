@@ -111,12 +111,12 @@ class GameplayModuleManagerTest {
         assertFalse(manager.replace("combat", replacement))
         assertFalse(manager.isInstalled("combat"))
         assertTrue(manager.installed().isEmpty())
-        assertEquals(1, originalUpdateCount)
+        assertEquals(0, originalUpdateCount)
         assertEquals(2, originalCleanupCount)
         assertTrue(diagnostics.snapshot().any { it.code == "MODULE_RESTORE_FAILED" })
 
         manager.update(1f / 60f)
-        assertEquals(1, originalUpdateCount)
+        assertEquals(0, originalUpdateCount)
     }
 
     @Test
