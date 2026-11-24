@@ -1,6 +1,6 @@
 # World soundtracks
 
-The prologue has three original, deterministic world scores. They are generated
+The project has four original, deterministic world scores. The three prologue scores and the fourth-world RTS score are generated
 on demand by `engine.audio.ProceduralMusicAsset` and played through the same
 `AudioManager` interface on Android and Windows.
 
@@ -8,7 +8,7 @@ on demand by `engine.audio.ProceduralMusicAsset` and played through the same
 |---|---|---|---|
 | Thea's distortion | `thea` | Opening rift sequence | Dark low drones, unstable pulses, dissonant upper tones |
 | Earth / Lisa | `earth` | Apartment and modern street | Warm soft keys, gentle pulse, light melodic phrases |
-| Ruined fantasy / Mira | `mira` | Awakening and first exploration | Slow string-like pads, airy melody, sparse distant percussion |
+| Ruined fantasy / Mira | `mira` | Awakening and first exploration | Slow string-like pads, airy melody, sparse distant percussion |\n| Fourth world / RTS campaign | `warfront` | Fourth-world strategic warfare | Retro-industrial march, mechanical bass ostinato, dry field percussion, restrained minor-key command motif |
 
 The prologue requests these IDs through the host audio loader using
 `procedural:thea`, `procedural:earth`, and `procedural:mira`. Each host renders
