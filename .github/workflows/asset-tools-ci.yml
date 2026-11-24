@@ -32,3 +32,16 @@ jobs:
 
       - name: Run asset pipeline unit tests
         run: python -m unittest discover -s tools/assets -p "test_*.py" -v
+
+      - name: Generate and validate a real PNG material set
+        run: |
+          python tools/assets/generate_procedural_material.py \
+            --material stone --size 512 --seed 42 --output /tmp/rift-stone-smoke
+          python tools/assets/validate_materials.py /tmp/rift-stone-smoke/material.json
+
+      - name: Upload generated PNG smoke-test asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-procedural-stone-smoke
+          path: /tmp/rift-stone-smoke/
+          if-no-files-found: error
