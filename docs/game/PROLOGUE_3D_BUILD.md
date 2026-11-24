@@ -72,3 +72,8 @@ All dialogue in the current build is authored prototype copy and can be revised 
 8. Test Android performance and input on a physical device; run Windows smoke test too.
 
 Do not describe the current build as texture-complete or production-ready.
+
+
+## Authoritative playable script
+
+The current authored dialogue and scene-by-scene staging for Part I Prologue — “The Crack” and Act I — “A Strange Dream” are maintained in [`docs/game/story/PART_1_PROLOGUE_ACT_1_SCRIPT.md`](story/PART_1_PROLOGUE_ACT_1_SCRIPT.md). The scene implementation should be reconciled against that script as the next integration pass. The script intentionally keeps Teia's escape, the neutral space, and Mira's identity unexplained at this stage.
