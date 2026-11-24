@@ -5,6 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GameplayModuleManagerTest {
     @Test
@@ -81,6 +84,41 @@ class GameplayModuleManagerTest {
         assertFalse(manager.isInstalled("partial"))
     }
 
+
+    @Test
+    fun failedReplacementAndFailedRestoreRemovesInactiveModule() {
+        val diagnostics = DiagnosticReporter()
+        val manager = GameplayModuleManager(diagnostics)
+        var originalInstallCount = 0
+        var originalUpdateCount = 0
+        var originalCleanupCount = 0
+        val original = object : GameplayModule {
+            override val descriptor = descriptor("combat")
+            override fun onInstall(context: GameplayModuleContext) {
+                originalInstallCount += 1
+                if (originalInstallCount > 1) error("restore failed")
+            }
+            override fun onUpdate(deltaSeconds: Float) {
+                originalUpdateCount += 1
+            }
+            override fun onUninstall() {
+                originalCleanupCount += 1
+            }
+        }
+        val replacement = TestModule(descriptor("combat", "2.0.0"), failInstall = true)
+
+        assertTrue(manager.install(original))
+        assertFalse(manager.replace("combat", replacement))
+        assertFalse(manager.isInstalled("combat"))
+        assertTrue(manager.installed().isEmpty())
+        assertEquals(0, originalUpdateCount)
+        assertEquals(2, originalCleanupCount)
+        assertTrue(diagnostics.snapshot().any { it.code == "MODULE_RESTORE_FAILED" })
+
+        manager.update(1f / 60f)
+        assertEquals(0, originalUpdateCount)
+    }
+
     @Test
     fun replacesImplementationUsingSameStableId() {
         val manager = GameplayModuleManager()
@@ -122,6 +160,46 @@ class GameplayModuleManagerTest {
         assertTrue(manager.hasCapability("combat.realtime"))
         manager.update(1f / 60f)
         assertEquals(1, module.updateCount)
+    }
+
+
+    @Test
+    fun uninstallWaitsUntilAnInFlightUpdateCallbackFinishes() {
+        val manager = GameplayModuleManager()
+        val callbackStarted = CountDownLatch(1)
+        val allowCallbackToFinish = CountDownLatch(1)
+        val uninstallStarted = CountDownLatch(1)
+        val uninstallFinished = AtomicBoolean(false)
+        val module = object : GameplayModule {
+            override val descriptor = descriptor("blocking")
+            override fun onUpdate(deltaSeconds: Float) {
+                callbackStarted.countDown()
+                check(allowCallbackToFinish.await(2, TimeUnit.SECONDS))
+            }
+        }
+        assertTrue(manager.install(module))
+
+        val updateThread = Thread { manager.update(1f / 60f) }
+        updateThread.start()
+        assertTrue(callbackStarted.await(2, TimeUnit.SECONDS))
+
+        val uninstallThread = Thread {
+            uninstallStarted.countDown()
+            manager.uninstall("blocking")
+            uninstallFinished.set(true)
+        }
+        uninstallThread.start()
+
+        assertTrue(uninstallStarted.await(2, TimeUnit.SECONDS))
+        assertFalse(uninstallFinished.get())
+        allowCallbackToFinish.countDown()
+        updateThread.join(2000)
+        uninstallThread.join(2000)
+
+        assertFalse(updateThread.isAlive)
+        assertFalse(uninstallThread.isAlive)
+        assertTrue(uninstallFinished.get())
+        assertFalse(manager.isInstalled("blocking"))
     }
 
     @Test
