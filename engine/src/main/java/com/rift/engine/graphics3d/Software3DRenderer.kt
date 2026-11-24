@@ -42,7 +42,15 @@ data class ScreenTriangle(
  * Painter sorting remains an approximation until a depth-buffered backend is
  * available; intersecting opaque geometry can still sort incorrectly.
  */
-class Software3DRenderer {
+class Software3DRenderer(
+    private val nearPlane: Float = 0.08f
+) {
+    init {
+        require(nearPlane.isFinite() && nearPlane > 0f) {
+            "Renderer near plane must be finite and positive."
+        }
+    }
+
     private data class CameraVertex(
         val x: Float,
         val y: Float,
@@ -50,12 +58,7 @@ class Software3DRenderer {
         val uv: TextureUv
     )
 
-    private data class ProjectedVertex(
-        val x: Float,
-        val y: Float,
-        val depth: Float,
-        val uv: TextureUv
-    )
+    private data class ProjectedPoint(val x: Float, val y: Float)
 
     fun project(
         point: Vector3,
@@ -67,7 +70,7 @@ class Software3DRenderer {
         val basis = cameraBasis(camera)
         val relative = point - camera.position
         val depth = relative.dot(basis.forward)
-        if (depth < camera.near || depth > camera.far) return null
+        if (depth < effectiveNear(camera) || depth > camera.far) return null
         return projectCameraPoint(
             relative.dot(basis.right),
             relative.dot(basis.up),
@@ -96,15 +99,15 @@ class Software3DRenderer {
                     toCameraVertex(tri.b, tri.uvB, camera, basis),
                     toCameraVertex(tri.c, tri.uvC, camera, basis)
                 )
-                val clipped = clipAgainstPlane(cameraPolygon, camera.near, keepGreater = true)
+                val clipped = clipAgainstPlane(cameraPolygon, effectiveNear(camera), keepGreater = true)
                 val bounded = clipAgainstPlane(clipped, camera.far, keepGreater = false)
                 if (bounded.size < 3) continue
 
-                val projected = bounded.mapNotNull {
+                val projected = bounded.mapNotNull { vertex ->
                     projectCameraPoint(
-                        it.x, it.y, it.depth, camera, context.width, context.height
+                        vertex.x, vertex.y, vertex.depth, camera, context.width, context.height
                     )?.let { point ->
-                        ProjectedVertex(point.x, point.y, it.depth, it.uv)
+                        ProjectedVertexWithUv(point.x, point.y, vertex.depth, vertex.uv)
                     }
                 }
                 if (projected.size < 3) continue
@@ -142,6 +145,13 @@ class Software3DRenderer {
             }
         }
     }
+
+    private data class ProjectedVertexWithUv(
+        val x: Float,
+        val y: Float,
+        val depth: Float,
+        val uv: TextureUv
+    )
 
     private data class CameraBasis(
         val right: Vector3,
@@ -224,13 +234,15 @@ class Software3DRenderer {
         viewportWidth: Int,
         viewportHeight: Int
     ): ProjectedVertex? {
-        if (!depth.isFinite() || depth < camera.near || depth > camera.far) return null
+        if (!depth.isFinite() || depth < effectiveNear(camera) || depth > camera.far) return null
         val focal = (viewportHeight * 0.5f) / tan(camera.verticalFovRadians * 0.5f)
         val sx = viewportWidth * 0.5f + cameraX * focal / depth
         val sy = viewportHeight * 0.5f - cameraY * focal / depth
         if (!sx.isFinite() || !sy.isFinite()) return null
-        return ProjectedVertex(sx, sy, depth, TextureUv(0f, 0f))
+        return ProjectedPoint(sx, sy)
     }
+
+    private fun effectiveNear(camera: Camera3D): Float = maxOf(camera.near, nearPlane)
 
     companion object {
         private const val DEPTH_EPSILON = 1e-7f
