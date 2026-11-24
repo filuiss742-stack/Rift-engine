@@ -99,6 +99,8 @@ Each gate requires tests, documentation, a runnable example, and diagnostics bef
 
 - `Software3DRenderer` clips triangles against all six camera frustum planes and interpolates UVs at generated vertices. It still uses painter sorting and is not depth-correct for intersecting opaque geometry.
 - `DirectionalSpriteView` selects one of eight authored azimuth views from the camera position relative to a character's facing direction. This is a selector utility, not yet a sprite animation renderer.
+
+- `DirectionalSpriteRenderer` now combines the eight-way camera selector with separately authored texture frames, animation timing, an explicit fallback direction, and a vertical camera-facing quad anchored at the feet. Its result reports the selected direction, frame index, and whether a fallback was used. The quad enters the existing 3D mesh renderer; it does not yet provide depth-buffer occlusion because the current platform render contexts remain painter-based.
 - `CollisionWorld3D` supports ray queries against AABB and sphere proxies. It is not a rigid-body solver and currently scans registered colliders linearly.
 
 These utilities are independently tested. The hybrid render queue, depth-tested sprite quads, asset import, and physics integration remain future vertical slices.
