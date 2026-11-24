@@ -122,6 +122,7 @@ class SceneManager(
         }
     }
 
+    @Synchronized
     fun update(deltaSeconds: Float) {
         if (closed) return
         applyPendingTransitions()
@@ -136,6 +137,7 @@ class SceneManager(
         applyPendingTransitions()
     }
 
+    @Synchronized
     fun render(context: RenderContext) {
         if (closed) return
         applyPendingTransitions()
@@ -174,6 +176,7 @@ class SceneManager(
         )
     }
 
+    @Synchronized
     fun onPointer(event: PointerEvent) {
         if (closed) return
         applyPendingTransitions()
@@ -185,6 +188,7 @@ class SceneManager(
         applyPendingTransitions()
     }
 
+    @Synchronized
     fun resetInput() {
         if (closed) return
         heldKeys.clear()
@@ -195,6 +199,7 @@ class SceneManager(
         }
     }
 
+    @Synchronized
     fun onAxis(axisId: String, value: Float) {
         if (closed) return
         applyPendingTransitions()
@@ -206,6 +211,7 @@ class SceneManager(
         applyPendingTransitions()
     }
 
+    @Synchronized
     fun onKey(
         keyCode: Int,
         pressed: Boolean

@@ -79,6 +79,7 @@ class GameEngine(
         enqueueInput(InputEvent.ResetInput)
     }
 
+    @Synchronized
     fun update(deltaSeconds: Float) {
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
             "deltaSeconds must be finite and non-negative."
@@ -112,6 +113,7 @@ class GameEngine(
      * Saves the shared primitive GameState under a stable slot identifier.
      * Call at a safe game-loop boundary, not from a background worker.
      */
+    @Synchronized
     fun saveGameState(slot: String): Boolean {
         check(!closed) { "GameEngine is closed." }
         require(validSaveSlot(slot)) {
@@ -134,6 +136,7 @@ class GameEngine(
      * Loads a previously saved primitive GameState. Returns false when the slot
      * is empty or the data is invalid; malformed data is reported, not applied.
      */
+    @Synchronized
     fun loadGameState(slot: String): Boolean {
         check(!closed) { "GameEngine is closed." }
         require(validSaveSlot(slot)) {
@@ -178,6 +181,7 @@ class GameEngine(
         safe("engine.close.assets") { assets.close() }
     }
 
+    @Synchronized
     fun render(context: RenderContext) {
         if (closed) return
         if (diagnostics.hasFatalErrors()) {
