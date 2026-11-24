@@ -3,6 +3,8 @@ package com.rift.engine.physics3d
 import com.rift.engine.graphics3d.Vector3
 import kotlin.math.sqrt
 
+private const val DIRECTION_EPSILON = 1e-7f
+
 /** A normalized world-space ray. */
 class Ray3(val origin: Vector3, direction: Vector3) {
     val direction: Vector3 = direction.normalized()
@@ -161,6 +163,5 @@ class CollisionWorld3D {
     companion object {
         const val DEFAULT_COLLISION_LAYER: Int = 1
         const val ALL_COLLISION_LAYERS: Int = -1
-        private const val DIRECTION_EPSILON = 1e-7f
     }
 }
