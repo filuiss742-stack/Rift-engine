@@ -24,7 +24,7 @@ class DesktopSaveStoreTest {
     fun persistenceFailureIsNotReportedAsSuccessfulWrite() {
         val directory = Files.createTempDirectory("rift-save-write-failure").toFile()
         val file = directory.resolve("blocked")
-        Files.createDirectory(file)
+        Files.createDirectory(file.toPath())
         val diagnostics = DiagnosticReporter()
         val store = DesktopSaveStore(file, diagnostics)
 
