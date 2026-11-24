@@ -1,35 +1,36 @@
 # World soundtracks
 
-The prologue uses three original, deterministic PCM soundtrack sketches:
+The prologue has three original, deterministic world scores. They are generated
+on demand by `engine.audio.ProceduralMusicAsset` and played through the same
+`AudioManager` interface on Android and Windows.
 
-| World / viewpoint | Asset | Scene use |
-|---|---|---|
-| Thea's distortion | `music/03_thea_distortion.wav` | Opening rift sequence |
-| Earth / Lisa | `music/01_earth_everyday.wav` | Apartment and modern street |
-| Ruined fantasy / Mira | `music/02_mira_ruined_fantasy.wav` | Awakening and first exploration |
+| World / viewpoint | Score ID | Scene use | Musical direction |
+|---|---|---|---|
+| Thea's distortion | `thea` | Opening rift sequence | Dark low drones, unstable pulses, dissonant upper tones |
+| Earth / Lisa | `earth` | Apartment and modern street | Warm soft keys, gentle pulse, light melodic phrases |
+| Ruined fantasy / Mira | `mira` | Awakening and first exploration | Slow string-like pads, airy melody, sparse distant percussion |
 
-The source generator is `tools/audio/generate_prologue_soundtracks.py`. It uses only
-Python's standard library and emits 22.05 kHz, 16-bit mono PCM WAV files. This
-format is decoded by Android MediaPlayer and the desktop Java Sound backend
-without adding a codec dependency.
+The prologue requests these IDs through the host audio loader using
+`procedural:thea`, `procedural:earth`, and `procedural:mira`. Each host renders
+a 38-second, 22.05 kHz, 16-bit mono PCM WAV into a temporary file and plays it
+with its native decoder. Android uses MediaPlayer; Windows uses Java Sound.
+Resources are loaded lazily on the first transition into each world, looped,
+and released with the scene.
 
-Generated files live in `demo-game/src/main/resources/music/`. The Android app
-adds that shared resource directory to its packaged assets; the desktop audio
-loader first checks the project audio root and then its classpath resources.
+## Offline WAV masters
 
-## Rebuild
-
-Run:
+`tools/audio/generate_prologue_soundtracks.py` independently creates optional
+WAV masters using only Python's standard library:
 
 ```bash
-python tools/audio/generate_prologue_soundtracks.py --output demo-game/src/main/resources/music
+python tools/audio/generate_prologue_soundtracks.py --output /tmp/rift-music
 python -m unittest discover -s tools/audio -p "test_*.py" -v
 ```
 
 The GitHub Actions workflow `.github/workflows/generate-prologue-soundtracks.yml`
-regenerates the files, runs the audio tests, publishes a recovery artifact, and
-commits the assets to `development/0.7.0`.
+runs the generator and tests, then uploads the three masters as a workflow
+artifact. The game itself does not depend on generated repository binaries.
 
 These are original prototype cues, not final mastered orchestral scores. The
-engine currently switches tracks at world transitions; adaptive combat layers
-and crossfades are later audio-system improvements.
+engine currently switches tracks at world transitions; adaptive combat layers,
+crossfades, and final mastering remain later audio improvements.
