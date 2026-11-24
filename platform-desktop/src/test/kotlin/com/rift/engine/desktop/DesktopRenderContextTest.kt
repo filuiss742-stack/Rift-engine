@@ -162,7 +162,7 @@ class DesktopRenderContextTest {
             )
 
             assertEquals(0xFFFF0000.toInt(), image.getRGB(5, 5))
-            assertEquals(0xFF00FF00.toInt(), image.getRGB(17, 5))
+            assertEquals(0xFF00FF00.toInt(), image.getRGB(13, 5))
             assertEquals(0xFFFF0000.toInt(), image.getRGB(21, 5))
         } finally {
             graphics.dispose()
