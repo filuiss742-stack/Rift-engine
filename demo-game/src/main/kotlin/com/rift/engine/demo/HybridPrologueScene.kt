@@ -384,7 +384,9 @@ class HybridPrologueScene : Scene() {
     private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
         val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),camera,context.width,context.height) ?: return
         val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),camera,context.width,context.height) ?: return
-        val width = (top.second-bottom.second)*.46f
+        // Screen Y grows downward, so the projected top is normally smaller than the bottom.
+        // Use the absolute vertical span to keep the sprite destination rectangle positive.
+        val width = kotlin.math.abs(bottom.second - top.second) * .46f
         val left=bottom.first-width*.5f
         val right=bottom.first+width*.5f
         val tex=heroTexture
