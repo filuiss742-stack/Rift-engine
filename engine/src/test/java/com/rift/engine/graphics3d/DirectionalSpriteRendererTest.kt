@@ -27,8 +27,12 @@ class DirectionalSpriteRendererTest {
             mapOf(SpriteDirection8.FRONT to listOf(texture))
         )
 
+        val frontCamera = Camera3D(
+            position = Vector3(2f, 2f, 0f),
+            target = Vector3(2f, 0f, 3f)
+        )
         val result = DirectionalSpriteRenderer.buildMesh(
-            Vector3(2f, 0f, 3f), Vector3.FORWARD, camera,
+            Vector3(2f, 0f, 3f), Vector3.FORWARD, frontCamera,
             animation, 0f, 1.2f, 2.4f
         )
 
