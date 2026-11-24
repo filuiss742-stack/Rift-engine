@@ -16,6 +16,18 @@ Heroine 01 is the modern-Earth version used in the opening section. Do not confu
 
 The existing small pixel-art idle file is a legacy placeholder, not the high-resolution visual master. The three-version reference image is the visual source for the modern/fantasy/distorted distinction; the modern heroine is the leftmost design.
 
+## Portrait and medium-sprite set
+
+Before full animation production, create a small identity pack as independent PNGs:
+
+- neutral head-and-shoulders portrait;
+- neutral waist-up / bust sprite;
+- full-body neutral reference;
+- separate expression portraits (neutral, happy, sad, angry, surprised, frightened);
+- optional isolated eye, eyebrow and mouth layers only if a tested facial-animation system needs them.
+
+All images must preserve the same canonical face, violet eyes, near-black layered hair and modern outfit. Expression images change facial muscles and mouth/eyebrow shapes, not the character's age, head geometry, camera crop, hairline or rendering style. Do not generate all expressions in one sheet.
+
 ## First approved production asset
 
 The first production candidate must be exactly one full-body neutral idle pose:
