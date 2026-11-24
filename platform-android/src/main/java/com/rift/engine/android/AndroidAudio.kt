@@ -4,14 +4,13 @@ import android.content.Context
 import android.media.MediaPlayer
 import com.rift.engine.audio.AudioLoader
 import com.rift.engine.audio.AudioResource
+import com.rift.engine.audio.ProceduralMusicAsset
 import java.io.File
 import java.io.FileOutputStream
 
 private class AndroidAudioResource(
-    context: Context,
-    path: String
-) : AudioResource {
     private val temporaryFile: File
+) : AudioResource {
     private val player: MediaPlayer = MediaPlayer()
     private var closed = false
 
@@ -25,11 +24,7 @@ private class AndroidAudioResource(
         }
 
     init {
-        temporaryFile = File.createTempFile("rift-audio-", ".media", context.cacheDir)
         try {
-            context.assets.open(path).use { input ->
-                FileOutputStream(temporaryFile).use { output -> input.copyTo(output) }
-            }
             player.setDataSource(temporaryFile.absolutePath)
             player.prepare()
             player.setVolume(volume, volume)
@@ -74,12 +69,25 @@ private class AndroidAudioResource(
     }
 }
 
-/** Loads packaged Android audio assets through a temporary cache file. */
+/** Loads packaged assets and creates deterministic PCM music for procedural: paths. */
 class AndroidAudioLoader(context: Context) : AudioLoader {
     private val applicationContext = context.applicationContext
 
     override fun load(path: String, streaming: Boolean): AudioResource {
-        // MediaPlayer handles both short effects and music in this first backend.
-        return AndroidAudioResource(applicationContext, path)
+        val temporaryFile = File.createTempFile("rift-audio-", ".wav", applicationContext.cacheDir)
+        try {
+            if (path.startsWith("procedural:")) {
+                val world = path.substringAfter("procedural:")
+                ProceduralMusicAsset.write(world, temporaryFile)
+            } else {
+                applicationContext.assets.open(path).use { input ->
+                    FileOutputStream(temporaryFile).use { output -> input.copyTo(output) }
+                }
+            }
+            return AndroidAudioResource(temporaryFile)
+        } catch (exception: Exception) {
+            temporaryFile.delete()
+            throw exception
+        }
     }
 }
