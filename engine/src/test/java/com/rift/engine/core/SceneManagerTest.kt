@@ -11,6 +11,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SceneManagerTest {
+
+    @Test
+    fun sceneTransitionRequestsAfterCloseAreRejected() {
+        val diagnostics = com.rift.engine.diagnostics.DiagnosticReporter()
+        val manager = SceneManager(diagnostics)
+        val scene = object : Scene() {}
+
+        manager.setInitialScene(scene)
+        manager.close()
+        manager.changeScene(object : Scene() {})
+        manager.update(1f / 60f)
+
+        assertEquals(null, manager.current)
+        assertEquals("SCENE_MANAGER_CLOSED", diagnostics.snapshot().lastOrNull()?.code)
+    }
+
     @Test
     fun transitionRequestedDuringUpdateRunsAfterCurrentUpdateReturns() {
         val manager = SceneManager()

@@ -39,6 +39,7 @@ class GameEngine(
     val scenes = SceneManager(diagnostics, assets, audio)
 
     private val inputs = ConcurrentLinkedQueue<InputEvent>()
+    private val inputLock = Any()
     @Volatile private var closed = false
 
     private companion object {
@@ -60,30 +61,22 @@ class GameEngine(
     }
 
     fun onPointer(event: PointerEvent) {
-        if (!closed && !diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.Pointer(event))
-        }
+        enqueueInput(InputEvent.Pointer(event))
     }
 
     fun onKey(code: Int, pressed: Boolean) {
-        if (!closed && !diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.Key(code, pressed))
-        }
+        enqueueInput(InputEvent.Key(code, pressed))
     }
 
     fun onAxis(axisId: String, value: Float) {
         require(axisId.isNotBlank()) { "axisId must not be blank." }
         require(value.isFinite()) { "Axis values must be finite." }
-        if (!closed && !diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.Axis(axisId, value.coerceIn(-1f, 1f)))
-        }
+        enqueueInput(InputEvent.Axis(axisId, value.coerceIn(-1f, 1f)))
     }
 
     /** Releases all held keys and pointer buttons after the host loses focus. */
     fun onFocusLost() {
-        if (!closed && !diagnostics.hasFatalErrors()) {
-            inputs.offer(InputEvent.ResetInput)
-        }
+        enqueueInput(InputEvent.ResetInput)
     }
 
     fun update(deltaSeconds: Float) {
@@ -171,7 +164,9 @@ class GameEngine(
     override fun close() {
         if (closed) return
         closed = true
-        inputs.clear()
+        synchronized(inputLock) {
+            inputs.clear()
+        }
 
         // Scenes release their components while gameplay modules and plugins
         // are still available. Modules/plugins may in turn release audio/assets,
@@ -194,6 +189,14 @@ class GameEngine(
 
         if (diagnostics.hasErrors()) {
             DiagnosticsOverlay.render(context, diagnostics.snapshot())
+        }
+    }
+
+    private fun enqueueInput(event: InputEvent) {
+        synchronized(inputLock) {
+            if (!closed && !diagnostics.hasFatalErrors()) {
+                inputs.offer(event)
+            }
         }
     }
 
