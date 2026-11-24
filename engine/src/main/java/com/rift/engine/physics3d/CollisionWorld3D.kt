@@ -28,7 +28,7 @@ data class AabbCollider3D(
     override val id: String,
     val center: Vector3,
     val halfExtents: Vector3,
-    override val layerMask: Int = DEFAULT_COLLISION_LAYER,
+    override val layerMask: Int = CollisionWorld3D.DEFAULT_COLLISION_LAYER,
     override val enabled: Boolean = true
 ) : Collider3D {
     init {
@@ -90,7 +90,7 @@ data class SphereCollider3D(
     override val id: String,
     val center: Vector3,
     val radius: Float,
-    override val layerMask: Int = DEFAULT_COLLISION_LAYER,
+    override val layerMask: Int = CollisionWorld3D.DEFAULT_COLLISION_LAYER,
     override val enabled: Boolean = true
 ) : Collider3D {
     init {
