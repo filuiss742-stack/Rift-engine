@@ -322,25 +322,31 @@ class DesktopSaveStore(
 
     @Synchronized
     override fun putString(key: String, value: String) {
+        require(key.isNotBlank()) { "Save key must not be blank." }
         properties.setProperty("s.$key", value)
         flush()
     }
 
     @Synchronized
     override fun getString(key: String, defaultValue: String): String {
+        require(key.isNotBlank()) { "Save key must not be blank." }
         return properties.getProperty("s.$key", defaultValue)
     }
 
     @Synchronized
     override fun putFloat(key: String, value: Float) {
+        require(key.isNotBlank()) { "Save key must not be blank." }
+        require(value.isFinite()) { "Saved float values must be finite." }
         properties.setProperty("f.$key", value.toString())
         flush()
     }
 
     @Synchronized
     override fun getFloat(key: String, defaultValue: Float): Float {
+        require(key.isNotBlank()) { "Save key must not be blank." }
+        require(defaultValue.isFinite()) { "Default float values must be finite." }
         val storedValue = properties.getProperty("f.$key") ?: return defaultValue
-        val parsedValue = storedValue.toFloatOrNull()
+        val parsedValue = storedValue.toFloatOrNull()?.takeIf { it.isFinite() }
 
         if (parsedValue == null) {
             diagnostics.report(
@@ -383,7 +389,7 @@ class DesktopSaveStore(
             Files.createDirectories(parent.toPath())
             temporaryFile = Files.createTempFile(
                 parent.toPath(),
-                file.name,
+                file.name.padEnd(3, '_'),
                 ".tmp"
             ).toFile()
 
@@ -411,6 +417,10 @@ class DesktopSaveStore(
             }
         } catch (exception: Exception) {
             diagnostics.reportException("DesktopSaveStore.flush", exception)
+            throw IllegalStateException(
+                "Could not persist save data to '${file.absolutePath}'.",
+                exception
+            )
         }
     }
 }
