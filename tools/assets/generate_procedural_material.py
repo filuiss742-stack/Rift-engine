@@ -54,10 +54,10 @@ def generate(material: str, size: int, seed: int, output: Path) -> dict[str, Pat
     grids = (4, 12, 32, 96)
     lattices = {grid: make_lattice(rng, grid) for grid in grids}
     fine = make_lattice(rng, 256)
-    base_pixels: list[tuple[int, int, int]] = []
-    height_values: list[int] = []
-    rough_values: list[int] = []
-    metal_values: list[int] = []
+    base_bytes = bytearray()
+    height_bytes = bytearray()
+    rough_bytes = bytearray()
+    metal_bytes = bytearray()
 
     for py in range(size):
         v = py / size
@@ -98,35 +98,31 @@ def generate(material: str, size: int, seed: int, output: Path) -> dict[str, Pat
                 shade = 104 + broad * 88 + brush * 18
                 color = (shade * 0.94, shade * 0.99, shade * 1.05)
 
-            base_pixels.append(tuple(clamp8(channel) for channel in color))
-            height_values.append(clamp8(h * 255.0))
+            base_bytes.extend(clamp8(channel) for channel in color)
+            height_bytes.append(clamp8(h * 255.0))
             rough_base = {"stone": 218, "soil": 238, "grass": 230, "wood": 188, "metal": 92}[material]
-            rough_values.append(clamp8(rough_base + (grain - 0.5) * 34))
-            metal_values.append(clamp8(220 + (grain - 0.5) * 20) if material == "metal" else 0)
+            rough_bytes.append(clamp8(rough_base + (grain - 0.5) * 34))
+            metal_bytes.append(clamp8(220 + (grain - 0.5) * 20) if material == "metal" else 0)
 
-    base = Image.new("RGB", (size, size))
-    base.putdata(base_pixels)
-    height = Image.new("L", (size, size))
-    height.putdata(height_values)
-    roughness = Image.new("L", (size, size))
-    roughness.putdata(rough_values)
-    metallic = Image.new("L", (size, size))
-    metallic.putdata(metal_values)
+    base = Image.frombytes("RGB", (size, size), bytes(base_bytes))
+    height = Image.frombytes("L", (size, size), bytes(height_bytes))
+    roughness = Image.frombytes("L", (size, size), bytes(rough_bytes))
+    metallic = Image.frombytes("L", (size, size), bytes(metal_bytes))
 
     # Derive a tangent-space normal map from the height field with wrapped neighbors.
     hp = height.load()
     normal = Image.new("RGB", (size, size))
-    normal_pixels = []
+    normal_bytes = bytearray()
     for py in range(size):
         for px in range(size):
             dx = (hp[(px + 1) % size, py] - hp[(px - 1) % size, py]) / 255.0
             dy = (hp[px, (py + 1) % size] - hp[px, (py - 1) % size]) / 255.0
             nx, ny, nz = -dx * 2.2, -dy * 2.2, 1.0
             length = math.sqrt(nx * nx + ny * ny + nz * nz)
-            normal_pixels.append((clamp8((nx / length * 0.5 + 0.5) * 255),
-                                  clamp8((ny / length * 0.5 + 0.5) * 255),
-                                  clamp8((nz / length * 0.5 + 0.5) * 255)))
-    normal.putdata(normal_pixels)
+            normal_bytes.extend((clamp8((nx / length * 0.5 + 0.5) * 255),
+                                 clamp8((ny / length * 0.5 + 0.5) * 255),
+                                 clamp8((nz / length * 0.5 + 0.5) * 255)))
+    normal = Image.frombytes("RGB", (size, size), bytes(normal_bytes))
 
     # Exact duplicated border pixels guarantee a clean repeat at the UV seam.
     for image in (base, height, normal, roughness, metallic):
