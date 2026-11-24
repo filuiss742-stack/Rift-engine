@@ -1,4 +1,4 @@
-name: Generate prologue world soundtracks
+name: Generate prologue world soundtrack masters
 
 on:
   push:
@@ -10,49 +10,32 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  generate-and-integrate:
+  generate-and-verify:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source branch
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Generate original PCM soundtrack files
+      - name: Generate original PCM WAV masters
         run: |
           python tools/audio/generate_prologue_soundtracks.py \
-            --output demo-game/src/main/resources/music
+            --output /tmp/rift-prologue-music
 
       - name: Verify generated WAV files
         run: python -m unittest discover -s tools/audio -p "test_*.py" -v
 
-      - name: Upload soundtrack artifact for recovery
+      - name: Upload optional WAV masters
         uses: actions/upload-artifact@v4
         with:
           name: rift-prologue-world-soundtracks
-          path: demo-game/src/main/resources/music/*.wav
+          path: /tmp/rift-prologue-music/*.wav
           if-no-files-found: error
           retention-days: 90
-
-      - name: Commit generated soundtracks to development branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add demo-game/src/main/resources/music/*.wav
-          if git diff --cached --quiet; then
-            echo "No soundtrack changes."
-            exit 0
-          fi
-          git commit -m "Add original music for the three game worlds"
-          git fetch origin "${GITHUB_REF_NAME}"
-          git rebase "origin/${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
