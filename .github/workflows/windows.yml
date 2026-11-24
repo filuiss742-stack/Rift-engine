@@ -9,7 +9,12 @@ on:
       - "feature/**"
       - "release/**"
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - "development/**"
+      - "fix/**"
+      - "feature/**"
+      - "release/**"
   workflow_dispatch:
 
 concurrency:
