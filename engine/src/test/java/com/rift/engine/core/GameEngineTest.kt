@@ -23,6 +23,7 @@ class GameEngineTest {
         val updateStarted = CountDownLatch(1)
         val allowUpdateToFinish = CountDownLatch(1)
         val closeStarted = CountDownLatch(1)
+        val closeCompleted = CountDownLatch(1)
         val closeFinished = AtomicBoolean(false)
         val sceneDisposed = AtomicBoolean(false)
         engine.scenes.setInitialScene(object : Scene() {
@@ -43,11 +44,12 @@ class GameEngineTest {
             closeStarted.countDown()
             engine.close()
             closeFinished.set(true)
+            closeCompleted.countDown()
         }
         closeThread.start()
 
         assertTrue(closeStarted.await(2, TimeUnit.SECONDS))
-        assertFalse(closeFinished.await(100, TimeUnit.MILLISECONDS))
+        assertFalse(closeCompleted.await(100, TimeUnit.MILLISECONDS))
         assertFalse(sceneDisposed.get())
 
         allowUpdateToFinish.countDown()
