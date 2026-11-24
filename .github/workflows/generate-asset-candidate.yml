@@ -40,6 +40,13 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
+      - name: Refuse writes outside development/0.7.0
+        run: |
+          if [ "$GITHUB_REF_NAME" != "development/0.7.0" ]; then
+            echo "Asset generation is restricted to development/0.7.0."
+            exit 1
+          fi
+
       - name: Check out selected development branch
         uses: actions/checkout@v4
         with:
