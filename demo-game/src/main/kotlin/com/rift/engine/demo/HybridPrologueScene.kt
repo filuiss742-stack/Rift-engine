@@ -7,6 +7,8 @@ import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
 import com.rift.engine.graphics3d.cuboidMesh
 import com.rift.engine.graphics3d.groundPlaneMesh
+import com.rift.engine.graphics3d.texturedGroundPlaneMesh
+import com.rift.engine.graphics.ProceduralMaterials
 import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
@@ -69,6 +71,7 @@ class HybridPrologueScene : Scene() {
         far = 120f
     )
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
+    private var apartmentFloorTexture: com.rift.engine.graphics.TextureResource? = null
     private val joystick = VirtualJoystick(24f, 454f, 112f)
     private val useButton = VirtualButton(
         832f, 468f, 104f, 78f, "USE",
@@ -103,6 +106,7 @@ class HybridPrologueScene : Scene() {
     }
 
     override fun onEnter() {
+        apartmentFloorTexture = assets?.loadGeneratedTexture("prologue.material.oak-floor", ProceduralMaterials.oakFloor(256, 256, 17))
         heroTexture = assets?.loadTexture(
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
@@ -240,7 +244,9 @@ class HybridPrologueScene : Scene() {
         heroPosition = Vector3(-2.2f, 0f, 1.4f)
         val built = mutableListOf<Mesh3D>()
         val interactables = mutableListOf<Prop>()
-        built += groundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, 0xFF6B5548.toInt())
+        val floor = apartmentFloorTexture
+        built += if (floor != null) texturedGroundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, floor, 3f, 2.5f)
+            else groundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, 0xFF6B5548.toInt())
         // Four room walls and a darker skirting line. All are actual cuboid geometry.
         built += cuboidMesh(Vector3(0f, 1.6f, -5f), Vector3(12f, 3.2f, .22f), 0xFF514B5A.toInt(), 0xFF3C3944.toInt())
         built += cuboidMesh(Vector3(-6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f), 0xFF5D5661.toInt(), 0xFF3F3B46.toInt())

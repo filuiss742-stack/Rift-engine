@@ -13,4 +13,7 @@ interface TextureResource : AutoCloseable {
 fun interface TextureLoader {
     /** Loads a project-relative texture path, or returns null when it is missing. */
     fun load(path: String): TextureResource?
+
+    /** Creates a host-native texture from deterministic engine-generated ARGB pixels. */
+    fun create(data: GeneratedTextureData): TextureResource? = null
 }

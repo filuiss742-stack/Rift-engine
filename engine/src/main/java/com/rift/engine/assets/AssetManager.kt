@@ -2,6 +2,7 @@ package com.rift.engine.assets
 
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
+import com.rift.engine.graphics.GeneratedTextureData
 import com.rift.engine.graphics.TextureLoader
 import com.rift.engine.graphics.TextureResource
 
@@ -78,6 +79,37 @@ class AssetManager(
                 path,
                 "Use a supported image format and inspect the platform decoder error."
             )
+            null
+        }
+    }
+
+    /** Creates and caches a native texture from procedural pixels without writing an intermediate file. */
+    @Synchronized
+    fun loadGeneratedTexture(id: String, data: GeneratedTextureData): TextureResource? {
+        check(!closed) { "AssetManager is closed." }
+        if (!validId(id)) {
+            report("RIFT_ASSET_ID_INVALID", "Texture ID must be a stable lowercase identifier.", id, "Use lowercase letters, digits, dots, underscores, or hyphens; start with a letter.")
+            return null
+        }
+        textures[id]?.let { existing ->
+            if (existing.path != "generated:$id") {
+                report("RIFT_ASSET_ID_CONFLICT", "Texture ID '$id' is already assigned to '${existing.path}'.", id, "Use a distinct ID for generated materials.")
+                return null
+            }
+            return existing.resource
+        }
+        return try {
+            val resource = textureLoader.create(data)
+            if (resource == null || resource.width != data.width || resource.height != data.height || resource.isDisposed) {
+                resource?.close()
+                report("RIFT_ASSET_GENERATED_TEXTURE_FAILED", "Generated texture '$id' could not be created by this platform.", id, "Ensure the active platform TextureLoader implements create().")
+                null
+            } else {
+                textures[id] = LoadedTexture("generated:$id", resource)
+                resource
+            }
+        } catch (exception: Exception) {
+            diagnostics.reportException("AssetManager.createGeneratedTexture", exception)
             null
         }
     }

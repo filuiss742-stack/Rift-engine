@@ -3,6 +3,7 @@ package com.rift.engine.android
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.rift.engine.graphics.GeneratedTextureData
 import com.rift.engine.graphics.TextureLoader
 import com.rift.engine.graphics.TextureResource
 
@@ -32,5 +33,10 @@ class AndroidTextureLoader(context: Context) : TextureLoader {
         return applicationContext.assets.open(path).use { stream ->
             BitmapFactory.decodeStream(stream)?.let(::AndroidTexture)
         }
+    }
+
+    override fun create(data: GeneratedTextureData): TextureResource {
+        val bitmap = Bitmap.createBitmap(data.copyPixels(), data.width, data.height, Bitmap.Config.ARGB_8888)
+        return AndroidTexture(bitmap)
     }
 }
