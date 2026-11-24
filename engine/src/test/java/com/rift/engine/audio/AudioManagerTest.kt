@@ -84,6 +84,58 @@ class AudioManagerTest {
         assertEquals(1, audio.plays)
     }
 
+
+    @Test
+    fun failedPreviousTrackStopIsDiagnosedAndDoesNotBlockNextTrack() {
+        val diagnostics = DiagnosticReporter()
+        val previous = object : AudioResource {
+            override var volume = 1f
+            override val isPlaying = true
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() {
+                throw IllegalStateException("stop failed")
+            }
+            override fun close() = Unit
+        }
+        val next = FakeAudio()
+        val queue = ArrayDeque(listOf(previous, next))
+        val manager = AudioManager(AudioLoader { _, _ -> queue.removeFirst() }, diagnostics)
+        manager.loadMusic("first", "first.wav")
+        manager.loadMusic("second", "second.wav")
+
+        assertTrue(manager.playMusic("first"))
+        assertTrue(manager.playMusic("second"))
+        assertEquals(1, next.plays)
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_PLAYBACK_FAILED" })
+    }
+
+    @Test
+    fun failedStopKeepsCurrentMusicIdSoStopCanBeRetried() {
+        val diagnostics = DiagnosticReporter()
+        var stopAttempts = 0
+        val audio = object : AudioResource {
+            override var volume = 1f
+            override val isPlaying = true
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() {
+                stopAttempts += 1
+                if (stopAttempts == 1) error("temporary stop failure")
+            }
+            override fun close() = Unit
+        }
+        val manager = AudioManager(AudioLoader { _, _ -> audio }, diagnostics)
+        manager.loadMusic("theme", "theme.wav")
+        manager.playMusic("theme")
+
+        assertFalse(manager.stopMusic())
+        assertTrue(manager.stopMusic())
+        assertEquals(2, stopAttempts)
+    }
+
     @Test
     fun switchingMusicStopsPreviousTrackAndSupportsPauseResume() {
         val first = FakeAudio()
