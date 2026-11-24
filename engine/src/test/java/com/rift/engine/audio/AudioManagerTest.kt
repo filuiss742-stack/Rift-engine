@@ -39,6 +39,35 @@ class AudioManagerTest {
         }
     }
 
+
+    @Test
+    fun failedAudioDisposalIsReportedAndVolumeFailuresAreContained() {
+        val diagnostics = DiagnosticReporter()
+        val audio = object : AudioResource {
+            override var volume: Float
+                get() = 1f
+                set(_) {
+                    throw IllegalStateException("volume control failed")
+                }
+            override val isPlaying = false
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() = Unit
+            override fun close() {
+                throw IllegalStateException("native audio release failed")
+            }
+        }
+        val manager = AudioManager(AudioLoader { _, _ -> audio }, diagnostics)
+        manager.loadSound("click", "click.wav")
+
+        assertFalse(manager.setSoundVolume("click", 0.5f))
+        assertTrue(manager.unloadSound("click"))
+        assertEquals(2, diagnostics.snapshot().size)
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_RESOURCE_OPERATION_FAILED" })
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_RESOURCE_DISPOSE_FAILED" })
+    }
+
     @Test
     fun cachesSoundsAndPlaysById() {
         val audio = FakeAudio()
@@ -53,6 +82,62 @@ class AudioManagerTest {
         assertTrue(manager.playSound("click"))
         assertEquals(1, loads)
         assertEquals(1, audio.plays)
+    }
+
+
+    @Test
+    fun failedPreviousTrackStopIsDiagnosedAndDoesNotBlockNextTrack() {
+        val diagnostics = DiagnosticReporter()
+        var failStop = true
+        val previous = object : AudioResource {
+            override var volume = 1f
+            override val isPlaying = true
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() {
+                if (failStop) throw IllegalStateException("stop failed")
+            }
+            override fun close() = Unit
+        }
+        val next = FakeAudio()
+        val queue = ArrayDeque(listOf(previous, next))
+        val manager = AudioManager(AudioLoader { _, _ -> queue.removeFirst() }, diagnostics)
+        manager.loadMusic("first", "first.wav")
+        manager.loadMusic("second", "second.wav")
+
+        assertTrue(manager.playMusic("first"))
+        assertFalse(manager.playMusic("second"))
+        assertEquals(0, next.plays)
+        failStop = false
+        assertTrue(manager.playMusic("second"))
+        assertEquals(1, next.plays)
+        assertTrue(diagnostics.snapshot().any { it.code == "RIFT_AUDIO_PLAYBACK_FAILED" })
+    }
+
+    @Test
+    fun failedStopKeepsCurrentMusicIdSoStopCanBeRetried() {
+        val diagnostics = DiagnosticReporter()
+        var stopAttempts = 0
+        val audio = object : AudioResource {
+            override var volume = 1f
+            override val isPlaying = true
+            override fun play(looping: Boolean) = Unit
+            override fun pause() = Unit
+            override fun resume() = Unit
+            override fun stop() {
+                stopAttempts += 1
+                if (stopAttempts == 1) error("temporary stop failure")
+            }
+            override fun close() = Unit
+        }
+        val manager = AudioManager(AudioLoader { _, _ -> audio }, diagnostics)
+        manager.loadMusic("theme", "theme.wav")
+        manager.playMusic("theme")
+
+        assertFalse(manager.stopMusic())
+        assertTrue(manager.stopMusic())
+        assertEquals(2, stopAttempts)
     }
 
     @Test
