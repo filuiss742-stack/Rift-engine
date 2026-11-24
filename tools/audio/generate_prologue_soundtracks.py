@@ -119,6 +119,62 @@ def make_thea() -> list[float]:
     return out
 
 
+def make_warfront() -> list[float]:
+    """Retro-industrial RTS march for the fourth world; original composition."""
+    out = [0.0] * int(DURATION * SAMPLE_RATE)
+    bpm = 96.0
+    beat = 60.0 / bpm
+    bar = beat * 4.0
+    bass_notes = (55.0, 65.41, 73.42, 61.74)
+    chords = (
+        (146.83, 174.61, 220.00),
+        (130.81, 164.81, 196.00),
+        (110.00, 146.83, 174.61),
+        (123.47, 155.56, 185.00),
+    )
+    measure = 0
+    start = 0.0
+    while start < DURATION:
+        root = bass_notes[measure % len(bass_notes)]
+        add_tone(out, start, bar * 0.92, root, 0.17, "soft-square",
+                 0.012, 0.32, 0.003, 700 + measure)
+        add_tone(out, start + beat * 2.0, beat * 0.78, root * 1.5, 0.065,
+                 "triangle", 0.008, 0.24, seed=720 + measure)
+        chord(out, start, bar * 0.9, chords[measure % len(chords)], 0.035,
+              "soft-square", 0.12, 0.72, 0.001, 740 + measure)
+        for step in range(4):
+            hit = start + step * beat
+            add_tone(out, hit, 0.16, 58.0 if step in (0, 2) else 46.0,
+                     0.20 if step == 0 else 0.12, "noise", 0.002, 0.14,
+                     seed=800 + measure * 8 + step)
+            if step in (1, 3):
+                add_tone(out, hit, 0.19, 190.0, 0.075, "noise", 0.002,
+                         0.17, seed=900 + measure * 8 + step)
+                add_tone(out, hit, 0.12, 132.0, 0.045, "triangle", 0.002,
+                         0.11, seed=920 + measure * 8 + step)
+            add_tone(out, hit + beat * 0.5, 0.045, 2400.0, 0.018,
+                     "noise", 0.001, 0.04, seed=940 + measure * 8 + step)
+        measure += 1
+        start += bar
+
+    motif = (293.66, 261.63, 220.00, 196.00, 220.00, 261.63, 246.94, 220.00)
+    for index, note in enumerate(motif):
+        time = 1.0 + index * beat * 2.0
+        add_tone(out, time, beat * 1.35, note, 0.052, "triangle",
+                 0.025, 0.38, 0.002, 1000 + index)
+        add_tone(out, time, beat * 1.1, note * 0.5, 0.028, "sine",
+                 0.02, 0.32, seed=1020 + index)
+
+    warning = 0
+    time = bar * 3.0
+    while time < DURATION:
+        add_tone(out, time, 0.72, 392.0 if warning % 2 == 0 else 349.23,
+                 0.022, "sine", 0.08, 0.58, 0.004, 1100 + warning)
+        warning += 1
+        time += bar * 4.0
+    return out
+
+
 def write_wav(path: Path, samples: list[float]) -> None:
     peak = max((abs(value) for value in samples), default=0.0)
     gain = 0.82 / max(peak, 0.82)
@@ -144,6 +200,7 @@ def generate(output_dir: Path, duration: float = DURATION) -> list[Path]:
         ("01_earth_everyday.wav", make_earth),
         ("02_mira_ruined_fantasy.wav", make_mira),
         ("03_thea_distortion.wav", make_thea),
+        ("04_warfront_rts.wav", make_warfront),
     ]
     result = []
     for filename, render in tracks:
