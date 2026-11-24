@@ -109,6 +109,18 @@ class HybridPrologueScene : Scene() {
         )
         buildApartment()
         phase = Phase.INTRO
+        playWorldMusic("world.thea", "music/03_thea_distortion.wav")
+    }
+
+    override fun onExit() {
+        audio?.stopMusic()
+    }
+
+    private fun playWorldMusic(id: String, path: String) {
+        val manager = audio ?: return
+        if (id !in manager.loadedMusicIds() && manager.loadMusic(id, path) == null) return
+        manager.setMusicVolume(0.42f)
+        manager.playMusic(id, looping = true)
     }
 
     override fun update(deltaSeconds: Float) {
@@ -212,6 +224,7 @@ class HybridPrologueScene : Scene() {
     private fun beginApartment() {
         if (phase != Phase.INTRO) return
         phase = Phase.APARTMENT
+        playWorldMusic("world.earth", "music/01_earth_everyday.wav")
         fade = 0.7f
         joystick.visible = true; useButton.visible = true
         objective.visible = true; hint.visible = true
@@ -290,6 +303,7 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "Хотя какое мне дело до их экспериментов?.."
                     )) {
                         phase=Phase.FANTASY_WAKE; fade=1f
+                        playWorldMusic("world.mira", "music/02_mira_ruined_fantasy.wav")
                         heroPosition=Vector3(0f,0f,1.8f)
                         fantasyStart=heroPosition
                         combatStarted=false; enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
