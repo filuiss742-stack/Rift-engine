@@ -43,7 +43,13 @@ class AudioManager(
         check(!closed) { "AudioManager is closed." }
         val resource = music[id]?.resource ?: return false
         if (currentMusicId != id) {
-            currentMusicId?.let { music[it]?.resource?.stop() }
+            currentMusicId?.let { previousId ->
+                music[previousId]?.resource?.let { previousResource ->
+                    safePlayback("music.stop", previousId) {
+                        previousResource.stop()
+                    }
+                }
+            }
         }
         val played = safePlayback("music.play", id) {
             resource.play(looping)
@@ -71,7 +77,7 @@ class AudioManager(
         val id = currentMusicId ?: return false
         val resource = music[id]?.resource ?: return false
         val stopped = safePlayback("music.stop", id) { resource.stop() }
-        currentMusicId = null
+        if (stopped) currentMusicId = null
         return stopped
     }
 
