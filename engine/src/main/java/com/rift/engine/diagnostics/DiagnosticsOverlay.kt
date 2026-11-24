@@ -31,8 +31,15 @@ object DiagnosticsOverlay {
         val suggestionLines = latestError?.suggestion?.let {
             wrap(it, context, maxTextWidth, 14f)
         }.orEmpty()
+        val locationLines = latestError?.location?.let {
+            wrap("Location: $it", context, maxTextWidth, 12f)
+        }.orEmpty()
+        val causeLines = latestError?.cause?.let {
+            wrap("Cause: $it", context, maxTextWidth, 12f)
+        }.orEmpty()
         val panelHeight = if (blocking) context.height.toFloat() else
-            (48f + messageLines.size * 20f + suggestionLines.size * 18f + 28f)
+            (48f + messageLines.size * 20f + suggestionLines.size * 18f +
+                locationLines.size * 16f + causeLines.size * 16f + 28f)
                 .coerceAtMost(context.height.toFloat() - 16f)
 
         if (!blocking) {
@@ -82,6 +89,10 @@ object DiagnosticsOverlay {
                     )
                     y += 18f
                 }
+            }
+            (locationLines + causeLines).forEach { line ->
+                context.drawText(line, 24f, y, body, 12f)
+                y += 16f
             }
         } else {
             context.drawText("No runtime errors recorded.", 24f, y, body, 16f)
