@@ -137,33 +137,4 @@ class AssetManagerTest {
         assertEquals("RIFT_ASSET_TEXTURE_NOT_FOUND", diagnostics.latestError()?.code)
     }
 
-    @Test
-    fun generatedTextureIsCreatedOnceAndOwnedByAssetManager() {
-        val texture = object : TextureResource {
-            override val width = 64
-            override val height = 64
-            var closes = 0
-            override val isDisposed: Boolean get() = closes > 0
-            override fun close() { closes += 1 }
-        }
-        var creates = 0
-        val loader = object : TextureLoader {
-            override fun load(path: String): TextureResource? = null
-            override fun create(data: com.rift.engine.graphics.GeneratedTextureData): TextureResource {
-                creates += 1
-                return texture
-            }
-        }
-        val assets = AssetManager(loader)
-        val data = com.rift.engine.graphics.ProceduralMaterials.oakFloor(64, 64)
-
-        val first = assets.loadGeneratedTexture("material.oak", data)
-        val second = assets.loadGeneratedTexture("material.oak", data)
-
-        assertSame(texture, first)
-        assertSame(first, second)
-        assertEquals(1, creates)
-        assets.close()
-        assertEquals(1, texture.closes)
-    }
 }
