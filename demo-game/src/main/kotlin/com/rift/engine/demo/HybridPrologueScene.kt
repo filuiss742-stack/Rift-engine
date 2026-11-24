@@ -291,8 +291,10 @@ class HybridPrologueScene : Scene() {
         for (x in listOf(-13f,-4f,7f,14f)) {
             built+=cuboidMesh(Vector3(x,1.4f,-10f),Vector3(.55f,2.8f,.55f),0xFF55483D.toInt())
             built+=cuboidMesh(Vector3(x,3.1f,-10f),Vector3(1.5f,.18f,1.5f),0xFFFFD99A.toInt())
-            built+=cuboidMesh(Vector3(x,1.5f,8f),Vector3(.65f,3f,.65f),0xFF624D3D.toInt())
-            built+=cuboidMesh(Vector3(x,3.8f,8f),Vector3(2.2f,2.4f,2.2f),0xFF315541.toInt(),0xFF284736.toInt())
+            // Keep tall vegetation behind the street frontage, away from the follow-camera sightline.
+            // The previous z=8 row sat directly between the camera and the heroine.
+            built+=cuboidMesh(Vector3(x,1.5f,-13f),Vector3(.48f,3f,.48f),0xFF624D3D.toInt())
+            built+=cuboidMesh(Vector3(x,3.55f,-13f),Vector3(1.55f,1.75f,1.55f),0xFF315541.toInt(),0xFF284736.toInt())
         }
         props=interactables; meshes=built
     }
