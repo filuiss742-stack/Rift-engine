@@ -21,11 +21,16 @@ Each run writes separate PNGs for `base_color`, `normal`, `roughness`, `metallic
 
 ## Generate and commit from GitHub Actions
 
-Open **Actions → Generate procedural material → Run workflow**. Select branch `development/0.7.0`, choose a material family and resolution, and provide an integer seed. The workflow generates five PNG maps, validates the PBR manifest, and commits the candidate under:
+There are two ways to start a generation:
+
+1. Open **Actions → Generate procedural material → Run workflow** on `development/0.7.0`.
+2. Create a JSON request under `tools/assets/generation-requests/` with `material`, `size`, and `seed`. A push of that request starts the same workflow, allowing an assistant or automation to queue a generation through the repository.
+
+The workflow generates five PNG maps, validates the PBR manifest, and opens a pull request against `development/0.7.0` with the candidate under:
 
 `app/src/main/assets/generated/material-candidates/<material>-<seed>/`
 
-The workflow only runs on `development/0.7.0`. Generated candidates remain outside the runtime's production material directories until they are reviewed and deliberately promoted.
+The development branch is protected, so the workflow does not bypass its rules or push directly to it. Generated candidates remain outside production material directories until they are reviewed and deliberately promoted.
 
 ## Validation
 
