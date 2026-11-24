@@ -37,6 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: development/0.7.0
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
