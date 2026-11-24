@@ -23,6 +23,23 @@ class AssetManagerTest {
         }
     }
 
+
+    @Test
+    fun failedTextureDisposalIsReportedWithoutRestoringTheCacheEntry() {
+        val diagnostics = DiagnosticReporter()
+        val texture = object : FakeTexture() {
+            override fun close() {
+                throw IllegalStateException("native texture release failed")
+            }
+        }
+        val assets = AssetManager(TextureLoader { texture }, diagnostics)
+        assets.loadTexture("hero", "hero.png")
+
+        assertTrue(assets.unloadTexture("hero"))
+        assertNull(assets.texture("hero"))
+        assertEquals("RIFT_ASSET_TEXTURE_DISPOSE_FAILED", diagnostics.latestError()?.code)
+    }
+
     @Test
     fun cachesTextureByStableIdAndPath() {
         val texture = FakeTexture()
