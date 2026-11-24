@@ -139,7 +139,13 @@ class AssetManagerTest {
 
     @Test
     fun generatedTextureIsCreatedOnceAndOwnedByAssetManager() {
-        val texture = FakeTexture()
+        val texture = object : TextureResource {
+            override val width = 64
+            override val height = 64
+            var closes = 0
+            override val isDisposed: Boolean get() = closes > 0
+            override fun close() { closes += 1 }
+        }
         var creates = 0
         val loader = object : TextureLoader {
             override fun load(path: String): TextureResource? = null
