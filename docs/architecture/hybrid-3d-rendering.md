@@ -1,6 +1,6 @@
 # Hybrid 3D World and Directional 2D Sprite Rendering
 
-Status: architecture contract and staged implementation plan. This document does not claim that the 3D renderer, 3D physics, model importer, or sprite-view selector are already implemented.
+Status: architecture contract and staged implementation plan. The repository currently has a CPU triangle renderer with frustum clipping, a camera-relative eight-direction sprite-view selector, and an initial 3D ray-query world. It does not yet provide a depth buffer, full 3D physics solver, model importer, or integrated directional sprite renderer.
 
 ## Target visual model
 
@@ -93,3 +93,12 @@ Quality settings must expose real trade-offs. Do not reduce texture resolution i
 7. **Hybrid vertical slice:** run the same world scene with the same game logic on Android and Windows, then profile on a real Android device.
 
 Each gate requires tests, documentation, a runnable example, and diagnostics before the next gate is treated as complete. The 2D renderer remains available throughout the migration.
+
+
+## Implemented 0.7.0 groundwork
+
+- `Software3DRenderer` clips triangles against all six camera frustum planes and interpolates UVs at generated vertices. It still uses painter sorting and is not depth-correct for intersecting opaque geometry.
+- `DirectionalSpriteView` selects one of eight authored azimuth views from the camera position relative to a character's facing direction. This is a selector utility, not yet a sprite animation renderer.
+- `CollisionWorld3D` supports ray queries against AABB and sphere proxies. It is not a rigid-body solver and currently scans registered colliders linearly.
+
+These utilities are independently tested. The hybrid render queue, depth-tested sprite quads, asset import, and physics integration remain future vertical slices.
