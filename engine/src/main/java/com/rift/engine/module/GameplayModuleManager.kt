@@ -3,7 +3,13 @@ package com.rift.engine.module
 import com.rift.engine.diagnostics.DiagnosticReporter
 import com.rift.engine.diagnostics.DiagnosticSeverity
 
-/** Runtime registry for optional gameplay modules. */
+/**
+ * Thread-safe lifecycle registry for optional gameplay modules.
+ *
+ * Lifecycle callbacks are serialized with registry operations. A callback may
+ * re-enter this manager on the same thread, but another thread cannot uninstall
+ * or replace a module while its update callback is executing.
+ */
 class GameplayModuleManager(
     private val diagnostics: DiagnosticReporter = DiagnosticReporter()
 ) {
@@ -115,19 +121,17 @@ class GameplayModuleManager(
         }
     }
 
+    @Synchronized
     fun update(deltaSeconds: Float) {
         require(deltaSeconds >= 0f && deltaSeconds.isFinite()) {
             "deltaSeconds must be finite and non-negative."
         }
 
-        val snapshot = synchronized(this) {
-            if (closed) emptyList() else modules.values.toList()
-        }
+        if (closed) return
+        // Snapshot iteration permits a callback to uninstall itself re-entrantly.
+        val snapshot = modules.values.toList()
         snapshot.forEach { module ->
-            val stillInstalled = synchronized(this) {
-                modules[module.descriptor.id] === module
-            }
-            if (stillInstalled) {
+            if (modules[module.descriptor.id] === module) {
                 try {
                     module.onUpdate(deltaSeconds)
                 } catch (exception: Exception) {
