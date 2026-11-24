@@ -1,6 +1,5 @@
 package com.rift.engine.desktop
 
-import com.rift.engine.graphics.GeneratedTextureData
 import com.rift.engine.graphics.TextureLoader
 import com.rift.engine.graphics.TextureResource
 import java.awt.image.BufferedImage
@@ -35,9 +34,4 @@ class DesktopTextureLoader(root: File = File("assets")) : TextureLoader {
         return image?.let(::DesktopTexture)
     }
 
-    override fun create(data: GeneratedTextureData): TextureResource {
-        val image = BufferedImage(data.width, data.height, BufferedImage.TYPE_INT_ARGB)
-        image.setRGB(0, 0, data.width, data.height, data.copyPixels(), 0, data.width)
-        return DesktopTexture(image)
-    }
 }
