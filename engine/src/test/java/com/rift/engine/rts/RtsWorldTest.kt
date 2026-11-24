@@ -53,6 +53,22 @@ class RtsWorldTest {
         assertEquals(0f, unit.position.z, 0.001f)
     }
 
+
+    @Test fun moveOrderPreservesUnitHeightWhenDestinationHasDifferentY() {
+        val world = RtsWorld()
+        addHeadquarters(world)
+        val unit = RtsUnit("scout", RtsTeam.PLAYER, infantrySpec, Vector3(0f, 2f, 0f))
+        world.addUnit(unit)
+
+        assertTrue(world.issueOrder("scout", RtsOrder.MoveTo(Vector3(1f, 99f, 0f))))
+        world.update(1f)
+
+        assertEquals(1f, unit.position.x, 0.001f)
+        assertEquals(2f, unit.position.y, 0.001f)
+        assertEquals(0f, unit.position.z, 0.001f)
+        assertEquals(RtsOrder.Hold, unit.order)
+    }
+
     @Test fun productionSpendsResourcesAndCreatesAUnit() {
         val world = RtsWorld(playerEconomy = RtsEconomy(resources = 20))
         addHeadquarters(world)
