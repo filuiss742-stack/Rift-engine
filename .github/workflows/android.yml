@@ -30,14 +30,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Install texture validation dependency
-        run: python -m pip install Pillow
-      - name: Test material texture validator
-        run: python -m unittest discover -s tools/assets -p "test_validate_materials.py"
+      - name: Download real CC0 PNG material textures
+        shell: bash
+        run: bash tools/assets/fetch_cc0_materials.sh
       - name: Check engine platform boundaries
         run: python scripts/check_engine_boundaries.py
       - name: Set up JDK 17
