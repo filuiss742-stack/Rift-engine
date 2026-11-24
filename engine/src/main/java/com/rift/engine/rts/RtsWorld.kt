@@ -284,7 +284,7 @@ class RtsWorld(
                 is RtsOrder.MoveTo -> {
                     unit.position = moveToward(unit.position, order.destination, unit.spec.moveSpeed * dt)
                     if (distanceOnGround(unit.position, order.destination) < ARRIVAL_EPSILON) {
-                        unit.position = order.destination
+                        unit.position = Vector3(order.destination.x, unit.position.y, order.destination.z)
                         unit.order = RtsOrder.Hold
                     }
                 }
