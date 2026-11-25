@@ -3,6 +3,8 @@ package com.rift.engine.demo
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.graphics3d.Camera3D
 import com.rift.engine.graphics3d.DirectionalSpriteAnimation
+import com.rift.engine.graphics3d.DirectionalSpriteActionController
+import com.rift.engine.graphics3d.DirectionalSpriteLibrary
 import com.rift.engine.graphics3d.DirectionalSpriteRenderer
 import com.rift.engine.graphics3d.SpriteDirection8
 import com.rift.engine.graphics3d.Software3DRenderer
@@ -96,6 +98,7 @@ class HybridPrologueScene : Scene() {
     )
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
     private var heroSpriteAnimation: DirectionalSpriteAnimation? = null
+    private var heroActionController: DirectionalSpriteActionController? = null
     private var enemySpriteTexture: com.rift.engine.graphics.TextureResource? = null
     private var enemySpriteAnimation: DirectionalSpriteAnimation? = null
     private var enemyAnimationTime = 0f
@@ -174,6 +177,14 @@ class HybridPrologueScene : Scene() {
                 fallbackDirection = SpriteDirection8.FRONT
             )
         } else null
+        // The runtime action controller is ready for independently authored clips.
+        // Until walk/attack/dodge frame sets exist, missing actions explicitly fall
+        // back to the real idle art rather than fabricating or mirroring frames.
+        heroActionController = heroSpriteAnimation?.let { idle ->
+            DirectionalSpriteActionController(
+                DirectionalSpriteLibrary(mapOf("idle" to idle), defaultAction = "idle")
+            )
+        }
         // The existing trial atlas contains a separate four-frame monster row.
         // Keep it as a 2D billboard in the 3D scene rather than a cuboid stand-in.
         enemySpriteTexture = assets?.loadTexture(
@@ -202,6 +213,7 @@ class HybridPrologueScene : Scene() {
 
     override fun update(deltaSeconds: Float) {
         heroAnimationTime += deltaSeconds
+        heroActionController?.update(deltaSeconds)
         if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
             enemyAnimationTime += deltaSeconds
         }
@@ -680,13 +692,14 @@ class HybridPrologueScene : Scene() {
     }
 
     private fun buildHeroSpriteMesh(camera: Camera3D): Mesh3D? {
-        val animation = heroSpriteAnimation ?: return null
+        val controller = heroActionController
+        val animation = controller?.currentAnimation ?: heroSpriteAnimation ?: return null
         return DirectionalSpriteRenderer.buildMesh(
             position = heroPosition,
             facingDirection = heroFacing,
             camera = camera,
             animation = animation,
-            elapsedSeconds = heroAnimationTime,
+            elapsedSeconds = controller?.elapsedSeconds ?: heroAnimationTime,
             worldWidth = .8f,
             worldHeight = 1.75f
         ).mesh
@@ -1010,7 +1023,15 @@ class HybridPrologueScene : Scene() {
         if (doDodge && dodgeTimer<=0f && dodgeCooldown<=0f) {
             dodgeTimer=.38f
             dodgeCooldown=.82f
+            heroActionController?.play("dodge", actionPriority = 60)
         }
+        if (doAttack && attackCooldown<=0f) {
+            heroActionController?.play("attack", actionPriority = 50)
+        }
+        heroActionController?.play(
+            if (dodgeTimer > 0f) "dodge" else if (length > .001f) "walk" else "idle",
+            actionPriority = if (dodgeTimer > 0f) 60 else if (length > .001f) 10 else 0
+        )
         val movedX=heroPosition.x-fantasyStart.x
         val movedZ=heroPosition.z-fantasyStart.z
         if (!combatStarted && sqrt(movedX*movedX+movedZ*movedZ)>1.25f) {
@@ -1062,6 +1083,7 @@ class HybridPrologueScene : Scene() {
                     if (caught && dodgeTimer<=0f && heroInvulnerability<=0f) {
                         heroInvulnerability=.9f
                         damageFlash=.18f
+                        heroActionController?.play("hit", actionPriority = 70)
                         if (PrologueCombatRules.wouldTriggerDefeat(heroHealth)) {
                             startDialogue(listOf(
                                 "Лиза" to "Ноги подкосились. Я не могу здесь умереть... Что бы это ни было, нужно подняться.",
