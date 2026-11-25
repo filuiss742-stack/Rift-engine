@@ -52,7 +52,7 @@ class DirectionalSpriteActionController(
         requestedAction = action
         selection = resolved
         priority = actionPriority
-        elapsed = 0f
+        elapsed = 0.0
         return true
     }
 
@@ -62,11 +62,11 @@ class DirectionalSpriteActionController(
             "Sprite action delta must be finite and non-negative."
         }
         elapsed += deltaSeconds.toDouble()
-        if (!currentAnimation.loop && currentAnimation.isFinished(elapsed)) {
+        if (!currentAnimation.loop && currentAnimation.isFinished(elapsedSeconds)) {
             requestedAction = fallbackAction
             selection = library.resolve(fallbackAction)
             priority = Int.MIN_VALUE
-            elapsed = 0f
+            elapsed = 0.0
         }
     }
 
@@ -74,6 +74,6 @@ class DirectionalSpriteActionController(
         requestedAction = fallbackAction
         selection = library.resolve(fallbackAction)
         priority = Int.MIN_VALUE
-        elapsed = 0f
+        elapsed = 0.0
     }
 }
