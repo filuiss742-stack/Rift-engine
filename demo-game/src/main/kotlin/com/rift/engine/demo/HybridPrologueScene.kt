@@ -439,7 +439,11 @@ class HybridPrologueScene : Scene() {
         fun assembly(id:String,position:Vector3,radius:Float,vararg parts:Mesh3D) {
             val mesh=Mesh3D(parts.flatMap { it.triangles })
             built+=mesh
-            interactables+=Prop(id,position,radius,mesh)
+            val vertices=mesh.triangles.flatMap { listOf(it.a,it.b,it.c) }
+            val halfX=(vertices.maxOf { it.x }-vertices.minOf { it.x })*.5f
+            val halfZ=(vertices.maxOf { it.z }-vertices.minOf { it.z })*.5f
+            val collisionRadius=sqrt(halfX*halfX+halfZ*halfZ).coerceAtLeast(.18f)
+            interactables+=Prop(id,position,radius,mesh,collisionRadius)
         }
         prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f,brickTexture)
         // Shopfronts are built as separate 3D glass, frame and door pieces rather than painted rectangles.
