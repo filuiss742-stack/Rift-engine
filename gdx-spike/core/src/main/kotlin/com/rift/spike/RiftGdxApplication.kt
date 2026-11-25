@@ -20,7 +20,6 @@ import com.badlogic.gdx.graphics.g3d.decals.DecalBatch
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
 import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.math.Vector3
 
 /**
  * Disposable renderer spike only. This does not replace Rift's production runtime.
@@ -88,6 +87,7 @@ class RiftGdxApplication : ApplicationAdapter() {
         modelBatch.render(prop, environment)
         modelBatch.end()
 
+        sprite.lookAt(camera.position, camera.up)
         decalBatch.add(sprite)
         decalBatch.flush()
     }
