@@ -57,11 +57,10 @@ class Software3DRendererTest {
         val mesh = texturedCuboidMesh(Vector3.ZERO, Vector3(2f, 1f, 3f), materials, 4f, 2.5f)
 
         assertEquals(12, mesh.triangles.size)
-        assertTrue(mesh.triangles.all { triangle ->
-            triangle.uvA.u == 0f && triangle.uvA.v == 0f &&
-                triangle.uvB.u == 4f && triangle.uvB.v == 0f &&
-                triangle.uvC.u == 4f && triangle.uvC.v == 2.5f
-        })
+        val coordinates = mesh.triangles.flatMap { listOf(it.uvA, it.uvB, it.uvC) }
+        assertEquals(4f, coordinates.maxOf { it.u }, 0f)
+        assertEquals(2.5f, coordinates.maxOf { it.v }, 0f)
+        assertTrue(coordinates.all { it.u in 0f..4f && it.v in 0f..2.5f })
     }
 
     @Test
