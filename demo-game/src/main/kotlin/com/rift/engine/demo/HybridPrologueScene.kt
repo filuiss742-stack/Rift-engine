@@ -329,6 +329,18 @@ class HybridPrologueScene : Scene() {
             interactables+=Prop(id,position,radius,mesh)
         }
         prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f,brickTexture)
+        // Shopfronts are built as separate 3D glass, frame and door pieces rather than painted rectangles.
+        val glass = 0xFF527184.toInt()
+        val frame = 0xFF343B45.toInt()
+        built += cuboidMesh(Vector3(-11.15f,1.75f,-5.43f),Vector3(1.35f,1.35f,.06f),glass,frame,frame)
+        built += cuboidMesh(Vector3(-8.85f,1.75f,-5.43f),Vector3(1.35f,1.35f,.06f),glass,frame,frame)
+        built += cuboidMesh(Vector3(-10f,1.05f,-5.38f),Vector3(.82f,2.1f,.10f),0xFF49382F.toInt(),frame,frame)
+        built += cuboidMesh(Vector3(4.8f,1.45f,-4.94f),Vector3(1.05f,1.35f,.05f),glass,frame,frame)
+        built += cuboidMesh(Vector3(6.2f,1.45f,-4.94f),Vector3(1.05f,1.35f,.05f),glass,frame,frame)
+        built += cuboidMesh(Vector3(5.5f,.95f,-4.88f),Vector3(.68f,1.9f,.08f),0xFF49382F.toInt(),frame,frame)
+        // A contrasting sill and lintel give the facade readable depth in the 3D camera.
+        built += cuboidMesh(Vector3(-10f,2.72f,-5.38f),Vector3(4.65f,.16f,.22f),0xFFB9A58C.toInt())
+        built += cuboidMesh(Vector3(5.5f,2.22f,-4.88f),Vector3(3.0f,.14f,.18f),0xFFB9A58C.toInt())
 
         // A bench is assembled from a timber seat/back and four separate metal supports.
         val benchParts=mutableListOf<Mesh3D>()
