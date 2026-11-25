@@ -59,6 +59,36 @@ class DirectionalAtlasTests(unittest.TestCase):
         with self.assertRaisesRegex(AssetError,"Frame count differs"):
             build(self.root,self.root/"atlas")
 
+    def test_manifest_uses_configured_pivot_and_action_fps(self):
+        self.make_frames()
+        _, manifest_path = build(self.root, self.root/"atlas", pivot_x=40, pivot_y=110,
+                                 fps_overrides={"walk": 9, "dodge": 18})
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual({"x": 40, "y": 110}, data["pivot"])
+        self.assertEqual(9, data["animations"]["walk"]["front"]["fps"])
+        self.assertEqual(18, data["animations"]["dodge"]["back"]["fps"])
+
+    def test_rejects_pivot_outside_canvas(self):
+        self.make_frames()
+        with self.assertRaisesRegex(AssetError, "pivot must be inside"):
+            build(self.root, self.root/"atlas", pivot_x=96, pivot_y=20)
+
+    def test_rejects_atlas_over_pixel_budget(self):
+        self.make_frames()
+        with self.assertRaisesRegex(AssetError, "safety limit"):
+            build(self.root, self.root/"atlas", max_atlas_pixels=100)
+
+    def test_rejects_invalid_fps_override(self):
+        self.make_frames()
+        with self.assertRaisesRegex(AssetError, "FPS override"):
+            build(self.root, self.root/"atlas", fps_overrides={"walk": 0})
+
+    def test_rejects_non_png_files_in_action_folder(self):
+        self.make_frames()
+        (self.root/"source"/"front"/"idle"/"notes.txt").write_text("not an image")
+        with self.assertRaisesRegex(AssetError, "Unexpected files"):
+            build(self.root, self.root/"atlas")
+
     def test_rejects_mixed_character_identity(self):
         self.make_frames()
         path=self.root/"source"/"front"/"idle"/"not_lisa_front_idle_000.png"

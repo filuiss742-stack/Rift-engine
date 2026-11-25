@@ -22,6 +22,8 @@ except ImportError as exc:
 
 DIRECTIONS = ("front", "front_left", "left", "back_left", "back", "back_right", "right", "front_right")
 ACTIONS = ("idle", "walk", "run", "attack", "dodge", "hit", "interact")
+DEFAULT_FPS = {"idle": 4, "walk": 8, "run": 10, "attack": 12, "dodge": 14, "hit": 10, "interact": 6}
+DEFAULT_MAX_ATLAS_PIXELS = 64_000_000
 NAME = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<direction>front_left|back_left|back_right|front_right|front|back|left|right)_(?P<action>[a-z0-9]+)_(?P<frame>\d{3})\.png$", re.I)
 
 
@@ -44,6 +46,10 @@ def collect(character_dir: Path, require_actions: tuple[str, ...]) -> tuple[list
             action = action_dir.name.lower()
             if action not in ACTIONS:
                 raise AssetError(f"Unknown action folder: {action_dir.name}")
+            unexpected = [p.name for p in action_dir.iterdir() if p.is_file() and p.suffix.lower() != ".png"]
+            nested = [p.name for p in action_dir.iterdir() if p.is_dir()]
+            if unexpected or nested:
+                raise AssetError(f"Unexpected files or nested folders in {action_dir}: files={unexpected}, folders={nested}")
             for path in sorted(action_dir.glob("*.png")):
                 match = NAME.match(path.name)
                 if not match:
@@ -98,18 +104,36 @@ def collect(character_dir: Path, require_actions: tuple[str, ...]) -> tuple[list
 
 
 def build(character_dir: Path, output_dir: Path, columns: int = 8, gutter: int = 4,
-          require_actions: tuple[str, ...] = ("idle", "walk", "attack", "dodge")) -> tuple[Path, Path]:
+          require_actions: tuple[str, ...] = ("idle", "walk", "attack", "dodge"),
+          pivot_x: int | None = None, pivot_y: int | None = None,
+          fps_overrides: dict[str, int] | None = None,
+          max_atlas_pixels: int = DEFAULT_MAX_ATLAS_PIXELS) -> tuple[Path, Path]:
     if columns < 1 or gutter < 0:
         raise AssetError("columns must be positive and gutter non-negative")
+    if max_atlas_pixels < 1:
+        raise AssetError("max_atlas_pixels must be positive")
     frames, (cw, ch) = collect(character_dir, require_actions)
+    px = cw // 2 if pivot_x is None else pivot_x
+    py = ch - 8 if pivot_y is None else pivot_y
+    if not (0 <= px < cw and 0 <= py < ch):
+        raise AssetError(f"pivot must be inside the source canvas: ({px}, {py}) not in {cw}x{ch}")
+    fps = dict(DEFAULT_FPS)
+    for action, value in (fps_overrides or {}).items():
+        if action not in ACTIONS or not isinstance(value, int) or value < 1 or value > 60:
+            raise AssetError(f"FPS override must use a known action and an integer from 1 to 60: {action}={value}")
+        fps[action] = value
     columns = min(columns, len(frames))
     rows = (len(frames) + columns - 1) // columns
-    atlas = Image.new("RGBA", (columns*cw+(columns+1)*gutter, rows*ch+(rows+1)*gutter), (0,0,0,0))
+    atlas_width = columns*cw+(columns+1)*gutter
+    atlas_height = rows*ch+(rows+1)*gutter
+    if atlas_width * atlas_height > max_atlas_pixels:
+        raise AssetError(f"Atlas would contain {atlas_width * atlas_height:,} pixels; configured safety limit is {max_atlas_pixels:,}")
+    atlas = Image.new("RGBA", (atlas_width, atlas_height), (0,0,0,0))
     manifest: dict[str, Any] = {
         "schemaVersion": 2, "character": character_dir.name,
         "atlas": f"{character_dir.name}_directional_atlas.png",
         "canvas": {"width": cw, "height": ch},
-        "pivot": {"x": cw//2, "y": ch-8},
+        "pivot": {"x": px, "y": py},
         "directions": list(DIRECTIONS), "animations": {}
     }
     for slot, frame in enumerate(frames):
@@ -118,7 +142,7 @@ def build(character_dir: Path, output_dir: Path, columns: int = 8, gutter: int =
         atlas.alpha_composite(frame["image"], (x,y))
         clip = manifest["animations"].setdefault(frame["action"], {}).setdefault(frame["direction"], {
             "loop": frame["action"] in ("idle","walk","run"),
-            "fps": {"idle":4,"walk":8,"run":10}.get(frame["action"],8),
+            "fps": fps[frame["action"]],
             "frames": []
         })
         clip["frames"].append({"index":frame["index"],"rect":[x,y,cw,ch],
@@ -138,13 +162,25 @@ def main() -> int:
     parser.add_argument("--columns", type=int, default=8)
     parser.add_argument("--gutter", type=int, default=4)
     parser.add_argument("--require-actions", default="idle,walk,attack,dodge")
+    parser.add_argument("--pivot-x", type=int, help="shared horizontal anchor in source-canvas pixels")
+    parser.add_argument("--pivot-y", type=int, help="shared vertical anchor in source-canvas pixels")
+    parser.add_argument("--max-atlas-pixels", type=int, default=DEFAULT_MAX_ATLAS_PIXELS)
+    parser.add_argument("--fps", action="append", default=[], metavar="ACTION=FPS")
     args = parser.parse_args()
     required = tuple(x.strip() for x in args.require_actions.split(",") if x.strip())
     if any(x not in ACTIONS for x in required):
         parser.error(f"Unknown action; choose from {', '.join(ACTIONS)}")
+    fps_overrides: dict[str, int] = {}
+    for item in args.fps:
+        try:
+            action, raw_value = item.split("=", 1)
+            fps_overrides[action] = int(raw_value)
+        except ValueError:
+            parser.error(f"Invalid --fps value {item!r}; expected ACTION=FPS")
     try:
         atlas, manifest = build(args.character_dir, args.output or args.character_dir/"atlas",
-                                args.columns, args.gutter, required)
+                                args.columns, args.gutter, required, args.pivot_x, args.pivot_y,
+                                fps_overrides, args.max_atlas_pixels)
     except AssetError as exc:
         print(f"DIRECTIONAL ASSET VALIDATION FAILED: {exc}", file=sys.stderr)
         return 2
