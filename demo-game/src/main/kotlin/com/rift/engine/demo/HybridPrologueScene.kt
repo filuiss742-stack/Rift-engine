@@ -8,8 +8,6 @@ import com.rift.engine.graphics3d.SpriteDirection8
 import com.rift.engine.graphics3d.Software3DRenderer
 import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
-import com.rift.engine.graphics3d.MeshTriangle
-import com.rift.engine.graphics3d.TextureUv
 import com.rift.engine.graphics3d.spriteAtlasFrameUv
 import com.rift.engine.graphics3d.cuboidMesh
 import com.rift.engine.graphics3d.CuboidMaterialSet
@@ -89,6 +87,7 @@ class HybridPrologueScene : Scene() {
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
     private var heroSpriteAnimation: DirectionalSpriteAnimation? = null
     private var enemySpriteTexture: com.rift.engine.graphics.TextureResource? = null
+    private var enemySpriteAnimation: DirectionalSpriteAnimation? = null
     private var enemyAnimationTime = 0f
     private var heroFacing = Vector3(0f,0f,1f)
     private var heroAnimationTime = 0f
@@ -154,6 +153,16 @@ class HybridPrologueScene : Scene() {
             "prologue.enemy.trial-atlas",
             "sprites/rift_trial_sheet.png"
         )
+        enemySpriteAnimation = enemySpriteTexture?.let { atlas ->
+            val frames = List(4) { atlas }
+            DirectionalSpriteAnimation(
+                framesByDirection = mapOf(SpriteDirection8.FRONT to frames),
+                frameDurationSeconds = .22f,
+                uvRectsByDirection = mapOf(
+                    SpriteDirection8.FRONT to (4..7).map { spriteAtlasFrameUv(it,4,2) }
+                )
+            )
+        }
         fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
@@ -657,29 +666,16 @@ class HybridPrologueScene : Scene() {
     }
 
     private fun buildEnemySpriteMesh(camera: Camera3D): Mesh3D? {
-        val texture = enemySpriteTexture ?: return null
-        if (texture.isDisposed) return null
-        val position = Vector3(2.4f,0f,-1.5f)
-        val toCamera = Vector3(camera.position.x-position.x,0f,camera.position.z-position.z)
-        val horizontal = if (toCamera.lengthSquared() > 1e-8f) toCamera.normalized() else Vector3(0f,0f,1f)
-        val right = Vector3.UP.cross(horizontal).normalized()
-        val halfWidth = .58f
-        val height = 1.62f
-        val leftBottom = position - right * halfWidth
-        val rightBottom = position + right * halfWidth
-        val leftTop = leftBottom + Vector3(0f,height,0f)
-        val rightTop = rightBottom + Vector3(0f,height,0f)
-        // Atlas: four 64x64 monster frames occupy the complete lower row.
-        val frame = (enemyAnimationTime / .22f).toInt().mod(4)
-        val uv = spriteAtlasFrameUv(frameIndex = 4 + frame, columns = 4, rows = 2)
-        val tl = uv.topLeft
-        val tr = uv.topRight
-        val br = uv.bottomRight
-        val bl = uv.bottomLeft
-        return Mesh3D(listOf(
-            MeshTriangle(leftTop,leftBottom,rightBottom,0xFFFFFFFF.toInt(),texture,tl,bl,br),
-            MeshTriangle(leftTop,rightBottom,rightTop,0xFFFFFFFF.toInt(),texture,tl,br,tr)
-        ))
+        val animation = enemySpriteAnimation ?: return null
+        return DirectionalSpriteRenderer.buildMesh(
+            position = Vector3(2.4f,0f,-1.5f),
+            facingDirection = Vector3(0f,0f,1f),
+            camera = camera,
+            animation = animation,
+            elapsedSeconds = enemyAnimationTime,
+            worldWidth = 1.16f,
+            worldHeight = 1.62f
+        ).mesh
     }
 
     private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
