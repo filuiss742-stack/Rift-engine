@@ -151,7 +151,7 @@ def build(character_dir: Path, output_dir: Path, columns: int = 8, gutter: int =
     atlas_path = output_dir / f"{character_dir.name}_directional_atlas.png"
     manifest_path = output_dir / f"{character_dir.name}_directional_atlas.json"
     atlas.save(atlas_path, "PNG", optimize=True)
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+"\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + chr(10), encoding="utf-8")
     return atlas_path, manifest_path
 
 
