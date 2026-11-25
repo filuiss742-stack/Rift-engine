@@ -10,6 +10,7 @@ import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
 import com.rift.engine.graphics3d.MeshTriangle
 import com.rift.engine.graphics3d.TextureUv
+import com.rift.engine.graphics3d.spriteAtlasFrameUv
 import com.rift.engine.graphics3d.cuboidMesh
 import com.rift.engine.graphics3d.CuboidMaterialSet
 import com.rift.engine.graphics3d.texturedCuboidMesh
@@ -670,14 +671,11 @@ class HybridPrologueScene : Scene() {
         val rightTop = rightBottom + Vector3(0f,height,0f)
         // Atlas: four 64x64 monster frames occupy the complete lower row.
         val frame = (enemyAnimationTime / .22f).toInt().mod(4)
-        val u0 = frame * .25f
-        val u1 = u0 + .25f
-        val v0 = .5f
-        val v1 = 1f
-        val tl = TextureUv(u0,v0)
-        val tr = TextureUv(u1,v0)
-        val br = TextureUv(u1,v1)
-        val bl = TextureUv(u0,v1)
+        val uv = spriteAtlasFrameUv(frameIndex = 4 + frame, columns = 4, rows = 2)
+        val tl = uv.topLeft
+        val tr = uv.topRight
+        val br = uv.bottomRight
+        val bl = uv.bottomLeft
         return Mesh3D(listOf(
             MeshTriangle(leftTop,leftBottom,rightBottom,0xFFFFFFFF.toInt(),texture,tl,bl,br),
             MeshTriangle(leftTop,rightBottom,rightTop,0xFFFFFFFF.toInt(),texture,tl,br,tr)
