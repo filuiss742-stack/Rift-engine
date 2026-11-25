@@ -46,6 +46,7 @@ class DirectionalSpriteActionController(
         }
         if (!restart && resolved.action == selection.action && !isFinished) {
             requestedAction = action
+            selection = resolved
             return false
         }
         requestedAction = action
