@@ -1024,10 +1024,9 @@ class HybridPrologueScene : Scene() {
                 if (enemyTelegraph<=0f) {
                     val caught=distance(heroPosition,enemyWindupTarget)<=1.25f
                     if (caught && dodgeTimer<=0f && heroInvulnerability<=0f) {
-                        heroHealth=(heroHealth-1).coerceAtLeast(0)
                         heroInvulnerability=.9f
                         damageFlash=.18f
-                        if (heroHealth<=0) {
+                        if (PrologueCombatRules.wouldTriggerDefeat(heroHealth)) {
                             startDialogue(listOf(
                                 "Лиза" to "Ноги подкосились. Я не могу здесь умереть... Что бы это ни было, нужно подняться.",
                                 "Лиза" to "В следующий раз не стану ждать, пока оно замахнётся."
@@ -1040,6 +1039,7 @@ class HybridPrologueScene : Scene() {
                                 glitchTriggered=false; glitchTimer=0f
                             }
                         } else {
+                            heroHealth = PrologueCombatRules.applyDamage(heroHealth)
                             showToast("Получен удар. Уклоняйся во время красного предупреждения.")
                         }
                     }

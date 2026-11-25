@@ -20,4 +20,20 @@ internal object PrologueCombatRules {
             horizontalTarget.lengthSquared() <= 1e-6f) return false
         return horizontalFacing.normalized().dot(horizontalTarget.normalized()) >= minimumForwardDot
     }
+    
+    /**
+     * The heroine's canon health floor is one: an otherwise lethal hit starts
+     * the defeat/recovery beat instead of allowing HP to reach zero.
+     */
+    fun wouldTriggerDefeat(currentHealth: Int, incomingDamage: Int = 1): Boolean {
+        require(currentHealth >= 1) { "Current health must be at least one." }
+        require(incomingDamage >= 0) { "Incoming damage cannot be negative." }
+        return incomingDamage >= currentHealth
+    }
+
+    fun applyDamage(currentHealth: Int, incomingDamage: Int = 1): Int {
+        require(currentHealth >= 1) { "Current health must be at least one." }
+        require(incomingDamage >= 0) { "Incoming damage cannot be negative." }
+        return (currentHealth - incomingDamage).coerceAtLeast(1)
+    }
 }
