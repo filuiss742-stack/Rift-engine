@@ -385,7 +385,6 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "Хотя какое мне дело до их экспериментов?.."
                     )) {
                         phase=Phase.FANTASY_WAKE; fade=1f
-                        playWorldMusic("world.mira", "procedural:mira")
                         heroPosition=Vector3(0f,0f,1.8f)
                         fantasyStart=heroPosition
                         combatStarted=false; enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
