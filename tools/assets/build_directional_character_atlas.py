@@ -24,7 +24,7 @@ DIRECTIONS = ("front", "front_left", "left", "back_left", "back", "back_right", 
 ACTIONS = ("idle", "walk", "run", "attack", "dodge", "hit", "interact")
 DEFAULT_FPS = {"idle": 4, "walk": 8, "run": 10, "attack": 12, "dodge": 14, "hit": 10, "interact": 6}
 DEFAULT_MAX_ATLAS_PIXELS = 64_000_000
-NAME = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<direction>front_left|back_left|back_right|front_right|front|back|left|right)_(?P<action>[a-z0-9]+)_(?P<frame>\d{3})\.png$", re.I)
+NAME = re.compile(r"^(?P<char>[a-z0-9_]+?)_(?P<direction>front_left|back_left|back_right|front_right|front|back|left|right)_(?P<action>[a-z0-9]+)_(?P<frame>\d{3})\.png$", re.I)
 
 
 class AssetError(Exception):
