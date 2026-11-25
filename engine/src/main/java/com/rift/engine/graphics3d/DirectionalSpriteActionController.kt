@@ -37,6 +37,13 @@ class DirectionalSpriteActionController(
         if (!restart && action == requestedAction && !isFinished) return false
         if (!restart && !isFinished && !currentAnimation.loop && actionPriority < priority) return false
         val resolved = library.resolve(action)
+        if (resolved.usedFallback) {
+            requestedAction = action
+            selection = resolved
+            priority = actionPriority
+            elapsed = 0f
+            return true
+        }
         if (!restart && resolved.action == selection.action && !isFinished) {
             requestedAction = action
             return false
