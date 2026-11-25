@@ -20,6 +20,12 @@ import java.util.concurrent.locks.LockSupport
 class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val saveCounts = mutableListOf<Int>()
+    // Reuse scratch objects and texture shaders across the many triangles in a 3D frame.
+    private val textureShaders = java.util.IdentityHashMap<AndroidTexture, BitmapShader>()
+    private val textureMatrix = Matrix()
+    private val textureClip = Path()
+    private val textureSourcePoints = FloatArray(6)
+    private val textureDestinationPoints = FloatArray(6)
 
     override val width: Int
         get() = canvas.width
@@ -61,40 +67,51 @@ class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
             ?: throw IllegalArgumentException("Texture was not created by the Android texture loader.")
         check(!source.isDisposed) { "Cannot draw a disposed texture." }
         require(alpha.isFinite() && alpha in 0f..1f)
-        val values = floatArrayOf(x1,y1,u1,v1,x2,y2,u2,v2,x3,y3,u3,v3)
-        require(values.all(Float::isFinite)) { "Triangle coordinates and UVs must be finite." }
+        require(
+            x1.isFinite() && y1.isFinite() && u1.isFinite() && v1.isFinite() &&
+                x2.isFinite() && y2.isFinite() && u2.isFinite() && v2.isFinite() &&
+                x3.isFinite() && y3.isFinite() && u3.isFinite() && v3.isFinite()
+        ) { "Triangle coordinates and UVs must be finite." }
 
-        val sourcePoints = floatArrayOf(
-            u1 * texture.width, v1 * texture.height,
-            u2 * texture.width, v2 * texture.height,
-            u3 * texture.width, v3 * texture.height
-        )
-        val destinationPoints = floatArrayOf(x1,y1,x2,y2,x3,y3)
-        val transform = Matrix()
-        require(transform.setPolyToPoly(sourcePoints, 0, destinationPoints, 0, 3)) {
-            "Texture mapping triangle is degenerate."
-        }
+        textureSourcePoints[0] = u1 * texture.width
+        textureSourcePoints[1] = v1 * texture.height
+        textureSourcePoints[2] = u2 * texture.width
+        textureSourcePoints[3] = v2 * texture.height
+        textureSourcePoints[4] = u3 * texture.width
+        textureSourcePoints[5] = v3 * texture.height
+        textureDestinationPoints[0] = x1
+        textureDestinationPoints[1] = y1
+        textureDestinationPoints[2] = x2
+        textureDestinationPoints[3] = y2
+        textureDestinationPoints[4] = x3
+        textureDestinationPoints[5] = y3
+        textureMatrix.reset()
+        require(textureMatrix.setPolyToPoly(
+            textureSourcePoints, 0, textureDestinationPoints, 0, 3
+        )) { "Texture mapping triangle is degenerate." }
 
-        val clip = Path().apply {
-            moveTo(x1, y1)
-            lineTo(x2, y2)
-            lineTo(x3, y3)
-            close()
-        }
+        textureClip.reset()
+        textureClip.moveTo(x1, y1)
+        textureClip.lineTo(x2, y2)
+        textureClip.lineTo(x3, y3)
+        textureClip.close()
+
+        val shader = textureShaders[source] ?: BitmapShader(
+            source.bitmap,
+            Shader.TileMode.REPEAT,
+            Shader.TileMode.REPEAT
+        ).also { textureShaders[source] = it }
+
         val previousAlpha = paint.alpha
         val previousFilter = paint.isFilterBitmap
         val previousShader = paint.shader
         val saveCount = canvas.save()
         try {
-            canvas.clipPath(clip)
-            canvas.concat(transform)
+            canvas.clipPath(textureClip)
+            canvas.concat(textureMatrix)
             paint.alpha = (alpha * 255f).toInt()
             paint.isFilterBitmap = true
-            paint.shader = BitmapShader(
-                source.bitmap,
-                Shader.TileMode.REPEAT,
-                Shader.TileMode.REPEAT
-            )
+            paint.shader = shader
             canvas.drawPaint(paint)
         } finally {
             paint.alpha = previousAlpha
