@@ -310,17 +310,21 @@ class HybridPrologueScene : Scene() {
             solid(Vector3(-4.35f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
             solid(Vector3(-3.05f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
             wood(Vector3(-3.7f,.91f,-3.94f),Vector3(2.94f,.95f,.14f)),
-            ...[-4.95f,-2.45f].flatMap(x => [-3.82f,-1.98f].map(z =>
-                solid(Vector3(x,.12f,z),Vector3(.13f,.24f,.13f),0xFF49382F.toInt())
-            ))
+            *listOf(-4.95f,-2.45f).flatMap { x ->
+                listOf(-3.82f,-1.98f).map { z ->
+                    solid(Vector3(x,.12f,z),Vector3(.13f,.24f,.13f),0xFF49382F.toInt())
+                }
+            }.toTypedArray()
         )
 
         // Desk: thick timber top, four legs, drawer unit and a monitor.
         assembly("desk", Vector3(3.5f,0f,-3.7f), 1.8f,
             wood(Vector3(3.5f,.91f,-3.7f),Vector3(2.42f,.14f,1.18f)),
-            ...[2.42f,4.58f].flatMap(x => [-4.16f,-3.24f].map(z =>
-                wood(Vector3(x,.45f,z),Vector3(.12f,.84f,.12f))
-            )),
+            *listOf(2.42f,4.58f).flatMap { x ->
+                listOf(-4.16f,-3.24f).map { z ->
+                    wood(Vector3(x,.45f,z),Vector3(.12f,.84f,.12f))
+                }
+            }.toTypedArray(),
             wood(Vector3(2.78f,.66f,-3.7f),Vector3(.58f,.38f,.94f)),
             solid(Vector3(2.78f,.66f,-3.205f),Vector3(.48f,.08f,.025f),0xFF4A3428.toInt()),
             solid(Vector3(3.75f,1.38f,-4.04f),Vector3(1.05f,.72f,.09f),0xFF242833.toInt()),
