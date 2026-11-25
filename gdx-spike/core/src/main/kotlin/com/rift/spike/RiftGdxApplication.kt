@@ -52,7 +52,7 @@ class RiftGdxApplication : ApplicationAdapter() {
         }
 
         val builder = ModelBuilder()
-        val attributes = VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal
+        val attributes = (VertexAttributes.Usage.Position or VertexAttributes.Usage.Normal).toLong()
         floorModel = builder.createBox(
             16f, 0.2f, 16f,
             Material(ColorAttribute.createDiffuse(Color(0.28f, 0.30f, 0.32f, 1f))),
