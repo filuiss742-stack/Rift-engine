@@ -2,11 +2,19 @@ package com.rift.engine.demo
 
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.graphics3d.Camera3D
+import com.rift.engine.graphics3d.DirectionalSpriteAnimation
+import com.rift.engine.graphics3d.DirectionalSpriteActionController
+import com.rift.engine.graphics3d.DirectionalSpriteLibrary
+import com.rift.engine.graphics3d.DirectionalSpriteRenderer
+import com.rift.engine.graphics3d.SpriteDirection8
 import com.rift.engine.graphics3d.Software3DRenderer
 import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
+import com.rift.engine.graphics3d.spriteAtlasFrameUv
 import com.rift.engine.graphics3d.cuboidMesh
-import com.rift.engine.graphics3d.groundPlaneMesh
+import com.rift.engine.graphics3d.CuboidMaterialSet
+import com.rift.engine.graphics3d.texturedCuboidMesh
+import com.rift.engine.graphics3d.texturedGroundPlaneMesh
 import com.rift.engine.input.EngineKey
 import com.rift.engine.input.PointerEvent
 import com.rift.engine.input.PointerEventType
@@ -29,10 +37,21 @@ class HybridPrologueScene : Scene() {
         val position: Vector3,
         val radius: Float,
         val mesh: Mesh3D,
+        val collisionRadius: Float = .82f,
         val task: Boolean = true
     )
 
     private val renderer = Software3DRenderer()
+    private val fantasyObstacles = listOf(
+        HorizontalObstacle(-4f, -4f, .18f, 4f),
+        HorizontalObstacle(4f, -4f, .18f, 4f),
+        HorizontalObstacle(-2.2f, -3.2f, .18f, .18f),
+        HorizontalObstacle(2.8f, -4.8f, .2f, .2f),
+        HorizontalObstacle(-3.1f, 1.8f, .78f, .34f),
+        HorizontalObstacle(3.3f, 2.1f, .58f, .42f),
+        HorizontalObstacle(-1.6f, .3f, .11f, .56f),
+        HorizontalObstacle(0f, 0f, 1.42f, 1.12f)
+    )
     private var phase = Phase.INTRO
     private var introTime = 0f
     private var fade = 0f
@@ -50,14 +69,23 @@ class HybridPrologueScene : Scene() {
     private var combatStarted = false
     private var enemyAttackTimer = 2.2f
     private var enemyTelegraph = 0f
+    private var enemyWindupTarget = Vector3.ZERO
+    private var heroHealth = 3
+    private var heroInvulnerability = 0f
+    private var damageFlash = 0f
     private var dodgeTimer = 0f
+    private var dodgeCooldown = 0f
     private var attackCooldown = 0f
+    private var attackEffectTimer = 0f
+    private var attackEffectPosition = Vector3.ZERO
+    private var enemyHitFlash = 0f
     private var glitchTimer = 0f
     private var glitchTriggered = false
     private val apartmentTasks = linkedSetOf<String>()
     private val streetTasks = linkedSetOf<String>()
     private var props = emptyList<Prop>()
     private var meshes = emptyList<Mesh3D>()
+    private var fantasyBaseMeshes: List<Mesh3D> = emptyList()
     private var heroPosition = Vector3(-2.2f, 0f, 1.4f)
     private val heroSpeed = 3.1f
     private val worldCamera = Camera3D(
@@ -69,6 +97,19 @@ class HybridPrologueScene : Scene() {
         far = 120f
     )
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
+    private var heroSpriteAnimation: DirectionalSpriteAnimation? = null
+    private var heroActionController: DirectionalSpriteActionController? = null
+    private var enemySpriteTexture: com.rift.engine.graphics.TextureResource? = null
+    private var enemySpriteAnimation: DirectionalSpriteAnimation? = null
+    private var enemyAnimationTime = 0f
+    private var heroFacing = Vector3(0f,0f,1f)
+    private var heroAnimationTime = 0f
+    private var woodFloorTexture: com.rift.engine.graphics.TextureResource? = null
+    private var asphaltTexture: com.rift.engine.graphics.TextureResource? = null
+    private var brickTexture: com.rift.engine.graphics.TextureResource? = null
+    private var concreteTexture: com.rift.engine.graphics.TextureResource? = null
+    private var stoneTexture: com.rift.engine.graphics.TextureResource? = null
+    private var mossyRockTexture: com.rift.engine.graphics.TextureResource? = null
     private val joystick = VirtualJoystick(24f, 454f, 112f)
     private val useButton = VirtualButton(
         832f, 468f, 104f, 78f, "USE",
@@ -78,6 +119,7 @@ class HybridPrologueScene : Scene() {
     )
     private val objective = UiLabel(18f, 16f, 760f, 28f, "", 0xFFF1EAF6.toInt(), 17f, true)
     private val hint = UiLabel(18f, 46f, 820f, 24f, "", 0xFFD7C9E1.toInt(), 13f)
+    private val combatStatus = UiLabel(18f, 76f, 340f, 26f, "", 0xFFFFD2D9.toInt(), 14f, true)
     private val toast = UiLabel(210f, 510f, 540f, 34f, "", 0xFFFFFFFF.toInt(), 17f, true)
     private val dialogueName = UiLabel(48f, 420f, 240f, 28f, "", 0xFFFFC5D0.toInt(), 16f, true)
     private val dialogueText = UiLabel(48f, 452f, 860f, 86f, "", 0xFFF5F0F8.toInt(), 18f)
@@ -94,36 +136,87 @@ class HybridPrologueScene : Scene() {
         input.bindKey("skip", EngineKey.ESCAPE)
         input.bindKey("attack", EngineKey.SPACE)
         input.bindKey("dodge", EngineKey.SHIFT)
-        ui.add(objective); ui.add(hint); ui.add(toast); ui.add(joystick); ui.add(useButton)
+        ui.add(objective); ui.add(hint); ui.add(combatStatus); ui.add(toast); ui.add(joystick); ui.add(useButton)
         ui.add(dialogueName); ui.add(dialogueText); ui.add(attackButton); ui.add(dodgeButton); ui.add(endLabel)
-        objective.visible = false; hint.visible = false; toast.visible = false
+        objective.visible = false; hint.visible = false; combatStatus.visible = false; toast.visible = false
         dialogueName.visible = false; dialogueText.visible = false
         joystick.visible = false; useButton.visible = false; attackButton.visible = false; dodgeButton.visible = false
         endLabel.visible = false
     }
 
     override fun onEnter() {
+        woodFloorTexture = assets?.loadTexture("prologue.material.wood-floor", "prologue/materials/wood_floor.png")
+        asphaltTexture = assets?.loadTexture("prologue.material.asphalt", "prologue/materials/asphalt_02.png")
+        brickTexture = assets?.loadTexture("prologue.material.brick", "prologue/materials/brick_wall_001.png")
+        concreteTexture = assets?.loadTexture("prologue.material.concrete", "prologue/materials/concrete_wall_008.png")
+        stoneTexture = assets?.loadTexture("prologue.material.stone-wall", "prologue/materials/stone_wall.png")
+        mossyRockTexture = assets?.loadTexture("prologue.material.mossy-rock", "prologue/materials/mossy_rock.png")
         heroTexture = assets?.loadTexture(
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
         )
+        // Load only independently authored views. Missing directions are not
+        // mirrored or silently registered as copies of the legacy front sprite.
+        val authoredHeroFrames = mutableMapOf<SpriteDirection8, List<com.rift.engine.graphics.TextureResource>>()
+        SpriteDirection8.values().forEach { direction ->
+            val key = direction.name.lowercase()
+            val texture = assets?.loadTexture(
+                "prologue.heroine.idle.$key",
+                "prologue/characters/heroine/source/$key/idle/heroine_${key}_idle_000.png"
+            )
+            if (texture != null) authoredHeroFrames[direction] = listOf(texture)
+        }
+        // The old single image remains a clearly limited front-view fallback
+        // until the independently authored production sprite set is supplied.
+        if (SpriteDirection8.FRONT !in authoredHeroFrames && heroTexture != null) {
+            authoredHeroFrames[SpriteDirection8.FRONT] = listOf(heroTexture!!)
+        }
+        heroSpriteAnimation = if (authoredHeroFrames.isNotEmpty()) {
+            DirectionalSpriteAnimation(
+                framesByDirection = authoredHeroFrames,
+                fallbackDirection = SpriteDirection8.FRONT
+            )
+        } else null
+        // The runtime action controller is ready for independently authored clips.
+        // Until walk/attack/dodge frame sets exist, missing actions explicitly fall
+        // back to the real idle art rather than fabricating or mirroring frames.
+        heroActionController = heroSpriteAnimation?.let { idle ->
+            DirectionalSpriteActionController(
+                DirectionalSpriteLibrary(mapOf("idle" to idle), defaultAction = "idle")
+            )
+        }
+        // The existing trial atlas contains a separate four-frame monster row.
+        // Keep it as a 2D billboard in the 3D scene rather than a cuboid stand-in.
+        enemySpriteTexture = assets?.loadTexture(
+            "prologue.enemy.trial-atlas",
+            "sprites/rift_trial_sheet.png"
+        )
+        enemySpriteAnimation = enemySpriteTexture?.let { atlas ->
+            val frames = List(4) { atlas }
+            DirectionalSpriteAnimation(
+                framesByDirection = mapOf(SpriteDirection8.FRONT to frames),
+                frameDurationSeconds = .22f,
+                uvRectsByDirection = mapOf(
+                    SpriteDirection8.FRONT to (4..7).map { spriteAtlasFrameUv(it,4,2) }
+                )
+            )
+        }
+        fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
-        playWorldMusic("world.thea", "procedural:thea")
+        // Music is intentionally disabled until real, supported audio assets are integrated.
     }
 
     override fun onExit() {
         audio?.stopMusic()
     }
 
-    private fun playWorldMusic(id: String, path: String) {
-        val manager = audio ?: return
-        if (id !in manager.loadedMusicIds() && manager.loadMusic(id, path) == null) return
-        manager.setMusicVolume(0.42f)
-        manager.playMusic(id, looping = true)
-    }
-
     override fun update(deltaSeconds: Float) {
+        heroAnimationTime += deltaSeconds
+        heroActionController?.update(deltaSeconds)
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            enemyAnimationTime += deltaSeconds
+        }
         if (phase == Phase.INTRO) {
             introTime += deltaSeconds
             if (input.wasPressed("skip") || input.wasPressed("use") || introTime >= 5.5f) beginApartment()
@@ -141,7 +234,9 @@ class HybridPrologueScene : Scene() {
                 showUse = false
                 joystick.visible = true; useButton.visible = true
                 attackButton.visible = true; dodgeButton.visible = true
-                objective.visible = true; hint.visible = true
+                objective.visible = true; hint.visible = true; combatStatus.visible = true
+                heroHealth = 3; heroInvulnerability = 0f; damageFlash = 0f
+                combatStatus.text = "СОСТОЯНИЕ: 3 / 3"
                 updateObjective()
                 startDialogue(listOf(
                     "Лиза" to "Я помню, как легла спать. Это точно не моя комната.",
@@ -156,7 +251,10 @@ class HybridPrologueScene : Scene() {
             updateFantasyCombat(deltaSeconds)
             return
         }
-        if (phase == Phase.COMPLETE) return
+        if (phase == Phase.COMPLETE) {
+            fade = (fade - deltaSeconds * .72f).coerceAtLeast(0f)
+            return
+        }
         if (fade > 0f) fade = (fade - deltaSeconds * 1.4f).coerceAtLeast(0f)
         if (toastTimer > 0f) { toastTimer = (toastTimer - deltaSeconds).coerceAtLeast(0f); toast.visible = toastTimer > 0f }
 
@@ -167,6 +265,7 @@ class HybridPrologueScene : Scene() {
         val length = sqrt(ix * ix + iz * iz)
         val nx = if (length > 1f) ix / length else ix
         val nz = if (length > 1f) iz / length else iz
+        if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val candidate = Vector3(
             heroPosition.x + nx * heroSpeed * deltaSeconds,
             0f,
@@ -200,8 +299,11 @@ class HybridPrologueScene : Scene() {
             }
             else -> {
                 worldCamera.aspectRatio = context.width.toFloat() / context.height.coerceAtLeast(1)
-                renderer.render(context, worldCamera, meshes)
-                drawHeroBillboard(context)
+                val frameMeshes = meshes.toMutableList()
+                val heroMesh = buildHeroSpriteMesh(worldCamera)
+                if (heroMesh != null) frameMeshes += heroMesh
+                renderer.render(context, worldCamera, frameMeshes)
+                if (heroMesh == null) drawHeroBillboard(context)
                 if (dialogueOpen) context.drawRoundRect(28f, 400f, context.width - 28f, context.height - 22f, 14f, 0xEE171421.toInt())
                 super.render(context)
             }
@@ -224,7 +326,6 @@ class HybridPrologueScene : Scene() {
     private fun beginApartment() {
         if (phase != Phase.INTRO) return
         phase = Phase.APARTMENT
-        playWorldMusic("world.earth", "procedural:earth")
         fade = 0.7f
         joystick.visible = true; useButton.visible = true
         objective.visible = true; hint.visible = true
@@ -240,27 +341,126 @@ class HybridPrologueScene : Scene() {
         heroPosition = Vector3(-2.2f, 0f, 1.4f)
         val built = mutableListOf<Mesh3D>()
         val interactables = mutableListOf<Prop>()
-        built += groundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, 0xFF6B5548.toInt())
-        // Four room walls and a darker skirting line. All are actual cuboid geometry.
-        built += cuboidMesh(Vector3(0f, 1.6f, -5f), Vector3(12f, 3.2f, .22f), 0xFF514B5A.toInt(), 0xFF3C3944.toInt())
-        built += cuboidMesh(Vector3(-6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f), 0xFF5D5661.toInt(), 0xFF3F3B46.toInt())
-        built += cuboidMesh(Vector3(6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f), 0xFF5D5661.toInt(), 0xFF3F3B46.toInt())
-        // Window, bed, desk, fridge, sink and phone are independent 3D props.
-        fun prop(id: String, p: Vector3, size: Vector3, color: Int, radius: Float = 1.6f) {
-            val mesh = cuboidMesh(p, size, color, shade(color, .78f), shade(color, .62f))
-            built += mesh
-            interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh)
+        val wood = woodFloorTexture
+        built += if (wood != null) texturedGroundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, wood, 6f, 5f)
+            else cuboidMesh(Vector3(0f, -.08f, 0f), Vector3(12f, .16f, 10f), 0xFF6B5548.toInt())
+        // Photographed CC0 plaster is used on the room walls instead of flat color blocks.
+        val plaster = concreteTexture
+        fun wall(center: Vector3, size: Vector3) {
+            built += if (plaster != null) texturedCuboidMesh(center, size, CuboidMaterialSet(plaster, plaster, plaster, plaster, plaster, plaster), 2.5f, 1.5f)
+                else cuboidMesh(center, size, 0xFF514B5A.toInt(), 0xFF3C3944.toInt())
         }
-        prop("bed", Vector3(-3.7f,.34f,-2.9f), Vector3(2.8f,.68f,2.1f), 0xFF555D79.toInt(), 2.2f)
-        prop("desk", Vector3(3.5f,.58f,-3.7f), Vector3(2.3f,1.16f,1.1f), 0xFF795B45.toInt())
-        prop("fridge", Vector3(4.8f,1.0f,2.4f), Vector3(.95f,2f,.9f), 0xFFB9BEC8.toInt())
-        prop("sink", Vector3(2.4f,.48f,2.8f), Vector3(1.5f,.96f,.8f), 0xFF9CA9B2.toInt())
-        prop("phone", Vector3(-.4f,.08f,-.2f), Vector3(.28f,.16f,.5f), 0xFF272A35.toInt(), 1.4f)
-        prop("tv", Vector3(-2.4f,1.75f,-4.72f), Vector3(2.0f,1.2f,.12f), 0xFF171923.toInt(), 2.1f)
-        prop("exit", Vector3(5.8f,1.1f,-.2f), Vector3(.18f,2.2f,1.3f), 0xFF49382F.toInt(), 1.5f)
-        // Window glass and sill.
-        built += cuboidMesh(Vector3(0f,2.15f,-4.86f), Vector3(3.1f,1.55f,.04f), 0xFF263E59.toInt(), 0xFF263E59.toInt())
-        built += cuboidMesh(Vector3(0f,1.34f,-4.78f), Vector3(3.4f,.12f,.32f), 0xFFB7A99B.toInt())
+        wall(Vector3(0f, 1.6f, -5f), Vector3(12f, 3.2f, .22f))
+        wall(Vector3(-6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
+        wall(Vector3(6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
+        // Furniture is assembled from separate 3D parts. Interaction IDs stay
+        // attached to the complete assembly, not to an individual visual piece.
+        fun solid(p: Vector3, size: Vector3, color: Int) =
+            cuboidMesh(p, size, color, shade(color, .82f), shade(color, .68f))
+        fun wood(p: Vector3, size: Vector3): Mesh3D {
+            val texture = woodFloorTexture
+            return if (texture != null) texturedCuboidMesh(
+                p, size, CuboidMaterialSet(texture, texture, texture, texture, texture, texture), 2f, 1.25f
+            ) else solid(p, size, 0xFF795B45.toInt())
+        }
+        fun assembly(id: String, p: Vector3, radius: Float, vararg parts: Mesh3D) {
+            val mesh = Mesh3D(parts.flatMap { it.triangles })
+            built += mesh
+            val vertices = mesh.triangles.flatMap { listOf(it.a,it.b,it.c) }
+            val halfX = (vertices.maxOf { it.x } - vertices.minOf { it.x }) * .5f
+            val halfZ = (vertices.maxOf { it.z } - vertices.minOf { it.z }) * .5f
+            val collisionRadius = sqrt(halfX*halfX + halfZ*halfZ).coerceAtLeast(.18f)
+            interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh, collisionRadius)
+        }
+
+        // Bed: legs, frame, mattress, folded blanket, two pillows and headboard.
+        assembly("bed", Vector3(-3.7f,0f,-2.9f), 2.2f,
+            wood(Vector3(-3.7f,.25f,-2.9f),Vector3(2.92f,.30f,2.18f)),
+            solid(Vector3(-3.7f,.48f,-2.9f),Vector3(2.78f,.28f,2.04f),0xFFB7B2B0.toInt()),
+            solid(Vector3(-3.7f,.64f,-2.55f),Vector3(2.72f,.08f,1.25f),0xFF6E718D.toInt()),
+            solid(Vector3(-4.35f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
+            solid(Vector3(-3.05f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
+            wood(Vector3(-3.7f,.91f,-3.94f),Vector3(2.94f,.95f,.14f)),
+            *listOf(-4.95f,-2.45f).flatMap { x ->
+                listOf(-3.82f,-1.98f).map { z ->
+                    solid(Vector3(x,.12f,z),Vector3(.13f,.24f,.13f),0xFF49382F.toInt())
+                }
+            }.toTypedArray()
+        )
+
+        // Desk: thick timber top, four legs, drawer unit and a monitor.
+        assembly("desk", Vector3(3.5f,0f,-3.7f), 1.8f,
+            wood(Vector3(3.5f,.91f,-3.7f),Vector3(2.42f,.14f,1.18f)),
+            *listOf(2.42f,4.58f).flatMap { x ->
+                listOf(-4.16f,-3.24f).map { z ->
+                    wood(Vector3(x,.45f,z),Vector3(.12f,.84f,.12f))
+                }
+            }.toTypedArray(),
+            wood(Vector3(2.78f,.66f,-3.7f),Vector3(.58f,.38f,.94f)),
+            solid(Vector3(2.78f,.66f,-3.205f),Vector3(.48f,.08f,.025f),0xFF4A3428.toInt()),
+            solid(Vector3(3.75f,1.38f,-4.04f),Vector3(1.05f,.72f,.09f),0xFF242833.toInt()),
+            solid(Vector3(3.75f,1.39f,-3.985f),Vector3(.91f,.57f,.018f),0xFF466477.toInt()),
+            solid(Vector3(3.75f,1.01f,-4.02f),Vector3(.12f,.18f,.12f),0xFF343943.toInt())
+        )
+
+        // Fridge: insulated carcass, separate door, dark gasket, handle and lower vent.
+        assembly("fridge", Vector3(4.8f,0f,2.4f), 1.6f,
+            solid(Vector3(4.8f,1.02f,2.4f),Vector3(1.02f,2.04f,.94f),0xFFBFC6CC.toInt()),
+            solid(Vector3(4.8f,1.05f,1.91f),Vector3(.94f,1.92f,.055f),0xFFDCE1E4.toInt()),
+            solid(Vector3(5.19f,1.48f,1.86f),Vector3(.055f,.62f,.07f),0xFF737E87.toInt()),
+            solid(Vector3(5.19f,.48f,1.86f),Vector3(.055f,.42f,.07f),0xFF737E87.toInt()),
+            solid(Vector3(4.8f,.16f,1.87f),Vector3(.72f,.10f,.025f),0xFF89939A.toInt()),
+            solid(Vector3(4.8f,1.96f,1.87f),Vector3(.94f,.025f,.025f),0xFF8F989E.toInt())
+        )
+
+        // Kitchen sink: cabinet doors, countertop, recessed basin and a raised tap.
+        assembly("sink", Vector3(2.4f,0f,2.8f), 1.7f,
+            solid(Vector3(2.4f,.43f,2.8f),Vector3(1.56f,.86f,.84f),0xFF8C969B.toInt()),
+            solid(Vector3(2.4f,.48f,2.365f),Vector3(.72f,.68f,.035f),0xFFB5BEC1.toInt()),
+            solid(Vector3(3.12f,.48f,2.365f),Vector3(.68f,.68f,.035f),0xFFB5BEC1.toInt()),
+            solid(Vector3(2.4f,.91f,2.8f),Vector3(1.68f,.13f,.94f),0xFFD2D7D8.toInt()),
+            solid(Vector3(2.4f,.99f,2.78f),Vector3(.82f,.055f,.52f),0xFF687A82.toInt()),
+            solid(Vector3(2.4f,1.025f,2.78f),Vector3(.68f,.035f,.39f),0xFF303E48.toInt()),
+            solid(Vector3(2.4f,1.22f,2.47f),Vector3(.075f,.38f,.075f),0xFF8E9BA1.toInt()),
+            solid(Vector3(2.4f,1.39f,2.64f),Vector3(.075f,.075f,.34f),0xFF8E9BA1.toInt())
+        )
+
+        // Phone and TV are distinct objects with visible screens, not solid dark blocks.
+        assembly("phone", Vector3(-.4f,0f,-.2f), 1.4f,
+            solid(Vector3(-.4f,.075f,-.2f),Vector3(.32f,.055f,.56f),0xFF11151D.toInt()),
+            solid(Vector3(-.4f,.106f,-.2f),Vector3(.275f,.012f,.49f),0xFF4A6D83.toInt()),
+            solid(Vector3(-.4f,.114f,-.43f),Vector3(.045f,.008f,.018f),0xFFB6C8D0.toInt())
+        )
+        assembly("tv", Vector3(-2.4f,0f,-4.72f), 2.1f,
+            solid(Vector3(-2.4f,1.75f,-4.72f),Vector3(2.12f,1.26f,.13f),0xFF11151E.toInt()),
+            solid(Vector3(-2.4f,1.76f,-4.642f),Vector3(1.94f,1.08f,.018f),0xFF293D4B.toInt()),
+            solid(Vector3(-2.4f,1.07f,-4.70f),Vector3(.22f,.18f,.18f),0xFF252A32.toInt()),
+            solid(Vector3(-2.4f,.97f,-4.67f),Vector3(1.0f,.07f,.32f),0xFF252A32.toInt())
+        )
+
+        // Door panel and jambs. The interaction target remains the doorway centre.
+        assembly("exit", Vector3(5.8f,0f,-.2f), 1.5f,
+            wood(Vector3(5.82f,1.1f,-.2f),Vector3(.16f,2.22f,1.32f)),
+            solid(Vector3(5.69f,1.1f,-.2f),Vector3(.07f,2.3f,1.43f),0xFF382D2A.toInt()),
+            solid(Vector3(5.68f,1.1f,-.2f),Vector3(.035f,1.98f,1.12f),0xFF654B3E.toInt()),
+            solid(Vector3(5.64f,1.02f,.24f),Vector3(.045f,.12f,.045f),0xFFD2B16F.toInt())
+        )
+
+        // Window glazing, frame, mullion, sill and side curtains.
+        built += cuboidMesh(Vector3(0f,2.15f,-4.86f),Vector3(3.05f,1.48f,.035f),0xFF263E59.toInt())
+        built += cuboidMesh(Vector3(0f,2.15f,-4.82f),Vector3(3.28f,.10f,.13f),0xFFDDD5C8.toInt())
+        built += cuboidMesh(Vector3(0f,1.39f,-4.82f),Vector3(3.28f,.10f,.13f),0xFFDDD5C8.toInt())
+        for (x in listOf(-1.59f,1.59f,0f)) {
+            built += cuboidMesh(Vector3(x,2.15f,-4.82f),Vector3(.10f,1.58f,.13f),0xFFDDD5C8.toInt())
+        }
+        built += cuboidMesh(Vector3(0f,1.28f,-4.73f),Vector3(3.48f,.13f,.34f),0xFFB7A99B.toInt())
+        for (x in listOf(-1.78f,1.78f)) {
+            built += cuboidMesh(Vector3(x,2.12f,-4.78f),Vector3(.30f,1.72f,.10f),0xFF8A6574.toInt())
+        }
+        // Wall skirting boards add scale cues and cover the wall/floor seam.
+        built += cuboidMesh(Vector3(0f,.12f,-4.82f),Vector3(11.8f,.24f,.10f),0xFF8A786C.toInt())
+        built += cuboidMesh(Vector3(-5.82f,.12f,0f),Vector3(.10f,.24f,9.8f),0xFF8A786C.toInt())
+        built += cuboidMesh(Vector3(5.82f,.12f,0f),Vector3(.10f,.24f,9.8f),0xFF8A786C.toInt())
         props = interactables
         meshes = built
     }
@@ -270,23 +470,126 @@ class HybridPrologueScene : Scene() {
         heroPosition = Vector3(-8f,0f,2.5f)
         val built = mutableListOf<Mesh3D>()
         val interactables = mutableListOf<Prop>()
-        built += groundPlaneMesh(Vector3(0f,0f,0f), 30f, 24f, 0xFF565A5C.toInt())
-        built += groundPlaneMesh(Vector3(0f,.015f,2.5f), 30f, 4.2f, 0xFF343A43.toInt())
-        fun prop(id:String,p:Vector3,size:Vector3,color:Int,radius:Float=1.8f) {
-            val mesh=cuboidMesh(p,size,color,shade(color,.78f),shade(color,.62f))
-            built+=mesh; interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh)
+        val road = asphaltTexture
+        val sidewalk = concreteTexture
+        if (road != null) built += texturedGroundPlaneMesh(Vector3(0f,0f,0f), 30f, 24f, road, 18f, 14f)
+        else built += cuboidMesh(Vector3(0f,-.08f,0f), Vector3(30f,.16f,24f), 0xFF565A5C.toInt())
+        if (sidewalk != null) built += texturedGroundPlaneMesh(Vector3(0f,.018f,2.5f), 30f, 4.2f, sidewalk, 10f, 1.4f)
+        else built += cuboidMesh(Vector3(0f,-.04f,2.5f), Vector3(30f,.08f,4.2f), 0xFFB0AAA0.toInt())
+        fun prop(id:String,p:Vector3,size:Vector3,color:Int,radius:Float=1.8f,texture:com.rift.engine.graphics.TextureResource?=null) {
+            val mesh = if (texture != null) texturedCuboidMesh(p,size,CuboidMaterialSet(texture,texture,texture,texture,texture,texture), 2.5f, 1.8f)
+                else cuboidMesh(p,size,color,shade(color,.78f),shade(color,.62f))
+            built+=mesh
+            val halfX=size.x*.5f
+            val halfZ=size.z*.5f
+            val collisionRadius=sqrt(halfX*halfX+halfZ*halfZ).coerceAtLeast(.18f)
+            interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh,collisionRadius)
         }
-        prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f)
-        prop("bench",Vector3(2f,.55f,-1f),Vector3(2.5f,1.1f,.75f),0xFF795B45.toInt())
-        prop("message",Vector3(5f,.08f,1f),Vector3(.28f,.16f,.5f),0xFF252A35.toInt())
-        prop("busstop",Vector3(-2f,.9f,-4f),Vector3(1.8f,1.8f,.35f),0xFF697786.toInt())
-        prop("shop",Vector3(5.5f,1.3f,-6f),Vector3(3.2f,2.6f,2f),0xFF8B6D5C.toInt(),2.4f)
-        prop("home",Vector3(11f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF666C79.toInt(),3f)
+        fun assembly(id:String,position:Vector3,radius:Float,vararg parts:Mesh3D) {
+            val mesh=Mesh3D(parts.flatMap { it.triangles })
+            built+=mesh
+            val vertices=mesh.triangles.flatMap { listOf(it.a,it.b,it.c) }
+            val halfX=(vertices.maxOf { it.x }-vertices.minOf { it.x })*.5f
+            val halfZ=(vertices.maxOf { it.z }-vertices.minOf { it.z })*.5f
+            val collisionRadius=sqrt(halfX*halfX+halfZ*halfZ).coerceAtLeast(.18f)
+            interactables+=Prop(id,position,radius,mesh,collisionRadius)
+        }
+        prop("store",Vector3(-10f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF8B6D5C.toInt(),3f,brickTexture)
+        // Shopfronts are built as separate 3D glass, frame and door pieces rather than painted rectangles.
+        val glass = 0xFF527184.toInt()
+        val frame = 0xFF343B45.toInt()
+        built += cuboidMesh(Vector3(-11.15f,1.75f,-5.43f),Vector3(1.35f,1.35f,.06f),glass,frame,frame)
+        built += cuboidMesh(Vector3(-8.85f,1.75f,-5.43f),Vector3(1.35f,1.35f,.06f),glass,frame,frame)
+        built += cuboidMesh(Vector3(-10f,1.05f,-5.38f),Vector3(.82f,2.1f,.10f),0xFF49382F.toInt(),frame,frame)
+        built += cuboidMesh(Vector3(4.8f,1.45f,-4.94f),Vector3(1.05f,1.35f,.05f),glass,frame,frame)
+        built += cuboidMesh(Vector3(6.2f,1.45f,-4.94f),Vector3(1.05f,1.35f,.05f),glass,frame,frame)
+        built += cuboidMesh(Vector3(5.5f,.95f,-4.88f),Vector3(.68f,1.9f,.08f),0xFF49382F.toInt(),frame,frame)
+        // A contrasting sill and lintel give the facade readable depth in the 3D camera.
+        built += cuboidMesh(Vector3(-10f,2.72f,-5.38f),Vector3(4.65f,.16f,.22f),0xFFB9A58C.toInt())
+        built += cuboidMesh(Vector3(5.5f,2.22f,-4.88f),Vector3(3.0f,.14f,.18f),0xFFB9A58C.toInt())
+
+        // Street infrastructure gives the road a readable scale and breaks up
+        // the large asphalt plane with actual raised geometry.
+        for (z in listOf(.42f,4.58f)) {
+            built += cuboidMesh(Vector3(0f,.09f,z),Vector3(30f,.18f,.22f),0xFF8B8C87.toInt(),0xFF6D716F.toInt())
+        }
+        // Dashed centre markings and a pedestrian crossing are separate road paint meshes.
+        for (x in listOf(-12f,-8.5f,-5f,-1.5f,2f,5.5f,9f,12.5f)) {
+            built += cuboidMesh(Vector3(x,.028f,-2.25f),Vector3(1.8f,.018f,.12f),0xFFD7D5C8.toInt())
+        }
+        for (z in listOf(-1.45f,-.95f,-.45f,.05f)) {
+            built += cuboidMesh(Vector3(-6.2f,.03f,z),Vector3(3.3f,.02f,.22f),0xFFE2DED0.toInt())
+        }
+        // A recessed manhole with a raised rim and cross bars.
+        built += cuboidMesh(Vector3(9f,.026f,-1.1f),Vector3(1.05f,.035f,.82f),0xFF343B40.toInt())
+        built += cuboidMesh(Vector3(9f,.048f,-1.1f),Vector3(.88f,.018f,.65f),0xFF687075.toInt())
+        for (z in listOf(-1.34f,-1.22f,-1.10f,-.98f,-.86f)) {
+            built += cuboidMesh(Vector3(9f,.061f,z),Vector3(.72f,.012f,.025f),0xFF343B40.toInt())
+        }
+        // Drain grates sit against the curb, not floating on the sidewalk.
+        for (x in listOf(-9f,1f,11f)) {
+            built += cuboidMesh(Vector3(x,.13f,.58f),Vector3(1.0f,.025f,.22f),0xFF3B4146.toInt())
+            for (offset in listOf(-.32f,-.16f,0f,.16f,.32f)) {
+                built += cuboidMesh(Vector3(x+offset,.148f,.58f),Vector3(.035f,.012f,.18f),0xFF879095.toInt())
+            }
+        }
+        // Public litter bin: body, recessed opening, lid and two feet.
+        assembly("bin",Vector3(-6.2f,0f,3.55f),1.1f,
+            cuboidMesh(Vector3(-6.2f,.52f,3.55f),Vector3(.72f,1.04f,.68f),0xFF46535A.toInt()),
+            cuboidMesh(Vector3(-6.2f,1.06f,3.55f),Vector3(.82f,.12f,.76f),0xFF29343A.toInt()),
+            cuboidMesh(Vector3(-6.2f,.78f,3.195f),Vector3(.38f,.22f,.025f),0xFF171D22.toInt()),
+            cuboidMesh(Vector3(-6.2f,1.13f,3.55f),Vector3(.32f,.035f,.22f),0xFF879095.toInt()),
+            cuboidMesh(Vector3(-6.42f,.08f,3.55f),Vector3(.10f,.16f,.12f),0xFF252B30.toInt()),
+            cuboidMesh(Vector3(-5.98f,.08f,3.55f),Vector3(.10f,.16f,.12f),0xFF252B30.toInt())
+        )
+        // Utility cabinet and a small service conduit beside the shop wall.
+        assembly("utility",Vector3(8.1f,0f,-5.0f),1.2f,
+            cuboidMesh(Vector3(8.1f,.88f,-5f),Vector3(.72f,1.76f,.46f),0xFF657078.toInt()),
+            cuboidMesh(Vector3(8.1f,.90f,-4.75f),Vector3(.62f,1.62f,.035f),0xFF879197.toInt()),
+            cuboidMesh(Vector3(8.34f,1.04f,-4.71f),Vector3(.035f,.12f,.035f),0xFF20282D.toInt()),
+            cuboidMesh(Vector3(7.67f,.9f,-4.98f),Vector3(.09f,1.9f,.09f),0xFF4B555C.toInt())
+        )
+
+        // A bench is assembled from a timber seat/back and four separate metal supports.
+        val benchParts=mutableListOf<Mesh3D>()
+        val timber=woodFloorTexture
+        fun woodPart(p:Vector3,size:Vector3) = if(timber!=null)
+            texturedCuboidMesh(p,size,CuboidMaterialSet(timber,timber,timber,timber,timber,timber), 2.5f, 1.5f)
+        else cuboidMesh(p,size,0xFF795B45.toInt())
+        benchParts+=woodPart(Vector3(2f,.68f,-1f),Vector3(2.5f,.14f,.72f))
+        benchParts+=woodPart(Vector3(2f,1.02f,-1.32f),Vector3(2.5f,.68f,.12f))
+        for(x in listOf(.95f,3.05f)) for(z in listOf(-1.25f,-.78f))
+            benchParts+=cuboidMesh(Vector3(x,.36f,z),Vector3(.11f,.62f,.11f),0xFF303943.toInt())
+        assembly("bench",Vector3(2f,0f,-1f),1.8f,*benchParts.toTypedArray())
+
+        // The notice board has a post and a framed sign instead of one floating cube.
+        assembly("message",Vector3(5f,0f,1f),1.4f,
+            cuboidMesh(Vector3(5f,.75f,1f),Vector3(.10f,1.5f,.10f),0xFF343A42.toInt()),
+            cuboidMesh(Vector3(5f,1.38f,1f),Vector3(1.0f,.72f,.12f),0xFF252A35.toInt()),
+            cuboidMesh(Vector3(5f,1.38f,.925f),Vector3(.86f,.56f,.02f),0xFFD6C9AE.toInt())
+        )
+
+        // Bus stop: two supports, a roof, a glass-like dark rear panel and a small bench.
+        assembly("busstop",Vector3(-2f,0f,-4f),2.1f,
+            cuboidMesh(Vector3(-2.82f,.95f,-4f),Vector3(.10f,1.9f,.10f),0xFF65727D.toInt()),
+            cuboidMesh(Vector3(-1.18f,.95f,-4f),Vector3(.10f,1.9f,.10f),0xFF65727D.toInt()),
+            cuboidMesh(Vector3(-2f,1.95f,-4f),Vector3(2.0f,.14f,1.05f),0xFF424C59.toInt()),
+            cuboidMesh(Vector3(-2f,1.0f,-4.42f),Vector3(1.72f,1.55f,.055f),0xFF526B78.toInt()),
+            cuboidMesh(Vector3(-2f,.42f,-3.82f),Vector3(1.35f,.10f,.36f),0xFF795B45.toInt())
+        )
+
+        prop("shop",Vector3(5.5f,1.3f,-6f),Vector3(3.2f,2.6f,2f),0xFF8B6D5C.toInt(),2.4f,brickTexture)
+        prop("home",Vector3(11f,1.7f,-7f),Vector3(5f,3.4f,3f),0xFF666C79.toInt(),3f,concreteTexture)
         for (x in listOf(-13f,-4f,7f,14f)) {
-            built+=cuboidMesh(Vector3(x,1.4f,-10f),Vector3(.55f,2.8f,.55f),0xFF55483D.toInt())
-            built+=cuboidMesh(Vector3(x,3.1f,-10f),Vector3(1.5f,.18f,1.5f),0xFFFFD99A.toInt())
-            built+=cuboidMesh(Vector3(x,1.5f,8f),Vector3(.65f,3f,.65f),0xFF624D3D.toInt())
-            built+=cuboidMesh(Vector3(x,3.8f,8f),Vector3(2.2f,2.4f,2.2f),0xFF315541.toInt(),0xFF284736.toInt())
+            // Street lamp with a post, short arm and lantern housing.
+            built+=cuboidMesh(Vector3(x,1.35f,-10f),Vector3(.12f,2.7f,.12f),0xFF55483D.toInt())
+            built+=cuboidMesh(Vector3(x+.30f,2.65f,-10f),Vector3(.68f,.09f,.10f),0xFF55483D.toInt())
+            built+=cuboidMesh(Vector3(x+.60f,2.48f,-10f),Vector3(.34f,.34f,.34f),0xFFFFD99A.toInt(),0xFFB98D5C.toInt())
+            // Keep low-poly trees behind the street frontage, away from the follow-camera sightline.
+            built+=cuboidMesh(Vector3(x,1.45f,-13f),Vector3(.38f,2.9f,.38f),0xFF624D3D.toInt())
+            built+=cuboidMesh(Vector3(x,3.0f,-13f),Vector3(1.35f,1.15f,1.35f),0xFF315541.toInt(),0xFF284736.toInt())
+            built+=cuboidMesh(Vector3(x-.42f,2.85f,-13.05f),Vector3(.85f,.95f,.92f),0xFF3C684B.toInt())
+            built+=cuboidMesh(Vector3(x+.40f,2.92f,-12.96f),Vector3(.82f,1.0f,.90f),0xFF284736.toInt())
         }
         props=interactables; meshes=built
     }
@@ -303,10 +606,11 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "Хотя какое мне дело до их экспериментов?.."
                     )) {
                         phase=Phase.FANTASY_WAKE; fade=1f
-                        playWorldMusic("world.mira", "procedural:mira")
                         heroPosition=Vector3(0f,0f,1.8f)
                         fantasyStart=heroPosition
                         combatStarted=false; enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
+                        enemyWindupTarget=Vector3.ZERO; heroHealth=3; heroInvulnerability=0f; damageFlash=0f
+                        combatStatus.visible=false
                         joystick.visible=false; useButton.visible=false
                         attackButton.visible=false; dodgeButton.visible=false
                         objective.visible=false; hint.visible=false; toast.visible=false
@@ -362,6 +666,18 @@ class HybridPrologueScene : Scene() {
                         "Продавец" to "Тогда хорошего вечера."
                     ))
                 }
+                "bin" -> startDialogue(listOf(
+                    "Лиза" to "Урна переполнена. Кто-то опять оставил коробку рядом.",
+                    "Лиза" to "Странно. На крышке наклейка с логотипом института. Наверное, просто реклама."
+                ))
+                "utility" -> startDialogue(listOf(
+                    "Лиза" to "Электрощиток гудит так, будто внутри поселился шмель.",
+                    "Лиза" to "Лучше не трогать. Я не настолько любопытная."
+                ))
+                "message" -> startDialogue(listOf(
+                    "Лиза" to "Объявление о перекрытии дороги возле исследовательского комплекса.",
+                    "Лиза" to "Сегодня вечером там проводят пресс-конференцию. Похоже, весь город только об этом и говорит."
+                ))
                 else -> showToast("Ничего интересного.")
             }
             else -> Unit
@@ -372,13 +688,42 @@ class HybridPrologueScene : Scene() {
     private fun isWalkable(p:Vector3):Boolean {
         val limit = if (phase==Phase.STREET) 14f else 5.35f
         if (kotlin.math.abs(p.x)>limit || kotlin.math.abs(p.z)>limit*.82f) return false
-        return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message","exit","home") }
+        return props.none { distance(p,it.position) < it.collisionRadius && it.id !in setOf("phone","message","exit","home") }
+    }
+
+    private fun buildHeroSpriteMesh(camera: Camera3D): Mesh3D? {
+        val controller = heroActionController
+        val animation = controller?.currentAnimation ?: heroSpriteAnimation ?: return null
+        return DirectionalSpriteRenderer.buildMesh(
+            position = heroPosition,
+            facingDirection = heroFacing,
+            camera = camera,
+            animation = animation,
+            elapsedSeconds = controller?.elapsedSeconds ?: heroAnimationTime,
+            worldWidth = .8f,
+            worldHeight = 1.75f
+        ).mesh
+    }
+
+    private fun buildEnemySpriteMesh(camera: Camera3D): Mesh3D? {
+        val animation = enemySpriteAnimation ?: return null
+        return DirectionalSpriteRenderer.buildMesh(
+            position = Vector3(2.4f,0f,-1.5f),
+            facingDirection = Vector3(0f,0f,1f),
+            camera = camera,
+            animation = animation,
+            elapsedSeconds = enemyAnimationTime,
+            worldWidth = 1.16f,
+            worldHeight = 1.62f
+        ).mesh
     }
 
     private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
         val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),camera,context.width,context.height) ?: return
         val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),camera,context.width,context.height) ?: return
-        val width = (top.second-bottom.second)*.46f
+        // Screen Y grows downward, so the projected top is normally smaller than the bottom.
+        // Use the absolute vertical span to keep the sprite destination rectangle positive.
+        val width = kotlin.math.abs(bottom.second - top.second) * .46f
         val left=bottom.first-width*.5f
         val right=bottom.first+width*.5f
         val tex=heroTexture
@@ -425,36 +770,106 @@ class HybridPrologueScene : Scene() {
         context.drawText("Нажми или E, чтобы начать",centerX-135f,context.height-36f,0xFFBBAEC9.toInt(),15f)
     }
 
+    private fun buildFantasyBaseMeshes(): List<Mesh3D> {
+        val ruin = mutableListOf<Mesh3D>()
+        val groundTexture = mossyRockTexture
+        val wallTexture = stoneTexture
+        ruin += if (groundTexture != null) {
+            texturedGroundPlaneMesh(Vector3(0f,0f,0f),18f,16f,groundTexture,12f,10f)
+        } else {
+            cuboidMesh(Vector3(0f,-.08f,0f),Vector3(18f,.16f,16f),0xFF45434A.toInt())
+        }
+        fun ruinWall(center: Vector3, size: Vector3) {
+            ruin += if (wallTexture != null) {
+                texturedCuboidMesh(center,size,CuboidMaterialSet(
+                    wallTexture,wallTexture,wallTexture,wallTexture,wallTexture,wallTexture
+                ), 3f, 2f)
+            } else {
+                cuboidMesh(center,size,0xFF514B50.toInt(),0xFF403B42.toInt(),0xFF625B61.toInt())
+            }
+        }
+        ruinWall(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f))
+        ruinWall(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f))
+        ruinWall(Vector3(-2.2f,1.8f,-3.2f),Vector3(.28f,3.6f,.28f))
+        ruinWall(Vector3(2.8f,1.1f,-4.8f),Vector3(.3f,2.2f,.3f))
+        ruinWall(Vector3(-4f,2.9f,-4f),Vector3(2.2f,.24f,1.4f))
+        ruinWall(Vector3(3.8f,2.7f,-4.2f),Vector3(1.8f,.22f,1.2f))
+        ruin += cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt())
+        // Broken paving and fallen masonry frame the camp without blocking its playable space.
+        ruin += cuboidMesh(Vector3(-3.1f,.12f,1.8f),Vector3(1.5f,.24f,.62f),0xFF5A555D.toInt())
+        ruin += cuboidMesh(Vector3(3.3f,.16f,2.1f),Vector3(1.1f,.32f,.72f),0xFF625B62.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.12f,.3f),Vector3(1.1f,.18f,.18f),0xFF65462F.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
+        return ruin
+    }
+
     private fun renderFantasyWake(context:RenderContext) {
         context.clear(0xFF171824.toInt())
-        val wakeCamera=Camera3D(Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f),Vector3(heroPosition.x,1f,heroPosition.z-.8f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
-        val ruin=mutableListOf(
-            groundPlaneMesh(Vector3(0f,0f,0f),18f,16f,0xFF45434A.toInt()),
-            cuboidMesh(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt()),
-            cuboidMesh(Vector3(-2.2f,1.8f,-3.2f),Vector3(.28f,3.6f,.28f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(2.8f,1.1f,-4.8f),Vector3(.3f,2.2f,.3f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(-1.6f,.12f,.3f),Vector3(1.1f,.18f,.18f),0xFF65462F.toInt()),
-            cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt()),
-            cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt()),
-            cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
-        )
-        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
-            ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
-            ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
-        }
+        worldCamera.aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1)
+        worldCamera.position=Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f)
+        worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
+        val wakeCamera=worldCamera
+        val ruin = fantasyBaseMeshes.toMutableList()
+        // The defeated creature is removed before the first distortion mark appears.
         if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
             ruin += cuboidMesh(Vector3(-2.8f,1.35f,-2.8f),Vector3(.07f,2.7f,.12f),0xFFFF244F.toInt(),0xFF8C1536.toInt(),0xFFFF6B86.toInt())
             ruin += cuboidMesh(Vector3(-2.86f,1.35f,-2.8f),Vector3(.035f,2.45f,.14f),0xFFFFA0B0.toInt())
         }
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            buildEnemySpriteMesh(wakeCamera)?.let { ruin += it }
+        }
+        val showHero = phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE
+        val heroMesh = if (showHero) buildHeroSpriteMesh(wakeCamera) else null
+        if (heroMesh != null) ruin += heroMesh
         renderer.render(context,wakeCamera,ruin)
-        if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
-        context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        if (showHero && heroMesh == null) drawHeroBillboard(context,wakeCamera)
+        context.drawText(when (phase) {
+            Phase.FANTASY_CAMP -> "РУИНЫ • КОСТЁР"
+            Phase.COMPLETE -> "РАЗЛОМ • ПЕРВЫЙ КОНТАКТ"
+            else -> "..."
+        },context.width*.5f-115f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            val healthAnchor = renderer.project(Vector3(2.4f,1.85f,-1.5f),wakeCamera,context.width,context.height)
+            if (healthAnchor != null) {
+                val barWidth = 66f
+                val left = healthAnchor.first - barWidth * .5f
+                val top = healthAnchor.second - 8f
+                context.drawRoundRect(left,top,left+barWidth,top+7f,3f,0xCC211A22.toInt())
+                for (segment in 0 until 3) {
+                    val color = if (segment < enemyHealth) 0xFFFF526B.toInt() else 0xFF55414A.toInt()
+                    context.drawRect(left+2f+segment*21f,top+2f,left+20f+segment*21f,top+5f,color)
+                }
+            }
+        }
+        if (enemyHitFlash > 0f && phase == Phase.FANTASY_CAMP) {
+            val hitPoint = renderer.project(Vector3(2.4f,1.0f,-1.5f),wakeCamera,context.width,context.height)
+            if (hitPoint != null) {
+                val pulse = 1f + (enemyHitFlash / .16f) * 12f
+                for (i in 0 until 8) {
+                    val angle = i * (Math.PI / 4.0)
+                    val x1 = hitPoint.first + kotlin.math.cos(angle).toFloat() * 12f
+                    val y1 = hitPoint.second + kotlin.math.sin(angle).toFloat() * 12f
+                    val x2 = hitPoint.first + kotlin.math.cos(angle).toFloat() * (12f+pulse)
+                    val y2 = hitPoint.second + kotlin.math.sin(angle).toFloat() * (12f+pulse)
+                    context.drawLine(x1,y1,x2,y2,0xFFFFD18A.toInt(),3f)
+                }
+            }
+        }
+        if (attackEffectTimer > 0f && phase == Phase.FANTASY_CAMP) {
+            val slash = renderer.project(attackEffectPosition,wakeCamera,context.width,context.height)
+            if (slash != null) {
+                val alpha = (attackEffectTimer / .18f).coerceIn(0f,1f)
+                val color = ((alpha*255f).toInt().coerceIn(0,255) shl 24) or 0x00FFE7B0
+                context.drawLine(slash.first-15f,slash.second+12f,slash.first+16f,slash.second-13f,color,4f)
+                context.drawLine(slash.first-10f,slash.second+18f,slash.first+20f,slash.second-7f,color,2f)
+            }
+        }
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
-            val marker = renderer.project(Vector3(2.4f,.05f,-1.5f),wakeCamera,context.width,context.height)
+            val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
-                val radius = (1f - (enemyTelegraph / .75f).coerceIn(0f,1f)) * 18f + 22f
+                val radius = (1f - (enemyTelegraph / .78f).coerceIn(0f,1f)) * 18f + 22f
                 var px = marker.first + radius
                 var py = marker.second
                 for (i in 1..32) {
@@ -467,6 +882,9 @@ class HybridPrologueScene : Scene() {
                 context.drawText("УДАР!",marker.first-24f,marker.second-radius-10f,0xFFFF9AA8.toInt(),13f,true)
             }
         }
+        if (damageFlash > 0f) {
+            context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x44FF243F.toInt())
+        }
         if (glitchTimer > 0f) {
             context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x55FF174F.toInt())
             context.drawText("СИГНАЛ НЕ СОВПАДАЕТ",context.width*.5f-145f,context.height*.35f,0xFFFF526B.toInt(),20f,true)
@@ -475,13 +893,20 @@ class HybridPrologueScene : Scene() {
 
     private fun updateObjective() {
         when(phase) {
-            Phase.APARTMENT -> { objective.text="ЗЕМЛЯ • ДОМ ЛИЗЫ"; hint.text="Утро: телефон, завтрак и новости (" + apartmentTasks.size + "/3)." }
-            Phase.STREET -> { objective.text="ЗЕМЛЯ • ГОРОД"; hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." }
+            Phase.APARTMENT -> {
+                objective.text="ЗЕМЛЯ • ДОМ ЛИЗЫ"
+                hint.text="Утро: телефон, завтрак и новости (" + apartmentTasks.size + "/3)." + nearbyInteractionHint()
+            }
+            Phase.STREET -> {
+                objective.text="ЗЕМЛЯ • ГОРОД"
+                hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." + nearbyInteractionHint()
+            }
             Phase.FANTASY_CAMP -> {
                 objective.text="НЕИЗВЕСТНЫЙ МИР • РУИНЫ"
+                combatStatus.text = "СОСТОЯНИЕ: $heroHealth / 3"
                 hint.text=when {
                     !combatStarted -> "Осмотрись и отойди от костра. WASD или виртуальный стик."
-                    enemyHealth>0 -> "SPACE / HIT — атака • SHIFT / DODGE — уклонение"
+                    enemyHealth>0 -> "SPACE / HIT — удар перед собой • SHIFT / DODGE — уклонение (перезарядка)"
                     else -> "Первый глитч. Нажми E, чтобы осмотреть разлом."
                 }
             }
@@ -489,6 +914,34 @@ class HybridPrologueScene : Scene() {
         }
     }
 
+
+    /** Adds a short contextual control hint when an interactable is in reach. */
+    private fun nearbyInteractionHint(): String {
+        var nearest: Prop? = null
+        var nearestDistance = Float.POSITIVE_INFINITY
+        for (prop in props) {
+            val candidateDistance = distance(heroPosition,prop.position)
+            if (candidateDistance <= prop.radius && candidateDistance < nearestDistance) {
+                nearest = prop
+                nearestDistance = candidateDistance
+            }
+        }
+        val action = when (nearest?.id) {
+            "phone" -> "осмотреть телефон"
+            "fridge" -> "приготовить завтрак"
+            "tv" -> "посмотреть новости"
+            "bed" -> "лечь спать"
+            "exit" -> "выйти из дома"
+            "busstop" -> "осмотреть остановку"
+            "shop" -> "зайти в магазин"
+            "home" -> "вернуться домой"
+            "message" -> "прочитать объявление"
+            "bin" -> "осмотреть урну"
+            "utility" -> "осмотреть электрощиток"
+            else -> null
+        }
+        return if (action == null) "" else "  •  E / USE — $action"
+    }
 
     private fun startDialogue(lines: List<Pair<String, String>>, after: (() -> Unit)? = null) {
         dialogueLines = lines
@@ -538,6 +991,11 @@ class HybridPrologueScene : Scene() {
         if (glitchTimer > 0f) glitchTimer = (glitchTimer - delta).coerceAtLeast(0f)
         attackCooldown = (attackCooldown - delta).coerceAtLeast(0f)
         dodgeTimer = (dodgeTimer - delta).coerceAtLeast(0f)
+        dodgeCooldown = (dodgeCooldown - delta).coerceAtLeast(0f)
+        attackEffectTimer = (attackEffectTimer - delta).coerceAtLeast(0f)
+        enemyHitFlash = (enemyHitFlash - delta).coerceAtLeast(0f)
+        heroInvulnerability = (heroInvulnerability - delta).coerceAtLeast(0f)
+        damageFlash = (damageFlash - delta).coerceAtLeast(0f)
         val ix = ((if (input.isDown("right")) 1f else 0f) -
             (if (input.isDown("left")) 1f else 0f) + joystick.axisX).coerceIn(-1f,1f)
         val iz = ((if (input.isDown("back")) 1f else 0f) -
@@ -545,17 +1003,35 @@ class HybridPrologueScene : Scene() {
         val length = sqrt(ix*ix+iz*iz)
         val nx = if (length>1f) ix/length else ix
         val nz = if (length>1f) iz/length else iz
+        if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val speed = if (dodgeTimer>0f) 7.5f else 3.1f
         val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
-        if (kotlin.math.abs(candidate.x)<6.2f && kotlin.math.abs(candidate.z)<5.2f) heroPosition=candidate
-        worldCamera.position=Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f)
-        worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
-
+        if (isFantasyWalkable(candidate)) {
+            heroPosition = candidate
+        } else {
+            // Resolve axes separately after a blocked diagonal step so the player
+            // can slide along a wall instead of sticking on its corner.
+            val candidateX = Vector3(candidate.x, 0f, heroPosition.z)
+            if (isFantasyWalkable(candidateX)) heroPosition = candidateX
+            val candidateZ = Vector3(heroPosition.x, 0f, candidate.z)
+            if (isFantasyWalkable(candidateZ)) heroPosition = candidateZ
+        }
         val doDodge=input.wasPressed("dodge") || touchDodge
         val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
         val doUse=input.wasPressed("use") || showUse
         touchDodge=false; touchAttack=false; showUse=false
-        if (doDodge && dodgeTimer<=0f) dodgeTimer=.38f
+        if (doDodge && dodgeTimer<=0f && dodgeCooldown<=0f) {
+            dodgeTimer=.38f
+            dodgeCooldown=.82f
+            heroActionController?.play("dodge", actionPriority = 60)
+        }
+        if (doAttack && attackCooldown<=0f) {
+            heroActionController?.play("attack", actionPriority = 50)
+        }
+        heroActionController?.play(
+            if (dodgeTimer > 0f) "dodge" else if (length > .001f) "walk" else "idle",
+            actionPriority = if (dodgeTimer > 0f) 60 else if (length > .001f) 10 else 0
+        )
         val movedX=heroPosition.x-fantasyStart.x
         val movedZ=heroPosition.z-fantasyStart.z
         if (!combatStarted && sqrt(movedX*movedX+movedZ*movedZ)>1.25f) {
@@ -572,9 +1048,20 @@ class HybridPrologueScene : Scene() {
         val dx=enemyPos.x-heroPosition.x; val dz=enemyPos.z-heroPosition.z
         val distanceToEnemy=sqrt(dx*dx+dz*dz)
         if (enemyHealth>0) {
-            if (doAttack && attackCooldown<=0f && distanceToEnemy<2.5f) {
-                enemyHealth--
+            if (doAttack && attackCooldown<=0f) {
                 attackCooldown=.52f
+                val towardEnemy = Vector3(dx,0f,dz)
+                val targetInMeleeArc = PrologueCombatRules.isTargetInMeleeArc(heroFacing,towardEnemy)
+                if (distanceToEnemy >= 2.5f) {
+                    showToast("Слишком далеко. Подойди к существу.")
+                } else if (!targetInMeleeArc) {
+                    showToast("Повернись к существу перед атакой.")
+                } else {
+                    enemyHealth--
+                    attackEffectTimer=.18f
+                    attackEffectPosition=enemyPos
+                    enemyHitFlash=.16f
+                if (enemyHealth<=0) enemyTelegraph=0f
                 if (enemyHealth<=0 && !glitchTriggered) {
                     glitchTriggered=true; glitchTimer=1.2f
                     startDialogue(listOf(
@@ -582,16 +1069,37 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "И эта вспышка... На секунду всё вокруг стало неправильным."
                     ))
                 }
+                }
             }
             enemyAttackTimer-=delta
-            if (enemyAttackTimer<=0f && distanceToEnemy<2.8f && enemyTelegraph<=0f) {
-                enemyTelegraph=.75f
+            if (enemyHealth>0 && enemyAttackTimer<=0f && distanceToEnemy<3.6f && enemyTelegraph<=0f) {
+                enemyWindupTarget=heroPosition
+                enemyTelegraph=.78f
             }
-            if (enemyTelegraph>0f) {
+            if (enemyHealth>0 && enemyTelegraph>0f) {
                 enemyTelegraph-=delta
                 if (enemyTelegraph<=0f) {
-                    if (distanceToEnemy<2.8f && dodgeTimer<=0f) {
-                        startDialogue(listOf("Лиза" to "Ай! Оно собирается перед ударом — можно успеть уйти с линии атаки."))
+                    val caught=distance(heroPosition,enemyWindupTarget)<=1.25f
+                    if (caught && dodgeTimer<=0f && heroInvulnerability<=0f) {
+                        heroInvulnerability=.9f
+                        damageFlash=.18f
+                        heroActionController?.play("hit", actionPriority = 70)
+                        if (PrologueCombatRules.wouldTriggerDefeat(heroHealth)) {
+                            startDialogue(listOf(
+                                "Лиза" to "Ноги подкосились. Я не могу здесь умереть... Что бы это ни было, нужно подняться.",
+                                "Лиза" to "В следующий раз не стану ждать, пока оно замахнётся."
+                            )) {
+                                heroHealth=3; heroPosition=Vector3(0f,0f,1.8f)
+                                fantasyStart=heroPosition; combatStarted=false
+                                enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
+                                dodgeTimer=0f; dodgeCooldown=0f; attackCooldown=0f
+                                attackEffectTimer=0f; enemyHitFlash=0f; enemyAnimationTime=0f
+                                glitchTriggered=false; glitchTimer=0f
+                            }
+                        } else {
+                            heroHealth = PrologueCombatRules.applyDamage(heroHealth)
+                            showToast("Получен удар. Уклоняйся во время красного предупреждения.")
+                        }
                     }
                     enemyAttackTimer=2.6f
                 }
@@ -606,15 +1114,21 @@ class HybridPrologueScene : Scene() {
                 "Лиза" to "Трещина в воздухе. Нет... не в воздухе. Будто сам мир на секунду забыл, каким должен быть.",
                 "Лиза" to "Я просто хотела проснуться. Почему это происходит со мной?"
             )) {
-                phase=Phase.COMPLETE
+                phase=Phase.COMPLETE; fade=1f
                 joystick.visible=false; useButton.visible=false; attackButton.visible=false; dodgeButton.visible=false
-                objective.visible=false; hint.visible=false
+                objective.visible=false; combatStatus.visible=false
+                hint.text="ГЛАВА I • НУЛЕВАЯ ГРАНЬ"; hint.visible=true
                 endLabel.text="ПРОЛОГ ЗАВЕРШЁН"
                 endLabel.visible=true
             }
         }
         updateObjective()
     }
+
+    private fun isFantasyWalkable(position: Vector3): Boolean =
+        PrologueCombatRules.isWalkableInRuins(
+            position.x, position.z, 6.2f, 5.2f, .28f, fantasyObstacles
+        )
 
     private fun showToast(message:String) {
         toast.text=message; toast.visible=true; toastTimer=1.8f

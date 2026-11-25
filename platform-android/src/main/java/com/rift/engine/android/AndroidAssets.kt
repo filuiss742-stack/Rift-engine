@@ -33,4 +33,5 @@ class AndroidTextureLoader(context: Context) : TextureLoader {
             BitmapFactory.decodeStream(stream)?.let(::AndroidTexture)
         }
     }
+
 }

@@ -30,6 +30,7 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
+import java.awt.geom.Path2D
 import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
 import java.io.File
@@ -49,6 +50,7 @@ class DesktopRenderContext(
 ) : RenderContext {
     private var currentGraphics = graphics
     private val graphicsStack = mutableListOf<Graphics2D>()
+    private val trianglePath = Path2D.Float()
 
     init {
         currentGraphics.setRenderingHint(
@@ -75,11 +77,12 @@ class DesktopRenderContext(
 
     override fun drawTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int) {
         currentGraphics.color = Color(color, true)
-        currentGraphics.fillPolygon(
-            intArrayOf(x1.toInt(), x2.toInt(), x3.toInt()),
-            intArrayOf(y1.toInt(), y2.toInt(), y3.toInt()),
-            3
-        )
+        trianglePath.reset()
+        trianglePath.moveTo(x1.toDouble(), y1.toDouble())
+        trianglePath.lineTo(x2.toDouble(), y2.toDouble())
+        trianglePath.lineTo(x3.toDouble(), y3.toDouble())
+        trianglePath.closePath()
+        currentGraphics.fill(trianglePath)
     }
 
     override fun drawTexturedTriangle(

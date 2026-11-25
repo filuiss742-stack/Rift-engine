@@ -33,4 +33,5 @@ class DesktopTextureLoader(root: File = File("assets")) : TextureLoader {
         }
         return image?.let(::DesktopTexture)
     }
+
 }

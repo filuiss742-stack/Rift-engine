@@ -19,9 +19,12 @@ data class CuboidMaterialSet(
 fun texturedCuboidMesh(
     center: Vector3,
     size: Vector3,
-    materials: CuboidMaterialSet
+    materials: CuboidMaterialSet,
+    uRepeat: Float = 1f,
+    vRepeat: Float = 1f
 ): Mesh3D {
     require(size.x > 0f && size.y > 0f && size.z > 0f)
+    require(uRepeat.isFinite() && vRepeat.isFinite() && uRepeat > 0f && vRepeat > 0f)
     val x0 = center.x - size.x * .5f
     val x1 = center.x + size.x * .5f
     val y0 = center.y - size.y * .5f
@@ -37,11 +40,11 @@ fun texturedCuboidMesh(
     fun face(a: Vector3, b: Vector3, c: Vector3, d: Vector3, texture: TextureResource) {
         out += MeshTriangle(
             a, b, c, 0xFFFFFFFF.toInt(), texture,
-            TextureUv(0f,0f), TextureUv(1f,0f), TextureUv(1f,1f)
+            TextureUv(0f,0f), TextureUv(uRepeat,0f), TextureUv(uRepeat,vRepeat)
         )
         out += MeshTriangle(
             a, c, d, 0xFFFFFFFF.toInt(), texture,
-            TextureUv(0f,0f), TextureUv(1f,1f), TextureUv(0f,1f)
+            TextureUv(0f,0f), TextureUv(uRepeat,vRepeat), TextureUv(0f,vRepeat)
         )
     }
 

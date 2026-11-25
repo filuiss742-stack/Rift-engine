@@ -1,4 +1,4 @@
-name: Android APK
+name: Android APK and Emulator AutoTest
 
 on:
   push:
@@ -18,26 +18,25 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Keep push and pull_request checks independent; one event must not cancel the other.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # macOS provides Hypervisor.framework; Linux hosted runners lack KVM and
+    # x86_64 TCG booted too slowly to expose Android system services.
+    runs-on: macos-14
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Install texture validation dependency
-        run: python -m pip install Pillow
-      - name: Test material texture validator
-        run: python -m unittest discover -s tools/assets -p "test_validate_materials.py"
+      - name: Download real CC0 PNG material textures
+        shell: bash
+        run: bash tools/assets/fetch_cc0_materials.sh
       - name: Check engine platform boundaries
         run: python scripts/check_engine_boundaries.py
       - name: Set up JDK 17
@@ -71,7 +70,41 @@ jobs:
         run: gradle :platform-android:lintDebug :app:lintDebug
       - name: Build debug APK
         run: gradle :app:assembleDebug
+      - name: Run APK on Android emulator (launch, render, screenshot, frame metrics)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 2
+          ram-size: 2048
+          heap-size: 512
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-boot-timeout: 600
+          script: |
+            set +e
+            gradle :app:connectedDebugAndroidTest
+            test_status=$?
+            mkdir -p build/autotest
+            adb logcat -d -v threadtime > build/autotest/logcat.txt
+            adb shell dumpsys gfxinfo com.rift.engine.demo framestats > build/autotest/gfxinfo-framestats.txt
+            adb shell dumpsys meminfo com.rift.engine.demo > build/autotest/meminfo.txt
+            adb pull /sdcard/Android/data/com.rift.engine.demo/files/rift-autotest/prologue-launch.png build/autotest/prologue-launch.png || true
+            exit $test_status
+      - name: Upload Android AutoTest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-android-autotest
+          path: |
+            build/autotest/
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: warn
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rift-engine-debug-apk

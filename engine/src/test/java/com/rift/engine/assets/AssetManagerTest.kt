@@ -136,4 +136,5 @@ class AssetManagerTest {
         assertNull(assets.loadTexture("missing", "missing.png"))
         assertEquals("RIFT_ASSET_TEXTURE_NOT_FOUND", diagnostics.latestError()?.code)
     }
+
 }

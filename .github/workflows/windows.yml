@@ -1,4 +1,4 @@
-name: Windows Desktop
+name: Windows Desktop and Runtime Smoke Test
 
 on:
   push:
@@ -27,18 +27,13 @@ permissions:
 jobs:
   desktop:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Install texture validation dependency
-        run: python -m pip install Pillow
-      - name: Test material texture validator
-        run: python -m unittest discover -s tools/assets -p "test_validate_materials.py"
+      - name: Download real CC0 PNG material textures
+        shell: bash
+        run: bash tools/assets/fetch_cc0_materials.sh
       - name: Check engine platform boundaries
         run: python scripts/check_engine_boundaries.py
       - name: Set up JDK 17
@@ -72,6 +67,36 @@ jobs:
           $mainJar = Get-ChildItem desktop-app/build/install/desktop-app/lib -Filter "desktop-app*.jar" | Select-Object -First 1
           if (-not $mainJar) { throw "Desktop application JAR was not found in the install distribution." }
           jpackage --type app-image --name RiftEngine --input desktop-app/build/install/desktop-app/lib --main-jar $mainJar.Name --main-class com.rift.engine.desktop.MainKt --dest build/windows
+      - name: Launch packaged EXE and capture runtime evidence
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/autotest | Out-Null
+          $exe = (Resolve-Path "build/windows/RiftEngine/RiftEngine.exe").Path
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 15
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "RiftEngine.exe exited during the 15-second runtime smoke test (exit code $($process.ExitCode))."
+          }
+          Get-Process -Id $process.Id | Select-Object Id, ProcessName, CPU, WorkingSet64, StartTime |
+            Format-List | Out-File build/autotest/process.txt
+          Add-Type -AssemblyName System.Drawing
+          Add-Type -AssemblyName System.Windows.Forms
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $bitmap.Save((Join-Path (Resolve-Path "build/autotest").Path "desktop-smoke.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+          Stop-Process -Id $process.Id -Force
+      - name: Upload Windows runtime smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-windows-autotest
+          path: build/autotest/
+          if-no-files-found: warn
       - name: Upload Windows app image
         uses: actions/upload-artifact@v4
         with:

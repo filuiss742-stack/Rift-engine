@@ -91,6 +91,104 @@ class DirectionalSpriteRendererTest {
     }
 
     @Test
+    fun appliesPerFrameAtlasUvRegionsWithoutCroppingTheTexture() {
+        val atlas = FakeTexture()
+        val animation = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(atlas,atlas)),
+            frameDurationSeconds = .1f,
+            uvRectsByDirection = mapOf(
+                SpriteDirection8.FRONT to listOf(
+                    spriteAtlasFrameUv(4,4,2),
+                    spriteAtlasFrameUv(5,4,2)
+                )
+            )
+        )
+
+        val result = DirectionalSpriteRenderer.buildMesh(
+            Vector3.ZERO, Vector3.FORWARD, camera,
+            animation, .15f, 1f, 2f
+        )
+
+        assertEquals(1,result.frameIndex)
+        assertSame(atlas,result.mesh.triangles.first().texture)
+        assertEquals(.25f,result.mesh.triangles.first().uvA.u,0f)
+        assertEquals(.5f,result.mesh.triangles.first().uvA.v,0f)
+        assertEquals(.5f,result.mesh.triangles.first().uvC.u,0f)
+        assertEquals(1f,result.mesh.triangles.first().uvC.v,0f)
+    }
+
+    @Test
+    fun rejectsMismatchedAtlasRegionAndFrameCounts() {
+        val atlas = FakeTexture()
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteAnimation(
+                framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(atlas,atlas)),
+                uvRectsByDirection = mapOf(
+                    SpriteDirection8.FRONT to listOf(spriteAtlasFrameUv(0,4,2))
+                )
+            )
+        }
+    }
+
+    @Test
+    fun oneShotClipStopsOnItsLastFrameAndReportsCompletion() {
+        val first = FakeTexture()
+        val second = FakeTexture()
+        val clip = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(first, second)),
+            frameDurationSeconds = .1f,
+            loop = false
+        )
+        assertEquals(0, clip.frameIndexAt(0f))
+        assertEquals(1, clip.frameIndexAt(.15f))
+        assertEquals(1, clip.frameIndexAt(12f))
+        assertFalse(clip.isFinished(.19f))
+        assertTrue(clip.isFinished(.2f))
+    }
+
+    @Test
+    fun loopingClipWrapsSafelyForLongSessions() {
+        val clip = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(FakeTexture(), FakeTexture())),
+            frameDurationSeconds = .125f
+        )
+        assertEquals(0, clip.frameIndexAt(1_000_000f))
+        assertEquals(1, clip.frameIndexAt(1_000_000.125f))
+        assertEquals(0, clip.frameIndexAt(1_000_000.25f))
+        assertEquals(0, clip.frameIndexAt(Float.MAX_VALUE))
+        assertFalse(clip.isFinished(100f))
+    }
+
+    @Test
+    fun spriteLibraryResolvesNamedActionsAndReportsFallback() {
+        val idle = DirectionalSpriteAnimation(mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())))
+        val attack = DirectionalSpriteAnimation(
+            mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())),
+            loop = false
+        )
+        val library = DirectionalSpriteLibrary(mapOf("idle" to idle, "attack" to attack))
+        val selected = library.resolve("attack")
+        assertEquals("attack", selected.action)
+        assertSame(attack, selected.animation)
+        assertFalse(selected.usedFallback)
+        val missing = library.resolve("cast")
+        assertEquals("idle", missing.action)
+        assertSame(idle, missing.animation)
+        assertTrue(missing.usedFallback)
+    }
+
+    @Test
+    fun spriteLibraryRejectsInvalidActionIdsAndMissingDefaults() {
+        val idle = DirectionalSpriteAnimation(mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())))
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteLibrary(mapOf("Idle" to idle))
+        }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteLibrary(mapOf("idle" to idle), defaultAction = "walk")
+        }
+    }
+
+    @Test
     fun advancesFramesUsingConfiguredDuration() {
         val first = FakeTexture()
         val second = FakeTexture()

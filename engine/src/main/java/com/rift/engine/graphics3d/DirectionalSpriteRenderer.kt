@@ -9,7 +9,11 @@ import com.rift.engine.graphics.TextureResource
 data class DirectionalSpriteAnimation(
     val framesByDirection: Map<SpriteDirection8, List<TextureResource>>,
     val frameDurationSeconds: Float = 0.12f,
-    val fallbackDirection: SpriteDirection8 = SpriteDirection8.FRONT
+    val fallbackDirection: SpriteDirection8 = SpriteDirection8.FRONT,
+    /** Optional per-frame atlas rectangles; omitted directions use the full texture. */
+    val uvRectsByDirection: Map<SpriteDirection8, List<TextureUvRect>> = emptyMap(),
+    /** Idle/movement clips loop; attacks, hits and interactions can stop on their final frame. */
+    val loop: Boolean = true
 ) {
     init {
         require(frameDurationSeconds.isFinite() && frameDurationSeconds > 0f) {
@@ -24,8 +28,75 @@ data class DirectionalSpriteAnimation(
         require(fallbackDirection in framesByDirection) {
             "Configured fallback direction must have authored frames."
         }
+        require(uvRectsByDirection.keys.all { it in framesByDirection }) {
+            "Atlas UV regions cannot be configured for a missing sprite direction."
+        }
+        uvRectsByDirection.forEach { (direction, regions) ->
+            require(regions.size == framesByDirection.getValue(direction).size) {
+                "Every atlas-backed sprite frame must have exactly one UV region."
+            }
+        }
+    }
+
+    /** Returns the stable frame for this timestamp, clamping one-shot clips at their final frame. */
+    fun frameIndexAt(elapsedSeconds: Float, direction: SpriteDirection8 = fallbackDirection): Int {
+        require(elapsedSeconds.isFinite() && elapsedSeconds >= 0f) {
+            "Sprite animation time must be finite and non-negative."
+        }
+        val count = framesByDirection[direction]?.size
+            ?: framesByDirection.getValue(fallbackDirection).size
+        val duration = frameDurationSeconds.toDouble()
+        val completedFrames = kotlin.math.floor(elapsedSeconds.toDouble() / duration)
+        if (!loop) return completedFrames.toInt().coerceIn(0, count - 1)
+
+        // Work in frame space rather than taking a remainder of elapsed seconds.
+        // This avoids precision drift at long-running loop boundaries and avoids
+        // narrowing the absolute frame counter to Int before wrapping it.
+        val wrappedFrame = completedFrames % count.toDouble()
+        return wrappedFrame.toInt().coerceIn(0, count - 1)
+    }
+
+    fun isFinished(elapsedSeconds: Float, direction: SpriteDirection8 = fallbackDirection): Boolean {
+        require(elapsedSeconds.isFinite() && elapsedSeconds >= 0f) {
+            "Sprite animation time must be finite and non-negative."
+        }
+        if (loop) return false
+        val count = framesByDirection[direction]?.size
+            ?: framesByDirection.getValue(fallbackDirection).size
+        return elapsedSeconds.toDouble() >= frameDurationSeconds.toDouble() * count
     }
 }
+
+/** A named collection of independently authored action clips for one character. */
+data class DirectionalSpriteLibrary(
+    val clipsByAction: Map<String, DirectionalSpriteAnimation>,
+    val defaultAction: String = "idle",
+    val fallbackAction: String = defaultAction
+) {
+    init {
+        require(clipsByAction.isNotEmpty()) { "A sprite library must contain at least one action clip." }
+        require(clipsByAction.keys.all { it.matches(Regex("^[a-z][a-z0-9_-]{0,31}$")) }) {
+            "Sprite action IDs must be stable lowercase identifiers."
+        }
+        require(defaultAction in clipsByAction) { "Default sprite action must exist in the library." }
+        require(fallbackAction in clipsByAction) { "Fallback sprite action must exist in the library." }
+    }
+
+    fun resolve(action: String): SpriteAnimationSelection {
+        val clip = clipsByAction[action]
+        return if (clip != null) {
+            SpriteAnimationSelection(action, clip, usedFallback = false)
+        } else {
+            SpriteAnimationSelection(fallbackAction, clipsByAction.getValue(fallbackAction), usedFallback = true)
+        }
+    }
+}
+
+data class SpriteAnimationSelection(
+    val action: String,
+    val animation: DirectionalSpriteAnimation,
+    val usedFallback: Boolean
+)
 
 /** Result keeps missing-view fallback visible to diagnostics and callers. */
 data class DirectionalSpriteMeshResult(
@@ -65,11 +136,11 @@ object DirectionalSpriteRenderer {
         val usedFallback = frames == null
         val selectedDirection = if (usedFallback) animation.fallbackDirection else direction
         val selectedFrames = frames ?: animation.framesByDirection.getValue(animation.fallbackDirection)
-        val frameIndex = (elapsedSeconds / animation.frameDurationSeconds)
-            .toInt()
-            .mod(selectedFrames.size)
+        val frameIndex = animation.frameIndexAt(elapsedSeconds, selectedDirection)
         val texture = selectedFrames[frameIndex]
         check(!texture.isDisposed) { "Selected sprite frame texture has been disposed." }
+        val uvRect = animation.uvRectsByDirection[selectedDirection]
+            ?.get(frameIndex) ?: TextureUvRect(0f,0f,1f,1f)
 
         // Keep the sprite upright and horizontal width stable. The horizontal
         // billboard axis is derived from the camera's ground-plane direction.
@@ -90,10 +161,10 @@ object DirectionalSpriteRenderer {
         val leftTop = leftBottom + Vector3(0f, worldHeight, 0f)
         val rightTop = rightBottom + Vector3(0f, worldHeight, 0f)
 
-        val uvTopLeft = TextureUv(0f, 0f)
-        val uvTopRight = TextureUv(1f, 0f)
-        val uvBottomRight = TextureUv(1f, 1f)
-        val uvBottomLeft = TextureUv(0f, 1f)
+        val uvTopLeft = uvRect.topLeft
+        val uvTopRight = uvRect.topRight
+        val uvBottomRight = uvRect.bottomRight
+        val uvBottomLeft = uvRect.bottomLeft
         val triangles = listOf(
             MeshTriangle(leftTop, leftBottom, rightBottom, 0xFFFFFFFF.toInt(),
                 texture, uvTopLeft, uvBottomLeft, uvBottomRight),

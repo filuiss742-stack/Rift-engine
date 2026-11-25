@@ -1,0 +1,35 @@
+name: Character Asset Pipeline CI
+
+on:
+  push:
+    branches:
+      - development/0.7.0
+      - "feature/**"
+    paths:
+      - "tools/assets/**"
+      - ".github/workflows/character-assets-ci.yml"
+  pull_request:
+    paths:
+      - "tools/assets/**"
+      - ".github/workflows/character-assets-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  character-asset-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install image tooling
+        run: python -m pip install --disable-pip-version-check Pillow
+      - name: Test character art and atlas tools
+        run: >-
+          python -m unittest -v
+          tools/assets/test_build_character_atlas.py
+          tools/assets/test_build_directional_character_atlas.py
+          tools/assets/test_validate_character_art.py
+          tools/assets/test_generate_cloudflare_image.py
