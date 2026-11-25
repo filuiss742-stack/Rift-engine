@@ -28,6 +28,7 @@ class AndroidRenderContext(private var canvas: Canvas) : RenderContext {
     private val textureShaders = java.util.IdentityHashMap<AndroidTexture, BitmapShader>()
     private val textureMatrix = Matrix()
     private val textureClip = Path()
+    private val trianglePath = Path()
     private val textureSourcePoints = FloatArray(6)
     private val textureDestinationPoints = FloatArray(6)
 
@@ -56,8 +57,12 @@ class AndroidRenderContext(private var canvas: Canvas) : RenderContext {
     override fun drawTriangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, color: Int) {
         paint.color = color
         paint.style = Paint.Style.FILL
-        val path = Path().apply { moveTo(x1, y1); lineTo(x2, y2); lineTo(x3, y3); close() }
-        canvas.drawPath(path, paint)
+        trianglePath.reset()
+        trianglePath.moveTo(x1, y1)
+        trianglePath.lineTo(x2, y2)
+        trianglePath.lineTo(x3, y3)
+        trianglePath.close()
+        canvas.drawPath(trianglePath, paint)
     }
 
     override fun drawTexturedTriangle(
