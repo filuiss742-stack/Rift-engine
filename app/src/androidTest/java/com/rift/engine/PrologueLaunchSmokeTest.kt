@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.FrameMetrics
+import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -29,7 +30,8 @@ class PrologueLaunchSmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 assertNotNull("Main activity must have a content view", activity.window.decorView)
-                assertNotNull("The game surface must be attached", activity.window.decorView.rootView)
+                val contentRoot = activity.findViewById<ViewGroup>(android.R.id.content)
+                assertTrue("The game view must be attached to the Activity", contentRoot.childCount > 0)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     activity.window.addOnFrameMetricsAvailableListener(
                         { _, metrics, _ ->
@@ -44,6 +46,12 @@ class PrologueLaunchSmokeTest {
 
             // Allow the actual game loop and SurfaceView to render, not just the Activity shell.
             instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                val gameView = activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+                assertTrue("Game surface must be visible", gameView.isShown)
+                assertTrue("Game surface must have a measured width", gameView.width > 0)
+                assertTrue("Game surface must have a measured height", gameView.height > 0)
+            }
             Thread.sleep(12_000L)
             instrumentation.waitForIdleSync()
 
