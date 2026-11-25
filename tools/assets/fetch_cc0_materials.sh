@@ -27,6 +27,8 @@ fetch "asphalt_02" "asphalt_02.png" "diff"
 fetch "brick_wall_001" "brick_wall_001.png" "diffuse"
 fetch "concrete_wall_008" "concrete_wall_008.png" "diff"
 fetch "wood_floor" "wood_floor.png" "diff"
+fetch "stone_wall" "stone_wall.png" "diffuse"
+fetch "mossy_rock" "mossy_rock.png" "diff"
 
 for destination in \
   "$ROOT/app/src/main/assets/prologue/materials" \
@@ -40,6 +42,8 @@ All four source materials are marked CC0 on their asset pages:
 - brick_wall_001: https://polyhaven.com/a/brick_wall_001
 - concrete_wall_008: https://polyhaven.com/a/concrete_wall_008
 - wood_floor: https://polyhaven.com/a/wood_floor
+- stone_wall: https://polyhaven.com/a/stone_wall
+- mossy_rock: https://polyhaven.com/a/mossy_rock
 CREDITS
 done
 
@@ -54,4 +58,4 @@ else
   exit 1
 fi
 
-echo \\"Installed four real 1K PNG material maps for Android and Desktop.\\"
+echo \\"Installed six real 1K PNG material maps for Android and Desktop.\\"
