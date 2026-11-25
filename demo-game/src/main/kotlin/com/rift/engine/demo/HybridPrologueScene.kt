@@ -275,27 +275,28 @@ class HybridPrologueScene : Scene() {
         val built = mutableListOf<Mesh3D>()
         val interactables = mutableListOf<Prop>()
         val wood = woodFloorTexture
-        built += if (wood != null) texturedGroundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, wood, 3f, 2.5f)
+        built += if (wood != null) texturedGroundPlaneMesh(Vector3(0f, 0f, 0f), 12f, 10f, wood, 6f, 5f)
             else cuboidMesh(Vector3(0f, -.08f, 0f), Vector3(12f, .16f, 10f), 0xFF6B5548.toInt())
         // Photographed CC0 plaster is used on the room walls instead of flat color blocks.
         val plaster = concreteTexture
         fun wall(center: Vector3, size: Vector3) {
-            built += if (plaster != null) texturedCuboidMesh(center, size, CuboidMaterialSet(plaster, plaster, plaster, plaster, plaster, plaster))
+            built += if (plaster != null) texturedCuboidMesh(center, size, CuboidMaterialSet(plaster, plaster, plaster, plaster, plaster, plaster), 2.5f, 1.5f)
                 else cuboidMesh(center, size, 0xFF514B5A.toInt(), 0xFF3C3944.toInt())
         }
         wall(Vector3(0f, 1.6f, -5f), Vector3(12f, 3.2f, .22f))
         wall(Vector3(-6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
         wall(Vector3(6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
         // Window, bed, desk, fridge, sink and phone are independent 3D props.
-        fun prop(id: String, p: Vector3, size: Vector3, color: Int, radius: Float = 1.6f) {
-            val mesh = cuboidMesh(p, size, color, shade(color, .78f), shade(color, .62f))
+        fun prop(id: String, p: Vector3, size: Vector3, color: Int, radius: Float = 1.6f, texture: com.rift.engine.graphics.TextureResource? = null) {
+            val mesh = if (texture != null) texturedCuboidMesh(p, size, CuboidMaterialSet(texture, texture, texture, texture, texture, texture), 2f, 1.5f)
+                else cuboidMesh(p, size, color, shade(color, .78f), shade(color, .62f))
             built += mesh
             interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh)
         }
         prop("bed", Vector3(-3.7f,.34f,-2.9f), Vector3(2.8f,.68f,2.1f), 0xFF555D79.toInt(), 2.2f)
-        prop("desk", Vector3(3.5f,.58f,-3.7f), Vector3(2.3f,1.16f,1.1f), 0xFF795B45.toInt())
-        prop("fridge", Vector3(4.8f,1.0f,2.4f), Vector3(.95f,2f,.9f), 0xFFB9BEC8.toInt())
-        prop("sink", Vector3(2.4f,.48f,2.8f), Vector3(1.5f,.96f,.8f), 0xFF9CA9B2.toInt())
+        prop("desk", Vector3(3.5f,.58f,-3.7f), Vector3(2.3f,1.16f,1.1f), 0xFF795B45.toInt(), texture = woodFloorTexture)
+        prop("fridge", Vector3(4.8f,1.0f,2.4f), Vector3(.95f,2f,.9f), 0xFFB9BEC8.toInt(), texture = concreteTexture)
+        prop("sink", Vector3(2.4f,.48f,2.8f), Vector3(1.5f,.96f,.8f), 0xFF9CA9B2.toInt(), texture = concreteTexture)
         prop("phone", Vector3(-.4f,.08f,-.2f), Vector3(.28f,.16f,.5f), 0xFF272A35.toInt(), 1.4f)
         prop("tv", Vector3(-2.4f,1.75f,-4.72f), Vector3(2.0f,1.2f,.12f), 0xFF171923.toInt(), 2.1f)
         prop("exit", Vector3(5.8f,1.1f,-.2f), Vector3(.18f,2.2f,1.3f), 0xFF49382F.toInt(), 1.5f)
@@ -313,12 +314,12 @@ class HybridPrologueScene : Scene() {
         val interactables = mutableListOf<Prop>()
         val road = asphaltTexture
         val sidewalk = concreteTexture
-        if (road != null) built += texturedGroundPlaneMesh(Vector3(0f,0f,0f), 30f, 24f, road, 8f, 7f)
+        if (road != null) built += texturedGroundPlaneMesh(Vector3(0f,0f,0f), 30f, 24f, road, 18f, 14f)
         else built += cuboidMesh(Vector3(0f,-.08f,0f), Vector3(30f,.16f,24f), 0xFF565A5C.toInt())
         if (sidewalk != null) built += texturedGroundPlaneMesh(Vector3(0f,.018f,2.5f), 30f, 4.2f, sidewalk, 10f, 1.4f)
         else built += cuboidMesh(Vector3(0f,-.04f,2.5f), Vector3(30f,.08f,4.2f), 0xFFB0AAA0.toInt())
         fun prop(id:String,p:Vector3,size:Vector3,color:Int,radius:Float=1.8f,texture:com.rift.engine.graphics.TextureResource?=null) {
-            val mesh = if (texture != null) texturedCuboidMesh(p,size,CuboidMaterialSet(texture,texture,texture,texture,texture,texture))
+            val mesh = if (texture != null) texturedCuboidMesh(p,size,CuboidMaterialSet(texture,texture,texture,texture,texture,texture), 2.5f, 1.8f)
                 else cuboidMesh(p,size,color,shade(color,.78f),shade(color,.62f))
             built+=mesh; interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh)
         }
@@ -333,7 +334,7 @@ class HybridPrologueScene : Scene() {
         val benchParts=mutableListOf<Mesh3D>()
         val timber=woodFloorTexture
         fun woodPart(p:Vector3,size:Vector3) = if(timber!=null)
-            texturedCuboidMesh(p,size,CuboidMaterialSet(timber,timber,timber,timber,timber,timber))
+            texturedCuboidMesh(p,size,CuboidMaterialSet(timber,timber,timber,timber,timber,timber), 2.5f, 1.5f)
         else cuboidMesh(p,size,0xFF795B45.toInt())
         benchParts+=woodPart(Vector3(2f,.68f,-1f),Vector3(2.5f,.14f,.72f))
         benchParts+=woodPart(Vector3(2f,1.02f,-1.32f),Vector3(2.5f,.68f,.12f))
@@ -528,7 +529,7 @@ class HybridPrologueScene : Scene() {
         val groundTexture = mossyRockTexture
         val wallTexture = stoneTexture
         ruin += if (groundTexture != null) {
-            texturedGroundPlaneMesh(Vector3(0f,0f,0f),18f,16f,groundTexture,7f,6f)
+            texturedGroundPlaneMesh(Vector3(0f,0f,0f),18f,16f,groundTexture,12f,10f)
         } else {
             cuboidMesh(Vector3(0f,-.08f,0f),Vector3(18f,.16f,16f),0xFF45434A.toInt())
         }
@@ -536,7 +537,7 @@ class HybridPrologueScene : Scene() {
             ruin += if (wallTexture != null) {
                 texturedCuboidMesh(center,size,CuboidMaterialSet(
                     wallTexture,wallTexture,wallTexture,wallTexture,wallTexture,wallTexture
-                ))
+                ), 3f, 2f)
             } else {
                 cuboidMesh(center,size,0xFF514B50.toInt(),0xFF403B42.toInt(),0xFF625B61.toInt())
             }
