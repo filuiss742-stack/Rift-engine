@@ -12,7 +12,7 @@ class DirectionalSpriteActionController(
     private val library: DirectionalSpriteLibrary,
     private val fallbackAction: String = library.defaultAction
 ) {
-    private var elapsed = 0f
+    private var elapsed = 0.0
     private var priority = Int.MIN_VALUE
     private var requestedAction = fallbackAction
     private var selection = library.resolve(fallbackAction)
@@ -25,7 +25,7 @@ class DirectionalSpriteActionController(
 
     val currentAction: String get() = selection.action
     val currentAnimation: DirectionalSpriteAnimation get() = selection.animation
-    val elapsedSeconds: Float get() = elapsed
+    val elapsedSeconds: Float get() = elapsed.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
     val usedFallback: Boolean get() = selection.usedFallback
     val isFinished: Boolean get() = currentAnimation.isFinished(elapsedSeconds)
 
@@ -41,7 +41,7 @@ class DirectionalSpriteActionController(
             requestedAction = action
             selection = resolved
             priority = actionPriority
-            elapsed = 0f
+            elapsed = 0.0
             return true
         }
         if (!restart && resolved.action == selection.action && !isFinished) {
@@ -61,7 +61,7 @@ class DirectionalSpriteActionController(
         require(deltaSeconds.isFinite() && deltaSeconds >= 0f) {
             "Sprite action delta must be finite and non-negative."
         }
-        elapsed += deltaSeconds
+        elapsed += deltaSeconds.toDouble()
         if (!currentAnimation.loop && currentAnimation.isFinished(elapsed)) {
             requestedAction = fallbackAction
             selection = library.resolve(fallbackAction)
