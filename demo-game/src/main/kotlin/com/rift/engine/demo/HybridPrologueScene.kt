@@ -489,7 +489,7 @@ class HybridPrologueScene : Scene() {
         context.clear(0xFF171824.toInt())
         val wakeCamera=Camera3D(Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f),Vector3(heroPosition.x,1f,heroPosition.z-.8f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
         val ruin=mutableListOf(
-            groundPlaneMesh(Vector3(0f,0f,0f),18f,16f,0xFF45434A.toInt()),
+            cuboidMesh(Vector3(0f,-.08f,0f),Vector3(18f,.16f,16f),0xFF45434A.toInt()),
             cuboidMesh(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
             cuboidMesh(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
             cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt()),
