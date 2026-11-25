@@ -1,6 +1,7 @@
 package com.rift.engine
 
 import android.os.Build
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -60,6 +61,24 @@ class PrologueLaunchSmokeTest {
             val screenshot = File(screenshotDir, "prologue-launch.png")
             assertTrue("Could not capture emulator screenshot", UiDevice.getInstance(instrumentation).takeScreenshot(screenshot))
             assertTrue("Screenshot is empty", screenshot.length() > 10_000L)
+            val bitmap = BitmapFactory.decodeFile(screenshot.absolutePath)
+            assertNotNull("Screenshot must decode as an image", bitmap)
+            bitmap!!
+            val sampledColors = HashSet<Int>()
+            val xStep = (bitmap.width / 48).coerceAtLeast(1)
+            val yStep = (bitmap.height / 48).coerceAtLeast(1)
+            for (y in 0 until bitmap.height step yStep) {
+                for (x in 0 until bitmap.width step xStep) {
+                    sampledColors += bitmap.getPixel(x, y)
+                }
+            }
+            val imageWidth = bitmap.width
+            val imageHeight = bitmap.height
+            bitmap.recycle()
+            assertTrue(
+                "Screenshot appears blank or unrendered ($imageWidth x $imageHeight, ${sampledColors.size} sampled colors)",
+                sampledColors.size > 24
+            )
 
             val samples = synchronized(framesNanos) { framesNanos.toList().sorted() }
             if (samples.isNotEmpty()) {
