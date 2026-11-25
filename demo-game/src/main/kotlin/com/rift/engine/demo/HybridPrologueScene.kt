@@ -286,23 +286,106 @@ class HybridPrologueScene : Scene() {
         wall(Vector3(0f, 1.6f, -5f), Vector3(12f, 3.2f, .22f))
         wall(Vector3(-6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
         wall(Vector3(6f, 1.6f, 0f), Vector3(.22f, 3.2f, 10f))
-        // Window, bed, desk, fridge, sink and phone are independent 3D props.
-        fun prop(id: String, p: Vector3, size: Vector3, color: Int, radius: Float = 1.6f, texture: com.rift.engine.graphics.TextureResource? = null) {
-            val mesh = if (texture != null) texturedCuboidMesh(p, size, CuboidMaterialSet(texture, texture, texture, texture, texture, texture), 2f, 1.5f)
-                else cuboidMesh(p, size, color, shade(color, .78f), shade(color, .62f))
+        // Furniture is assembled from separate 3D parts. Interaction IDs stay
+        // attached to the complete assembly, not to an individual visual piece.
+        fun solid(p: Vector3, size: Vector3, color: Int) =
+            cuboidMesh(p, size, color, shade(color, .82f), shade(color, .68f))
+        fun wood(p: Vector3, size: Vector3): Mesh3D {
+            val texture = woodFloorTexture
+            return if (texture != null) texturedCuboidMesh(
+                p, size, CuboidMaterialSet(texture, texture, texture, texture, texture, texture), 2f, 1.25f
+            ) else solid(p, size, 0xFF795B45.toInt())
+        }
+        fun assembly(id: String, p: Vector3, radius: Float, vararg parts: Mesh3D) {
+            val mesh = Mesh3D(parts.flatMap { it.triangles })
             built += mesh
             interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh)
         }
-        prop("bed", Vector3(-3.7f,.34f,-2.9f), Vector3(2.8f,.68f,2.1f), 0xFF555D79.toInt(), 2.2f)
-        prop("desk", Vector3(3.5f,.58f,-3.7f), Vector3(2.3f,1.16f,1.1f), 0xFF795B45.toInt(), texture = woodFloorTexture)
-        prop("fridge", Vector3(4.8f,1.0f,2.4f), Vector3(.95f,2f,.9f), 0xFFB9BEC8.toInt(), texture = concreteTexture)
-        prop("sink", Vector3(2.4f,.48f,2.8f), Vector3(1.5f,.96f,.8f), 0xFF9CA9B2.toInt(), texture = concreteTexture)
-        prop("phone", Vector3(-.4f,.08f,-.2f), Vector3(.28f,.16f,.5f), 0xFF272A35.toInt(), 1.4f)
-        prop("tv", Vector3(-2.4f,1.75f,-4.72f), Vector3(2.0f,1.2f,.12f), 0xFF171923.toInt(), 2.1f)
-        prop("exit", Vector3(5.8f,1.1f,-.2f), Vector3(.18f,2.2f,1.3f), 0xFF49382F.toInt(), 1.5f)
-        // Window glass and sill.
-        built += cuboidMesh(Vector3(0f,2.15f,-4.86f), Vector3(3.1f,1.55f,.04f), 0xFF263E59.toInt(), 0xFF263E59.toInt())
-        built += cuboidMesh(Vector3(0f,1.34f,-4.78f), Vector3(3.4f,.12f,.32f), 0xFFB7A99B.toInt())
+
+        // Bed: legs, frame, mattress, folded blanket, two pillows and headboard.
+        assembly("bed", Vector3(-3.7f,0f,-2.9f), 2.2f,
+            wood(Vector3(-3.7f,.25f,-2.9f),Vector3(2.92f,.30f,2.18f)),
+            solid(Vector3(-3.7f,.48f,-2.9f),Vector3(2.78f,.28f,2.04f),0xFFB7B2B0.toInt()),
+            solid(Vector3(-3.7f,.64f,-2.55f),Vector3(2.72f,.08f,1.25f),0xFF6E718D.toInt()),
+            solid(Vector3(-4.35f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
+            solid(Vector3(-3.05f,.68f,-3.62f),Vector3(.82f,.13f,.48f),0xFFE1D9D5.toInt()),
+            wood(Vector3(-3.7f,.91f,-3.94f),Vector3(2.94f,.95f,.14f)),
+            ...[-4.95f,-2.45f].flatMap(x => [-3.82f,-1.98f].map(z =>
+                solid(Vector3(x,.12f,z),Vector3(.13f,.24f,.13f),0xFF49382F.toInt())
+            ))
+        )
+
+        // Desk: thick timber top, four legs, drawer unit and a monitor.
+        assembly("desk", Vector3(3.5f,0f,-3.7f), 1.8f,
+            wood(Vector3(3.5f,.91f,-3.7f),Vector3(2.42f,.14f,1.18f)),
+            ...[2.42f,4.58f].flatMap(x => [-4.16f,-3.24f].map(z =>
+                wood(Vector3(x,.45f,z),Vector3(.12f,.84f,.12f))
+            )),
+            wood(Vector3(2.78f,.66f,-3.7f),Vector3(.58f,.38f,.94f)),
+            solid(Vector3(2.78f,.66f,-3.205f),Vector3(.48f,.08f,.025f),0xFF4A3428.toInt()),
+            solid(Vector3(3.75f,1.38f,-4.04f),Vector3(1.05f,.72f,.09f),0xFF242833.toInt()),
+            solid(Vector3(3.75f,1.39f,-3.985f),Vector3(.91f,.57f,.018f),0xFF466477.toInt()),
+            solid(Vector3(3.75f,1.01f,-4.02f),Vector3(.12f,.18f,.12f),0xFF343943.toInt())
+        )
+
+        // Fridge: insulated carcass, separate door, dark gasket, handle and lower vent.
+        assembly("fridge", Vector3(4.8f,0f,2.4f), 1.6f,
+            solid(Vector3(4.8f,1.02f,2.4f),Vector3(1.02f,2.04f,.94f),0xFFBFC6CC.toInt()),
+            solid(Vector3(4.8f,1.05f,1.91f),Vector3(.94f,1.92f,.055f),0xFFDCE1E4.toInt()),
+            solid(Vector3(5.19f,1.48f,1.86f),Vector3(.055f,.62f,.07f),0xFF737E87.toInt()),
+            solid(Vector3(5.19f,.48f,1.86f),Vector3(.055f,.42f,.07f),0xFF737E87.toInt()),
+            solid(Vector3(4.8f,.16f,1.87f),Vector3(.72f,.10f,.025f),0xFF89939A.toInt()),
+            solid(Vector3(4.8f,1.96f,1.87f),Vector3(.94f,.025f,.025f),0xFF8F989E.toInt())
+        )
+
+        // Kitchen sink: cabinet doors, countertop, recessed basin and a raised tap.
+        assembly("sink", Vector3(2.4f,0f,2.8f), 1.7f,
+            solid(Vector3(2.4f,.43f,2.8f),Vector3(1.56f,.86f,.84f),0xFF8C969B.toInt()),
+            solid(Vector3(2.4f,.48f,2.365f),Vector3(.72f,.68f,.035f),0xFFB5BEC1.toInt()),
+            solid(Vector3(3.12f,.48f,2.365f),Vector3(.68f,.68f,.035f),0xFFB5BEC1.toInt()),
+            solid(Vector3(2.4f,.91f,2.8f),Vector3(1.68f,.13f,.94f),0xFFD2D7D8.toInt()),
+            solid(Vector3(2.4f,.99f,2.78f),Vector3(.82f,.055f,.52f),0xFF687A82.toInt()),
+            solid(Vector3(2.4f,1.025f,2.78f),Vector3(.68f,.035f,.39f),0xFF303E48.toInt()),
+            solid(Vector3(2.4f,1.22f,2.47f),Vector3(.075f,.38f,.075f),0xFF8E9BA1.toInt()),
+            solid(Vector3(2.4f,1.39f,2.64f),Vector3(.075f,.075f,.34f),0xFF8E9BA1.toInt())
+        )
+
+        // Phone and TV are distinct objects with visible screens, not solid dark blocks.
+        assembly("phone", Vector3(-.4f,0f,-.2f), 1.4f,
+            solid(Vector3(-.4f,.075f,-.2f),Vector3(.32f,.055f,.56f),0xFF11151D.toInt()),
+            solid(Vector3(-.4f,.106f,-.2f),Vector3(.275f,.012f,.49f),0xFF4A6D83.toInt()),
+            solid(Vector3(-.4f,.114f,-.43f),Vector3(.045f,.008f,.018f),0xFFB6C8D0.toInt())
+        )
+        assembly("tv", Vector3(-2.4f,0f,-4.72f), 2.1f,
+            solid(Vector3(-2.4f,1.75f,-4.72f),Vector3(2.12f,1.26f,.13f),0xFF11151E.toInt()),
+            solid(Vector3(-2.4f,1.76f,-4.642f),Vector3(1.94f,1.08f,.018f),0xFF293D4B.toInt()),
+            solid(Vector3(-2.4f,1.07f,-4.70f),Vector3(.22f,.18f,.18f),0xFF252A32.toInt()),
+            solid(Vector3(-2.4f,.97f,-4.67f),Vector3(1.0f,.07f,.32f),0xFF252A32.toInt())
+        )
+
+        // Door panel and jambs. The interaction target remains the doorway centre.
+        assembly("exit", Vector3(5.8f,0f,-.2f), 1.5f,
+            wood(Vector3(5.82f,1.1f,-.2f),Vector3(.16f,2.22f,1.32f)),
+            solid(Vector3(5.69f,1.1f,-.2f),Vector3(.07f,2.3f,1.43f),0xFF382D2A.toInt()),
+            solid(Vector3(5.68f,1.1f,-.2f),Vector3(.035f,1.98f,1.12f),0xFF654B3E.toInt()),
+            solid(Vector3(5.64f,1.02f,.24f),Vector3(.045f,.12f,.045f),0xFFD2B16F.toInt())
+        )
+
+        // Window glazing, frame, mullion, sill and side curtains.
+        built += cuboidMesh(Vector3(0f,2.15f,-4.86f),Vector3(3.05f,1.48f,.035f),0xFF263E59.toInt())
+        built += cuboidMesh(Vector3(0f,2.15f,-4.82f),Vector3(3.28f,.10f,.13f),0xFFDDD5C8.toInt())
+        built += cuboidMesh(Vector3(0f,1.39f,-4.82f),Vector3(3.28f,.10f,.13f),0xFFDDD5C8.toInt())
+        for (x in listOf(-1.59f,1.59f,0f)) {
+            built += cuboidMesh(Vector3(x,2.15f,-4.82f),Vector3(.10f,1.58f,.13f),0xFFDDD5C8.toInt())
+        }
+        built += cuboidMesh(Vector3(0f,1.28f,-4.73f),Vector3(3.48f,.13f,.34f),0xFFB7A99B.toInt())
+        for (x in listOf(-1.78f,1.78f)) {
+            built += cuboidMesh(Vector3(x,2.12f,-4.78f),Vector3(.30f,1.72f,.10f),0xFF8A6574.toInt())
+        }
+        // Wall skirting boards add scale cues and cover the wall/floor seam.
+        built += cuboidMesh(Vector3(0f,.12f,-4.82f),Vector3(11.8f,.24f,.10f),0xFF8A786C.toInt())
+        built += cuboidMesh(Vector3(-5.82f,.12f,0f),Vector3(.10f,.24f,9.8f),0xFF8A786C.toInt())
+        built += cuboidMesh(Vector3(5.82f,.12f,0f),Vector3(.10f,.24f,9.8f),0xFF8A786C.toInt())
         props = interactables
         meshes = built
     }
