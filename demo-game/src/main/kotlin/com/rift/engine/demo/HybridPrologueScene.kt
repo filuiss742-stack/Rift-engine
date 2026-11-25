@@ -958,14 +958,11 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
         if (enemyHealth>0) {
             if (doAttack && attackCooldown<=0f) {
                 attackCooldown=.52f
-                val towardEnemy = if (distanceToEnemy > .001f) {
-                    Vector3(dx / distanceToEnemy,0f,dz / distanceToEnemy)
-                } else Vector3.ZERO
-                val facing = Vector3(heroFacing.x,0f,heroFacing.z)
-                val facingDot = if (facing.lengthSquared() > .001f) facing.normalized().dot(towardEnemy) else -1f
+                val towardEnemy = Vector3(dx,0f,dz)
+                val targetInMeleeArc = PrologueCombatRules.isTargetInMeleeArc(heroFacing,towardEnemy)
                 if (distanceToEnemy >= 2.5f) {
                     showToast("Слишком далеко. Подойди к существу.")
-                } else if (facingDot < .15f) {
+                } else if (!targetInMeleeArc) {
                     showToast("Повернись к существу перед атакой.")
                 } else {
                     enemyHealth--
