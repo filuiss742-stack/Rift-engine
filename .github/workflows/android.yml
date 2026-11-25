@@ -26,8 +26,10 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # macOS provides Hypervisor.framework; Linux hosted runners lack KVM and
+    # x86_64 TCG booted too slowly to expose Android system services.
+    runs-on: macos-14
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,9 +71,6 @@ jobs:
         run: gradle :app:assembleDebug
       - name: Run APK on Android emulator (launch, render, screenshot, frame metrics)
         uses: reactivecircus/android-emulator-runner@v2
-        env:
-          # Hosted Linux runners may not expose KVM; explicitly allow the emulator's TCG fallback.
-          ANDROID_I_WANT_MY_TCG: 'yes'
         with:
           api-level: 35
           target: google_apis
