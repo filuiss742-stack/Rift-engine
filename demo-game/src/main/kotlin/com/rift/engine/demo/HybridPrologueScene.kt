@@ -79,6 +79,8 @@ class HybridPrologueScene : Scene() {
     private var asphaltTexture: com.rift.engine.graphics.TextureResource? = null
     private var brickTexture: com.rift.engine.graphics.TextureResource? = null
     private var concreteTexture: com.rift.engine.graphics.TextureResource? = null
+    private var stoneTexture: com.rift.engine.graphics.TextureResource? = null
+    private var mossyRockTexture: com.rift.engine.graphics.TextureResource? = null
     private val joystick = VirtualJoystick(24f, 454f, 112f)
     private val useButton = VirtualButton(
         832f, 468f, 104f, 78f, "USE",
@@ -118,6 +120,8 @@ class HybridPrologueScene : Scene() {
         asphaltTexture = assets?.loadTexture("prologue.material.asphalt", "prologue/materials/asphalt_02.png")
         brickTexture = assets?.loadTexture("prologue.material.brick", "prologue/materials/brick_wall_001.png")
         concreteTexture = assets?.loadTexture("prologue.material.concrete", "prologue/materials/concrete_wall_008.png")
+        stoneTexture = assets?.loadTexture("prologue.material.stone-wall", "prologue/materials/stone_wall.png")
+        mossyRockTexture = assets?.loadTexture("prologue.material.mossy-rock", "prologue/materials/mossy_rock.png")
         heroTexture = assets?.loadTexture(
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
@@ -497,18 +501,37 @@ class HybridPrologueScene : Scene() {
     private fun renderFantasyWake(context:RenderContext) {
         context.clear(0xFF171824.toInt())
         val wakeCamera=Camera3D(Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f),Vector3(heroPosition.x,1f,heroPosition.z-.8f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
-        val ruin=mutableListOf(
-            cuboidMesh(Vector3(0f,-.08f,0f),Vector3(18f,.16f,16f),0xFF45434A.toInt()),
-            cuboidMesh(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt()),
-            cuboidMesh(Vector3(-2.2f,1.8f,-3.2f),Vector3(.28f,3.6f,.28f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(2.8f,1.1f,-4.8f),Vector3(.3f,2.2f,.3f),0xFF514B50.toInt()),
-            cuboidMesh(Vector3(-1.6f,.12f,.3f),Vector3(1.1f,.18f,.18f),0xFF65462F.toInt()),
-            cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt()),
-            cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt()),
-            cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
-        )
+        val ruin = mutableListOf<Mesh3D>()
+        val groundTexture = mossyRockTexture
+        val wallTexture = stoneTexture
+        ruin += if (groundTexture != null) {
+            texturedGroundPlaneMesh(Vector3(0f,0f,0f),18f,16f,groundTexture,7f,6f)
+        } else {
+            cuboidMesh(Vector3(0f,-.08f,0f),Vector3(18f,.16f,16f),0xFF45434A.toInt())
+        }
+        fun ruinWall(center: Vector3, size: Vector3) {
+            ruin += if (wallTexture != null) {
+                texturedCuboidMesh(center,size,CuboidMaterialSet(
+                    wallTexture,wallTexture,wallTexture,wallTexture,wallTexture,wallTexture
+                ))
+            } else {
+                cuboidMesh(center,size,0xFF514B50.toInt(),0xFF403B42.toInt(),0xFF625B61.toInt())
+            }
+        }
+        ruinWall(Vector3(-4f,1.5f,-4f),Vector3(.35f,3f,8f))
+        ruinWall(Vector3(4f,1.5f,-4f),Vector3(.35f,3f,8f))
+        ruinWall(Vector3(-2.2f,1.8f,-3.2f),Vector3(.28f,3.6f,.28f))
+        ruinWall(Vector3(2.8f,1.1f,-4.8f),Vector3(.3f,2.2f,.3f))
+        ruinWall(Vector3(-4f,2.9f,-4f),Vector3(2.2f,.24f,1.4f))
+        ruinWall(Vector3(3.8f,2.7f,-4.2f),Vector3(1.8f,.22f,1.2f))
+        ruin += cuboidMesh(Vector3(0f,.18f,0f),Vector3(2.8f,.36f,2.2f),0xFF66606B.toInt())
+        // Broken paving and fallen masonry frame the camp without blocking its playable space.
+        ruin += cuboidMesh(Vector3(-3.1f,.12f,1.8f),Vector3(1.5f,.24f,.62f),0xFF5A555D.toInt())
+        ruin += cuboidMesh(Vector3(3.3f,.16f,2.1f),Vector3(1.1f,.32f,.72f),0xFF625B62.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.12f,.3f),Vector3(1.1f,.18f,.18f),0xFF65462F.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt())
+        ruin += cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
         if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
             ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
             ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
