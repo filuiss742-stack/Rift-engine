@@ -442,6 +442,48 @@ class HybridPrologueScene : Scene() {
         built += cuboidMesh(Vector3(-10f,2.72f,-5.38f),Vector3(4.65f,.16f,.22f),0xFFB9A58C.toInt())
         built += cuboidMesh(Vector3(5.5f,2.22f,-4.88f),Vector3(3.0f,.14f,.18f),0xFFB9A58C.toInt())
 
+        // Street infrastructure gives the road a readable scale and breaks up
+        // the large asphalt plane with actual raised geometry.
+        for (z in listOf(.42f,4.58f)) {
+            built += cuboidMesh(Vector3(0f,.09f,z),Vector3(30f,.18f,.22f),0xFF8B8C87.toInt(),0xFF6D716F.toInt())
+        }
+        // Dashed centre markings and a pedestrian crossing are separate road paint meshes.
+        for (x in listOf(-12f,-8.5f,-5f,-1.5f,2f,5.5f,9f,12.5f)) {
+            built += cuboidMesh(Vector3(x,.028f,-2.25f),Vector3(1.8f,.018f,.12f),0xFFD7D5C8.toInt())
+        }
+        for (z in listOf(-1.45f,-.95f,-.45f,.05f)) {
+            built += cuboidMesh(Vector3(-6.2f,.03f,z),Vector3(3.3f,.02f,.22f),0xFFE2DED0.toInt())
+        }
+        // A recessed manhole with a raised rim and cross bars.
+        built += cuboidMesh(Vector3(9f,.026f,-1.1f),Vector3(1.05f,.035f,.82f),0xFF343B40.toInt())
+        built += cuboidMesh(Vector3(9f,.048f,-1.1f),Vector3(.88f,.018f,.65f),0xFF687075.toInt())
+        for (z in listOf(-1.34f,-1.22f,-1.10f,-.98f,-.86f)) {
+            built += cuboidMesh(Vector3(9f,.061f,z),Vector3(.72f,.012f,.025f),0xFF343B40.toInt())
+        }
+        // Drain grates sit against the curb, not floating on the sidewalk.
+        for (x in listOf(-9f,1f,11f)) {
+            built += cuboidMesh(Vector3(x,.13f,.58f),Vector3(1.0f,.025f,.22f),0xFF3B4146.toInt())
+            for (offset in listOf(-.32f,-.16f,0f,.16f,.32f)) {
+                built += cuboidMesh(Vector3(x+offset,.148f,.58f),Vector3(.035f,.012f,.18f),0xFF879095.toInt())
+            }
+        }
+        // Public litter bin: body, recessed opening, lid and two feet.
+        assembly("bin",Vector3(-6.2f,0f,3.55f),1.1f,
+            cuboidMesh(Vector3(-6.2f,.52f,3.55f),Vector3(.72f,1.04f,.68f),0xFF46535A.toInt()),
+            cuboidMesh(Vector3(-6.2f,1.06f,3.55f),Vector3(.82f,.12f,.76f),0xFF29343A.toInt()),
+            cuboidMesh(Vector3(-6.2f,.78f,3.195f),Vector3(.38f,.22f,.025f),0xFF171D22.toInt()),
+            cuboidMesh(Vector3(-6.2f,1.13f,3.55f),Vector3(.32f,.035f,.22f),0xFF879095.toInt()),
+            cuboidMesh(Vector3(-6.42f,.08f,3.55f),Vector3(.10f,.16f,.12f),0xFF252B30.toInt()),
+            cuboidMesh(Vector3(-5.98f,.08f,3.55f),Vector3(.10f,.16f,.12f),0xFF252B30.toInt())
+        )
+        // Utility cabinet and a small service conduit beside the shop wall.
+        assembly("utility",Vector3(8.1f,0f,-5.0f),1.2f,
+            cuboidMesh(Vector3(8.1f,.88f,-5f),Vector3(.72f,1.76f,.46f),0xFF657078.toInt()),
+            cuboidMesh(Vector3(8.1f,.90f,-4.75f),Vector3(.62f,1.62f,.035f),0xFF879197.toInt()),
+            cuboidMesh(Vector3(8.34f,1.04f,-4.71f),Vector3(.035f,.12f,.035f),0xFF20282D.toInt()),
+            cuboidMesh(Vector3(7.67f,.9f,-4.98f),Vector3(.09f,1.9f,.09f),0xFF4B555C.toInt())
+        )
+
         // A bench is assembled from a timber seat/back and four separate metal supports.
         val benchParts=mutableListOf<Mesh3D>()
         val timber=woodFloorTexture
