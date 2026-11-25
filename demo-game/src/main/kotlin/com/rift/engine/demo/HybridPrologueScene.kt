@@ -141,18 +141,11 @@ class HybridPrologueScene : Scene() {
         fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
-        playWorldMusic("world.thea", "procedural:thea")
+        // Music is intentionally disabled until real, supported audio assets are integrated.
     }
 
     override fun onExit() {
         audio?.stopMusic()
-    }
-
-    private fun playWorldMusic(id: String, path: String) {
-        val manager = audio ?: return
-        if (id !in manager.loadedMusicIds() && manager.loadMusic(id, path) == null) return
-        manager.setMusicVolume(0.42f)
-        manager.playMusic(id, looping = true)
     }
 
     override fun update(deltaSeconds: Float) {
@@ -266,7 +259,6 @@ class HybridPrologueScene : Scene() {
     private fun beginApartment() {
         if (phase != Phase.INTRO) return
         phase = Phase.APARTMENT
-        playWorldMusic("world.earth", "procedural:earth")
         fade = 0.7f
         joystick.visible = true; useButton.visible = true
         objective.visible = true; hint.visible = true
