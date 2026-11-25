@@ -36,6 +36,7 @@ class HybridPrologueScene : Scene() {
         val position: Vector3,
         val radius: Float,
         val mesh: Mesh3D,
+        val collisionRadius: Float = .82f,
         val task: Boolean = true
     )
 
@@ -316,7 +317,11 @@ class HybridPrologueScene : Scene() {
         fun assembly(id: String, p: Vector3, radius: Float, vararg parts: Mesh3D) {
             val mesh = Mesh3D(parts.flatMap { it.triangles })
             built += mesh
-            interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh)
+            val vertices = mesh.triangles.flatMap { listOf(it.a,it.b,it.c) }
+            val halfX = (vertices.maxOf { it.x } - vertices.minOf { it.x }) * .5f
+            val halfZ = (vertices.maxOf { it.z } - vertices.minOf { it.z }) * .5f
+            val collisionRadius = sqrt(halfX*halfX + halfZ*halfZ).coerceAtLeast(.18f)
+            interactables += Prop(id, Vector3(p.x, 0f, p.z), radius, mesh, collisionRadius)
         }
 
         // Bed: legs, frame, mattress, folded blanket, two pillows and headboard.
@@ -425,7 +430,11 @@ class HybridPrologueScene : Scene() {
         fun prop(id:String,p:Vector3,size:Vector3,color:Int,radius:Float=1.8f,texture:com.rift.engine.graphics.TextureResource?=null) {
             val mesh = if (texture != null) texturedCuboidMesh(p,size,CuboidMaterialSet(texture,texture,texture,texture,texture,texture), 2.5f, 1.8f)
                 else cuboidMesh(p,size,color,shade(color,.78f),shade(color,.62f))
-            built+=mesh; interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh)
+            built+=mesh
+            val halfX=size.x*.5f
+            val halfZ=size.z*.5f
+            val collisionRadius=sqrt(halfX*halfX+halfZ*halfZ).coerceAtLeast(.18f)
+            interactables+=Prop(id,Vector3(p.x,0f,p.z),radius,mesh,collisionRadius)
         }
         fun assembly(id:String,position:Vector3,radius:Float,vararg parts:Mesh3D) {
             val mesh=Mesh3D(parts.flatMap { it.triangles })
@@ -626,7 +635,7 @@ class HybridPrologueScene : Scene() {
     private fun isWalkable(p:Vector3):Boolean {
         val limit = if (phase==Phase.STREET) 14f else 5.35f
         if (kotlin.math.abs(p.x)>limit || kotlin.math.abs(p.z)>limit*.82f) return false
-        return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message","exit","home") }
+        return props.none { distance(p,it.position) < it.collisionRadius && it.id !in setOf("phone","message","exit","home") }
     }
 
     private fun buildHeroSpriteMesh(camera: Camera3D): Mesh3D? {
