@@ -52,6 +52,10 @@ class HybridPrologueScene : Scene() {
     private var combatStarted = false
     private var enemyAttackTimer = 2.2f
     private var enemyTelegraph = 0f
+    private var enemyWindupTarget = Vector3.ZERO
+    private var heroHealth = 3
+    private var heroInvulnerability = 0f
+    private var damageFlash = 0f
     private var dodgeTimer = 0f
     private var attackCooldown = 0f
     private var glitchTimer = 0f
@@ -84,6 +88,7 @@ class HybridPrologueScene : Scene() {
     )
     private val objective = UiLabel(18f, 16f, 760f, 28f, "", 0xFFF1EAF6.toInt(), 17f, true)
     private val hint = UiLabel(18f, 46f, 820f, 24f, "", 0xFFD7C9E1.toInt(), 13f)
+    private val combatStatus = UiLabel(18f, 76f, 340f, 26f, "", 0xFFFFD2D9.toInt(), 14f, true)
     private val toast = UiLabel(210f, 510f, 540f, 34f, "", 0xFFFFFFFF.toInt(), 17f, true)
     private val dialogueName = UiLabel(48f, 420f, 240f, 28f, "", 0xFFFFC5D0.toInt(), 16f, true)
     private val dialogueText = UiLabel(48f, 452f, 860f, 86f, "", 0xFFF5F0F8.toInt(), 18f)
@@ -100,9 +105,9 @@ class HybridPrologueScene : Scene() {
         input.bindKey("skip", EngineKey.ESCAPE)
         input.bindKey("attack", EngineKey.SPACE)
         input.bindKey("dodge", EngineKey.SHIFT)
-        ui.add(objective); ui.add(hint); ui.add(toast); ui.add(joystick); ui.add(useButton)
+        ui.add(objective); ui.add(hint); ui.add(combatStatus); ui.add(toast); ui.add(joystick); ui.add(useButton)
         ui.add(dialogueName); ui.add(dialogueText); ui.add(attackButton); ui.add(dodgeButton); ui.add(endLabel)
-        objective.visible = false; hint.visible = false; toast.visible = false
+        objective.visible = false; hint.visible = false; combatStatus.visible = false; toast.visible = false
         dialogueName.visible = false; dialogueText.visible = false
         joystick.visible = false; useButton.visible = false; attackButton.visible = false; dodgeButton.visible = false
         endLabel.visible = false
@@ -151,7 +156,9 @@ class HybridPrologueScene : Scene() {
                 showUse = false
                 joystick.visible = true; useButton.visible = true
                 attackButton.visible = true; dodgeButton.visible = true
-                objective.visible = true; hint.visible = true
+                objective.visible = true; hint.visible = true; combatStatus.visible = true
+                heroHealth = 3; heroInvulnerability = 0f; damageFlash = 0f
+                combatStatus.text = "СОСТОЯНИЕ: 3 / 3"
                 updateObjective()
                 startDialogue(listOf(
                     "Лиза" to "Я помню, как легла спать. Это точно не моя комната.",
@@ -365,6 +372,8 @@ class HybridPrologueScene : Scene() {
                         heroPosition=Vector3(0f,0f,1.8f)
                         fantasyStart=heroPosition
                         combatStarted=false; enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
+                        enemyWindupTarget=Vector3.ZERO; heroHealth=3; heroInvulnerability=0f; damageFlash=0f
+                        combatStatus.visible=false
                         joystick.visible=false; useButton.visible=false
                         attackButton.visible=false; dodgeButton.visible=false
                         objective.visible=false; hint.visible=false; toast.visible=false
@@ -512,7 +521,7 @@ class HybridPrologueScene : Scene() {
         if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
         context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
-            val marker = renderer.project(Vector3(2.4f,.05f,-1.5f),wakeCamera,context.width,context.height)
+            val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
                 val radius = (1f - (enemyTelegraph / .75f).coerceIn(0f,1f)) * 18f + 22f
                 var px = marker.first + radius
@@ -527,6 +536,9 @@ class HybridPrologueScene : Scene() {
                 context.drawText("УДАР!",marker.first-24f,marker.second-radius-10f,0xFFFF9AA8.toInt(),13f,true)
             }
         }
+        if (damageFlash > 0f) {
+            context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x44FF243F.toInt())
+        }
         if (glitchTimer > 0f) {
             context.drawRect(0f,0f,context.width.toFloat(),context.height.toFloat(),0x55FF174F.toInt())
             context.drawText("СИГНАЛ НЕ СОВПАДАЕТ",context.width*.5f-145f,context.height*.35f,0xFFFF526B.toInt(),20f,true)
@@ -539,6 +551,7 @@ class HybridPrologueScene : Scene() {
             Phase.STREET -> { objective.text="ЗЕМЛЯ • ГОРОД"; hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." }
             Phase.FANTASY_CAMP -> {
                 objective.text="НЕИЗВЕСТНЫЙ МИР • РУИНЫ"
+                combatStatus.text = "СОСТОЯНИЕ: $heroHealth / 3"
                 hint.text=when {
                     !combatStarted -> "Осмотрись и отойди от костра. WASD или виртуальный стик."
                     enemyHealth>0 -> "SPACE / HIT — атака • SHIFT / DODGE — уклонение"
@@ -598,6 +611,8 @@ class HybridPrologueScene : Scene() {
         if (glitchTimer > 0f) glitchTimer = (glitchTimer - delta).coerceAtLeast(0f)
         attackCooldown = (attackCooldown - delta).coerceAtLeast(0f)
         dodgeTimer = (dodgeTimer - delta).coerceAtLeast(0f)
+        heroInvulnerability = (heroInvulnerability - delta).coerceAtLeast(0f)
+        damageFlash = (damageFlash - delta).coerceAtLeast(0f)
         val ix = ((if (input.isDown("right")) 1f else 0f) -
             (if (input.isDown("left")) 1f else 0f) + joystick.axisX).coerceIn(-1f,1f)
         val iz = ((if (input.isDown("back")) 1f else 0f) -
@@ -632,9 +647,12 @@ class HybridPrologueScene : Scene() {
         val dx=enemyPos.x-heroPosition.x; val dz=enemyPos.z-heroPosition.z
         val distanceToEnemy=sqrt(dx*dx+dz*dz)
         if (enemyHealth>0) {
-            if (doAttack && attackCooldown<=0f && distanceToEnemy<2.5f) {
-                enemyHealth--
+            if (doAttack && attackCooldown<=0f) {
                 attackCooldown=.52f
+                if (distanceToEnemy >= 2.5f) {
+                    showToast("Слишком далеко. Подойди к существу.")
+                } else {
+                    enemyHealth--
                 if (enemyHealth<=0 && !glitchTriggered) {
                     glitchTriggered=true; glitchTimer=1.2f
                     startDialogue(listOf(
@@ -642,16 +660,34 @@ class HybridPrologueScene : Scene() {
                         "Лиза" to "И эта вспышка... На секунду всё вокруг стало неправильным."
                     ))
                 }
+                }
             }
             enemyAttackTimer-=delta
-            if (enemyAttackTimer<=0f && distanceToEnemy<2.8f && enemyTelegraph<=0f) {
-                enemyTelegraph=.75f
+            if (enemyAttackTimer<=0f && distanceToEnemy<3.6f && enemyTelegraph<=0f) {
+                enemyWindupTarget=heroPosition
+                enemyTelegraph=.78f
             }
             if (enemyTelegraph>0f) {
                 enemyTelegraph-=delta
                 if (enemyTelegraph<=0f) {
-                    if (distanceToEnemy<2.8f && dodgeTimer<=0f) {
-                        startDialogue(listOf("Лиза" to "Ай! Оно собирается перед ударом — можно успеть уйти с линии атаки."))
+                    val caught=distance(heroPosition,enemyWindupTarget)<=1.25f
+                    if (caught && dodgeTimer<=0f && heroInvulnerability<=0f) {
+                        heroHealth=(heroHealth-1).coerceAtLeast(0)
+                        heroInvulnerability=.9f
+                        damageFlash=.18f
+                        if (heroHealth<=0) {
+                            startDialogue(listOf(
+                                "Лиза" to "Ноги подкосились. Я не могу здесь умереть... Что бы это ни было, нужно подняться.",
+                                "Лиза" to "В следующий раз не стану ждать, пока оно замахнётся."
+                            )) {
+                                heroHealth=3; heroPosition=Vector3(0f,0f,1.8f)
+                                fantasyStart=heroPosition; combatStarted=false
+                                enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
+                                glitchTriggered=false; glitchTimer=0f
+                            }
+                        } else {
+                            showToast("Получен удар. Уклоняйся во время красного предупреждения.")
+                        }
                     }
                     enemyAttackTimer=2.6f
                 }
