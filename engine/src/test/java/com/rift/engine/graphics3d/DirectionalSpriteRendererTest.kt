@@ -91,6 +91,46 @@ class DirectionalSpriteRendererTest {
     }
 
     @Test
+    fun appliesPerFrameAtlasUvRegionsWithoutCroppingTheTexture() {
+        val atlas = FakeTexture()
+        val animation = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(atlas,atlas)),
+            frameDurationSeconds = .1f,
+            uvRectsByDirection = mapOf(
+                SpriteDirection8.FRONT to listOf(
+                    spriteAtlasFrameUv(4,4,2),
+                    spriteAtlasFrameUv(5,4,2)
+                )
+            )
+        )
+
+        val result = DirectionalSpriteRenderer.buildMesh(
+            Vector3.ZERO, Vector3.FORWARD, camera,
+            animation, .15f, 1f, 2f
+        )
+
+        assertEquals(1,result.frameIndex)
+        assertSame(atlas,result.mesh.triangles.first().texture)
+        assertEquals(.25f,result.mesh.triangles.first().uvA.u,0f)
+        assertEquals(.5f,result.mesh.triangles.first().uvA.v,0f)
+        assertEquals(.5f,result.mesh.triangles.first().uvC.u,0f)
+        assertEquals(1f,result.mesh.triangles.first().uvC.v,0f)
+    }
+
+    @Test
+    fun rejectsMismatchedAtlasRegionAndFrameCounts() {
+        val atlas = FakeTexture()
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteAnimation(
+                framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(atlas,atlas)),
+                uvRectsByDirection = mapOf(
+                    SpriteDirection8.FRONT to listOf(spriteAtlasFrameUv(0,4,2))
+                )
+            )
+        }
+    }
+
+    @Test
     fun advancesFramesUsingConfiguredDuration() {
         val first = FakeTexture()
         val second = FakeTexture()
