@@ -9,7 +9,9 @@ import com.rift.engine.graphics.TextureResource
 data class DirectionalSpriteAnimation(
     val framesByDirection: Map<SpriteDirection8, List<TextureResource>>,
     val frameDurationSeconds: Float = 0.12f,
-    val fallbackDirection: SpriteDirection8 = SpriteDirection8.FRONT
+    val fallbackDirection: SpriteDirection8 = SpriteDirection8.FRONT,
+    /** Optional per-frame atlas rectangles; omitted directions use the full texture. */
+    val uvRectsByDirection: Map<SpriteDirection8, List<TextureUvRect>> = emptyMap()
 ) {
     init {
         require(frameDurationSeconds.isFinite() && frameDurationSeconds > 0f) {
@@ -23,6 +25,14 @@ data class DirectionalSpriteAnimation(
         }
         require(fallbackDirection in framesByDirection) {
             "Configured fallback direction must have authored frames."
+        }
+        require(uvRectsByDirection.keys.all { it in framesByDirection }) {
+            "Atlas UV regions cannot be configured for a missing sprite direction."
+        }
+        uvRectsByDirection.forEach { (direction, regions) ->
+            require(regions.size == framesByDirection.getValue(direction).size) {
+                "Every atlas-backed sprite frame must have exactly one UV region."
+            }
         }
     }
 }
@@ -70,6 +80,8 @@ object DirectionalSpriteRenderer {
             .mod(selectedFrames.size)
         val texture = selectedFrames[frameIndex]
         check(!texture.isDisposed) { "Selected sprite frame texture has been disposed." }
+        val uvRect = animation.uvRectsByDirection[selectedDirection]
+            ?.get(frameIndex) ?: TextureUvRect(0f,0f,1f,1f)
 
         // Keep the sprite upright and horizontal width stable. The horizontal
         // billboard axis is derived from the camera's ground-plane direction.
@@ -90,10 +102,10 @@ object DirectionalSpriteRenderer {
         val leftTop = leftBottom + Vector3(0f, worldHeight, 0f)
         val rightTop = rightBottom + Vector3(0f, worldHeight, 0f)
 
-        val uvTopLeft = TextureUv(0f, 0f)
-        val uvTopRight = TextureUv(1f, 0f)
-        val uvBottomRight = TextureUv(1f, 1f)
-        val uvBottomLeft = TextureUv(0f, 1f)
+        val uvTopLeft = uvRect.topLeft
+        val uvTopRight = uvRect.topRight
+        val uvBottomRight = uvRect.bottomRight
+        val uvBottomLeft = uvRect.bottomLeft
         val triangles = listOf(
             MeshTriangle(leftTop, leftBottom, rightBottom, 0xFFFFFFFF.toInt(),
                 texture, uvTopLeft, uvBottomLeft, uvBottomRight),
