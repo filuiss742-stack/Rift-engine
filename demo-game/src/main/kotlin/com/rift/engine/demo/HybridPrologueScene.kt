@@ -8,6 +8,8 @@ import com.rift.engine.graphics3d.SpriteDirection8
 import com.rift.engine.graphics3d.Software3DRenderer
 import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
+import com.rift.engine.graphics3d.MeshTriangle
+import com.rift.engine.graphics3d.TextureUv
 import com.rift.engine.graphics3d.cuboidMesh
 import com.rift.engine.graphics3d.CuboidMaterialSet
 import com.rift.engine.graphics3d.texturedCuboidMesh
@@ -80,6 +82,8 @@ class HybridPrologueScene : Scene() {
     )
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
     private var heroSpriteAnimation: DirectionalSpriteAnimation? = null
+    private var enemySpriteTexture: com.rift.engine.graphics.TextureResource? = null
+    private var enemyAnimationTime = 0f
     private var heroFacing = Vector3(0f,0f,1f)
     private var heroAnimationTime = 0f
     private var woodFloorTexture: com.rift.engine.graphics.TextureResource? = null
@@ -138,6 +142,12 @@ class HybridPrologueScene : Scene() {
                 framesByDirection = SpriteDirection8.values().associateWith { listOf(texture) }
             )
         }
+        // The existing trial atlas contains a separate four-frame monster row.
+        // Keep it as a 2D billboard in the 3D scene rather than a cuboid stand-in.
+        enemySpriteTexture = assets?.loadTexture(
+            "prologue.enemy.trial-atlas",
+            "sprites/rift_trial_sheet.png"
+        )
         fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
@@ -150,6 +160,9 @@ class HybridPrologueScene : Scene() {
 
     override fun update(deltaSeconds: Float) {
         heroAnimationTime += deltaSeconds
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            enemyAnimationTime += deltaSeconds
+        }
         if (phase == Phase.INTRO) {
             introTime += deltaSeconds
             if (input.wasPressed("skip") || input.wasPressed("use") || introTime >= 5.5f) beginApartment()
@@ -571,6 +584,35 @@ class HybridPrologueScene : Scene() {
         ).mesh
     }
 
+    private fun buildEnemySpriteMesh(camera: Camera3D): Mesh3D? {
+        val texture = enemySpriteTexture ?: return null
+        if (texture.isDisposed) return null
+        val position = Vector3(2.4f,0f,-1.5f)
+        val toCamera = Vector3(camera.position.x-position.x,0f,camera.position.z-position.z)
+        val horizontal = if (toCamera.lengthSquared() > 1e-8f) toCamera.normalized() else Vector3(0f,0f,1f)
+        val right = Vector3.UP.cross(horizontal).normalized()
+        val halfWidth = .58f
+        val height = 1.62f
+        val leftBottom = position - right * halfWidth
+        val rightBottom = position + right * halfWidth
+        val leftTop = leftBottom + Vector3(0f,height,0f)
+        val rightTop = rightBottom + Vector3(0f,height,0f)
+        // Atlas: four 64x64 monster frames occupy the complete lower row.
+        val frame = (enemyAnimationTime / .22f).toInt().mod(4)
+        val u0 = frame * .25f
+        val u1 = u0 + .25f
+        val v0 = .5f
+        val v1 = 1f
+        val tl = TextureUv(u0,v0)
+        val tr = TextureUv(u1,v0)
+        val br = TextureUv(u1,v1)
+        val bl = TextureUv(u0,v1)
+        return Mesh3D(listOf(
+            MeshTriangle(leftTop,leftBottom,rightBottom,0xFFFFFFFF.toInt(),texture,tl,bl,br),
+            MeshTriangle(leftTop,rightBottom,rightTop,0xFFFFFFFF.toInt(),texture,tl,br,tr)
+        ))
+    }
+
     private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
         val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),camera,context.width,context.height) ?: return
         val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),camera,context.width,context.height) ?: return
@@ -665,13 +707,12 @@ class HybridPrologueScene : Scene() {
         worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
         val wakeCamera=worldCamera
         val ruin = fantasyBaseMeshes.toMutableList()
-        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
-            ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
-            ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
-        }
-        if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
+enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
             ruin += cuboidMesh(Vector3(-2.8f,1.35f,-2.8f),Vector3(.07f,2.7f,.12f),0xFFFF244F.toInt(),0xFF8C1536.toInt(),0xFFFF6B86.toInt())
             ruin += cuboidMesh(Vector3(-2.86f,1.35f,-2.8f),Vector3(.035f,2.45f,.14f),0xFFFFA0B0.toInt())
+        }
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            buildEnemySpriteMesh(wakeCamera)?.let { ruin += it }
         }
         val showHero = phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE
         val heroMesh = if (showHero) buildHeroSpriteMesh(wakeCamera) else null
@@ -683,6 +724,19 @@ class HybridPrologueScene : Scene() {
             Phase.COMPLETE -> "РАЗЛОМ • ПЕРВЫЙ КОНТАКТ"
             else -> "..."
         },context.width*.5f-115f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
+            val healthAnchor = renderer.project(Vector3(2.4f,1.85f,-1.5f),wakeCamera,context.width,context.height)
+            if (healthAnchor != null) {
+                val barWidth = 66f
+                val left = healthAnchor.first - barWidth * .5f
+                val top = healthAnchor.second - 8f
+                context.drawRoundRect(left,top,left+barWidth,top+7f,3f,0xCC211A22.toInt())
+                for (segment in 0 until 3) {
+                    val color = if (segment < enemyHealth) 0xFFFF526B.toInt() else 0xFF55414A.toInt()
+                    context.drawRect(left+2f+segment*21f,top+2f,left+20f+segment*21f,top+5f,color)
+                }
+            }
+        }
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
             val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
