@@ -1,6 +1,11 @@
-plugins { id("org.jetbrains.kotlin.jvm") }
+plugins {
+    id("org.jetbrains.kotlin.jvm")
+    id("java-library")
+}
 
-kotlin { jvmToolchain(17) }
+kotlin {
+    jvmToolchain(17)
+}
 
 dependencies {
     api("com.badlogicgames.gdx:gdx:1.14.2")
