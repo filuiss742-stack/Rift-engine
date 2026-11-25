@@ -22,5 +22,12 @@ include(
     ":demo-game",
     ":app",
     ":desktop-app",
-    ":tools:project-validator"
+    ":tools:project-validator",
+    ":gdx-spike:core",
+    ":gdx-spike:android",
+    ":gdx-spike:desktop"
 )
+
+project(":gdx-spike:core").projectDir = file("gdx-spike/core")
+project(":gdx-spike:android").projectDir = file("gdx-spike/android")
+project(":gdx-spike:desktop").projectDir = file("gdx-spike/desktop")
