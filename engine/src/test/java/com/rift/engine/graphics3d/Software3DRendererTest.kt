@@ -51,6 +51,20 @@ class Software3DRendererTest {
     }
 
     @Test
+    fun texturedCuboidSupportsRepeatedUvCoordinatesOnEveryFace() {
+        val texture = TestTexture()
+        val materials = CuboidMaterialSet(texture, texture, texture, texture, texture, texture)
+        val mesh = texturedCuboidMesh(Vector3.ZERO, Vector3(2f, 1f, 3f), materials, 4f, 2.5f)
+
+        assertEquals(12, mesh.triangles.size)
+        assertTrue(mesh.triangles.all { triangle ->
+            triangle.uvA.u == 0f && triangle.uvA.v == 0f &&
+                triangle.uvB.u == 4f && triangle.uvB.v == 0f &&
+                triangle.uvC.u == 4f && triangle.uvC.v == 2.5f
+        })
+    }
+
+    @Test
     fun texturedGroundPlaneSupportsRepeatedUvCoordinates() {
         val texture = TestTexture()
         val mesh = texturedGroundPlaneMesh(Vector3.ZERO, 10f, 8f, texture, 4f, 3f)
