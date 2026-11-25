@@ -150,7 +150,7 @@ class DirectionalSpriteRendererTest {
     fun loopingClipWrapsSafelyForLongSessions() {
         val clip = DirectionalSpriteAnimation(
             framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(FakeTexture(), FakeTexture())),
-            frameDurationSeconds = .1f
+            frameDurationSeconds = .125f
         )
         assertEquals(0, clip.frameIndexAt(1_000_000f))
         assertFalse(clip.isFinished(100f))
