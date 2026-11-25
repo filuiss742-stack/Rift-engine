@@ -27,7 +27,7 @@ fetch "asphalt_02" "asphalt_02.png" "diff"
 fetch "brick_wall_001" "brick_wall_001.png" "diffuse"
 fetch "concrete_wall_008" "concrete_wall_008.png" "diff"
 fetch "wood_floor" "wood_floor.png" "diff"
-fetch "stone_wall" "stone_wall.png" "diffuse"
+fetch "stone_wall" "stone_wall.png" "diff"
 fetch "mossy_rock" "mossy_rock.png" "diff"
 
 for destination in \
