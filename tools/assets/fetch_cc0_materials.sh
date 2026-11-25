@@ -43,4 +43,15 @@ All four source materials are marked CC0 on their asset pages:
 CREDITS
 done
 
-echo "Installed four real 1K PNG material maps for Android and Desktop."
+# Keep the existing heroine placeholder available to the Desktop runtime too.
+HEROINE_SOURCE="$ROOT/app/src/main/assets/prologue/characters/heroine/heroine_idle.png"
+HEROINE_DEST="$ROOT/desktop-app/src/main/resources/prologue/characters/heroine"
+if [[ -f "$HEROINE_SOURCE" ]]; then
+  mkdir -p "$HEROINE_DEST"
+  cp "$HEROINE_SOURCE" "$HEROINE_DEST/heroine_idle.png"
+else
+  echo "Missing source heroine sprite: $HEROINE_SOURCE" >&2
+  exit 1
+fi
+
+echo \\"Installed four real 1K PNG material maps for Android and Desktop.\\"
