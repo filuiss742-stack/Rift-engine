@@ -153,6 +153,9 @@ class DirectionalSpriteRendererTest {
             frameDurationSeconds = .125f
         )
         assertEquals(0, clip.frameIndexAt(1_000_000f))
+        assertEquals(1, clip.frameIndexAt(1_000_000.125f))
+        assertEquals(0, clip.frameIndexAt(1_000_000.25f))
+        assertEquals(0, clip.frameIndexAt(Float.MAX_VALUE))
         assertFalse(clip.isFinished(100f))
     }
 
