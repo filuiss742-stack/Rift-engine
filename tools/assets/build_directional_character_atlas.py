@@ -22,7 +22,7 @@ except ImportError as exc:
 
 DIRECTIONS = ("front", "front_left", "left", "back_left", "back", "back_right", "right", "front_right")
 ACTIONS = ("idle", "walk", "run", "attack", "dodge", "hit", "interact")
-NAME = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<direction>front_left|back_left|back_right|front_right|front|back|left|right)_(?P<action>[a-z0-9]+)_(?P<frame>\\d{3})\\.png$", re.I)
+NAME = re.compile(r"^(?P<char>[a-z0-9_]+)_(?P<direction>front_left|back_left|back_right|front_right|front|back|left|right)_(?P<action>[a-z0-9]+)_(?P<frame>\d{3})\.png$", re.I)
 
 
 class AssetError(Exception):
