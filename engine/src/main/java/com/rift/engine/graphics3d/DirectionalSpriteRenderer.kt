@@ -11,7 +11,9 @@ data class DirectionalSpriteAnimation(
     val frameDurationSeconds: Float = 0.12f,
     val fallbackDirection: SpriteDirection8 = SpriteDirection8.FRONT,
     /** Optional per-frame atlas rectangles; omitted directions use the full texture. */
-    val uvRectsByDirection: Map<SpriteDirection8, List<TextureUvRect>> = emptyMap()
+    val uvRectsByDirection: Map<SpriteDirection8, List<TextureUvRect>> = emptyMap(),
+    /** Idle/movement clips loop; attacks, hits and interactions can stop on their final frame. */
+    val loop: Boolean = true
 ) {
     init {
         require(frameDurationSeconds.isFinite() && frameDurationSeconds > 0f) {
@@ -35,7 +37,63 @@ data class DirectionalSpriteAnimation(
             }
         }
     }
+
+    /** Returns the stable frame for this timestamp, clamping one-shot clips at their final frame. */
+    fun frameIndexAt(elapsedSeconds: Float, direction: SpriteDirection8 = fallbackDirection): Int {
+        require(elapsedSeconds.isFinite() && elapsedSeconds >= 0f) {
+            "Sprite animation time must be finite and non-negative."
+        }
+        val count = framesByDirection[direction]?.size
+            ?: framesByDirection.getValue(fallbackDirection).size
+        val duration = frameDurationSeconds.toDouble()
+        val framePosition = elapsedSeconds.toDouble() / duration
+        if (!loop) return framePosition.toInt().coerceIn(0, count - 1)
+        val cycleSeconds = duration * count
+        val cyclePosition = elapsedSeconds.toDouble() % cycleSeconds
+        return (cyclePosition / duration).toInt().coerceIn(0, count - 1)
+    }
+
+    fun isFinished(elapsedSeconds: Float, direction: SpriteDirection8 = fallbackDirection): Boolean {
+        require(elapsedSeconds.isFinite() && elapsedSeconds >= 0f) {
+            "Sprite animation time must be finite and non-negative."
+        }
+        if (loop) return false
+        val count = framesByDirection[direction]?.size
+            ?: framesByDirection.getValue(fallbackDirection).size
+        return elapsedSeconds.toDouble() >= frameDurationSeconds.toDouble() * count
+    }
 }
+
+/** A named collection of independently authored action clips for one character. */
+data class DirectionalSpriteLibrary(
+    val clipsByAction: Map<String, DirectionalSpriteAnimation>,
+    val defaultAction: String = "idle",
+    val fallbackAction: String = defaultAction
+) {
+    init {
+        require(clipsByAction.isNotEmpty()) { "A sprite library must contain at least one action clip." }
+        require(clipsByAction.keys.all { it.matches(Regex("^[a-z][a-z0-9_-]{0,31}$")) }) {
+            "Sprite action IDs must be stable lowercase identifiers."
+        }
+        require(defaultAction in clipsByAction) { "Default sprite action must exist in the library." }
+        require(fallbackAction in clipsByAction) { "Fallback sprite action must exist in the library." }
+    }
+
+    fun resolve(action: String): SpriteAnimationSelection {
+        val clip = clipsByAction[action]
+        return if (clip != null) {
+            SpriteAnimationSelection(action, clip, usedFallback = false)
+        } else {
+            SpriteAnimationSelection(fallbackAction, clipsByAction.getValue(fallbackAction), usedFallback = true)
+        }
+    }
+}
+
+data class SpriteAnimationSelection(
+    val action: String,
+    val animation: DirectionalSpriteAnimation,
+    val usedFallback: Boolean
+)
 
 /** Result keeps missing-view fallback visible to diagnostics and callers. */
 data class DirectionalSpriteMeshResult(
@@ -75,9 +133,7 @@ object DirectionalSpriteRenderer {
         val usedFallback = frames == null
         val selectedDirection = if (usedFallback) animation.fallbackDirection else direction
         val selectedFrames = frames ?: animation.framesByDirection.getValue(animation.fallbackDirection)
-        val frameIndex = (elapsedSeconds / animation.frameDurationSeconds)
-            .toInt()
-            .mod(selectedFrames.size)
+        val frameIndex = animation.frameIndexAt(elapsedSeconds, selectedDirection)
         val texture = selectedFrames[frameIndex]
         check(!texture.isDisposed) { "Selected sprite frame texture has been disposed." }
         val uvRect = animation.uvRectsByDirection[selectedDirection]

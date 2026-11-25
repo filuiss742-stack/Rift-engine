@@ -131,6 +131,61 @@ class DirectionalSpriteRendererTest {
     }
 
     @Test
+    fun oneShotClipStopsOnItsLastFrameAndReportsCompletion() {
+        val first = FakeTexture()
+        val second = FakeTexture()
+        val clip = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(first, second)),
+            frameDurationSeconds = .1f,
+            loop = false
+        )
+        assertEquals(0, clip.frameIndexAt(0f))
+        assertEquals(1, clip.frameIndexAt(.15f))
+        assertEquals(1, clip.frameIndexAt(12f))
+        assertFalse(clip.isFinished(.19f))
+        assertTrue(clip.isFinished(.2f))
+    }
+
+    @Test
+    fun loopingClipWrapsSafelyForLongSessions() {
+        val clip = DirectionalSpriteAnimation(
+            framesByDirection = mapOf(SpriteDirection8.FRONT to listOf(FakeTexture(), FakeTexture())),
+            frameDurationSeconds = .1f
+        )
+        assertEquals(0, clip.frameIndexAt(1_000_000f))
+        assertFalse(clip.isFinished(100f))
+    }
+
+    @Test
+    fun spriteLibraryResolvesNamedActionsAndReportsFallback() {
+        val idle = DirectionalSpriteAnimation(mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())))
+        val attack = DirectionalSpriteAnimation(
+            mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())),
+            loop = false
+        )
+        val library = DirectionalSpriteLibrary(mapOf("idle" to idle, "attack" to attack))
+        val selected = library.resolve("attack")
+        assertEquals("attack", selected.action)
+        assertSame(attack, selected.animation)
+        assertFalse(selected.usedFallback)
+        val missing = library.resolve("cast")
+        assertEquals("idle", missing.action)
+        assertSame(idle, missing.animation)
+        assertTrue(missing.usedFallback)
+    }
+
+    @Test
+    fun spriteLibraryRejectsInvalidActionIdsAndMissingDefaults() {
+        val idle = DirectionalSpriteAnimation(mapOf(SpriteDirection8.FRONT to listOf(FakeTexture())))
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteLibrary(mapOf("Idle" to idle))
+        }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            DirectionalSpriteLibrary(mapOf("idle" to idle), defaultAction = "walk")
+        }
+    }
+
+    @Test
     fun advancesFramesUsingConfiguredDuration() {
         val first = FakeTexture()
         val second = FakeTexture()
