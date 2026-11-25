@@ -25,7 +25,7 @@ Launch the desktop spike with:
 
 The Android debug APK is written to:
 
-`gdx-spike/android/build/outputs/apk/debug/android-debug.apk`
+`gdx-spike/android/build/outputs/apk/debug/android-debug.apk (verify the exact AGP output filename from CI; it is normally `android-debug.apk` for this standalone module)`
 
 ## Scope limits
 
