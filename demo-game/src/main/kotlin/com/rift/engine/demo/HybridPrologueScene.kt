@@ -62,7 +62,11 @@ class HybridPrologueScene : Scene() {
     private var heroInvulnerability = 0f
     private var damageFlash = 0f
     private var dodgeTimer = 0f
+    private var dodgeCooldown = 0f
     private var attackCooldown = 0f
+    private var attackEffectTimer = 0f
+    private var attackEffectPosition = Vector3.ZERO
+    private var enemyHitFlash = 0f
     private var glitchTimer = 0f
     private var glitchTriggered = false
     private val apartmentTasks = linkedSetOf<String>()
@@ -791,6 +795,29 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
                 }
             }
         }
+        if (enemyHitFlash > 0f && phase == Phase.FANTASY_CAMP) {
+            val hitPoint = renderer.project(Vector3(2.4f,1.0f,-1.5f),wakeCamera,context.width,context.height)
+            if (hitPoint != null) {
+                val pulse = 1f + (enemyHitFlash / .16f) * 12f
+                for (i in 0 until 8) {
+                    val angle = i * (Math.PI / 4.0)
+                    val x1 = hitPoint.first + kotlin.math.cos(angle).toFloat() * 12f
+                    val y1 = hitPoint.second + kotlin.math.sin(angle).toFloat() * 12f
+                    val x2 = hitPoint.first + kotlin.math.cos(angle).toFloat() * (12f+pulse)
+                    val y2 = hitPoint.second + kotlin.math.sin(angle).toFloat() * (12f+pulse)
+                    context.drawLine(x1,y1,x2,y2,0xFFFFD18A.toInt(),3f)
+                }
+            }
+        }
+        if (attackEffectTimer > 0f && phase == Phase.FANTASY_CAMP) {
+            val slash = renderer.project(attackEffectPosition,wakeCamera,context.width,context.height)
+            if (slash != null) {
+                val alpha = (attackEffectTimer / .18f).coerceIn(0f,1f)
+                val color = ((alpha*255f).toInt().coerceIn(0,255) shl 24) or 0x00FFE7B0
+                context.drawLine(slash.first-15f,slash.second+12f,slash.first+16f,slash.second-13f,color,4f)
+                context.drawLine(slash.first-10f,slash.second+18f,slash.first+20f,slash.second-7f,color,2f)
+            }
+        }
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
             val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
@@ -825,7 +852,7 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
                 combatStatus.text = "СОСТОЯНИЕ: $heroHealth / 3"
                 hint.text=when {
                     !combatStarted -> "Осмотрись и отойди от костра. WASD или виртуальный стик."
-                    enemyHealth>0 -> "SPACE / HIT — атака • SHIFT / DODGE — уклонение"
+                    enemyHealth>0 -> "SPACE / HIT — удар перед собой • SHIFT / DODGE — уклонение (перезарядка)"
                     else -> "Первый глитч. Нажми E, чтобы осмотреть разлом."
                 }
             }
@@ -882,6 +909,9 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
         if (glitchTimer > 0f) glitchTimer = (glitchTimer - delta).coerceAtLeast(0f)
         attackCooldown = (attackCooldown - delta).coerceAtLeast(0f)
         dodgeTimer = (dodgeTimer - delta).coerceAtLeast(0f)
+        dodgeCooldown = (dodgeCooldown - delta).coerceAtLeast(0f)
+        attackEffectTimer = (attackEffectTimer - delta).coerceAtLeast(0f)
+        enemyHitFlash = (enemyHitFlash - delta).coerceAtLeast(0f)
         heroInvulnerability = (heroInvulnerability - delta).coerceAtLeast(0f)
         damageFlash = (damageFlash - delta).coerceAtLeast(0f)
         val ix = ((if (input.isDown("right")) 1f else 0f) -
@@ -899,7 +929,10 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
         val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
         val doUse=input.wasPressed("use") || showUse
         touchDodge=false; touchAttack=false; showUse=false
-        if (doDodge && dodgeTimer<=0f) dodgeTimer=.38f
+        if (doDodge && dodgeTimer<=0f && dodgeCooldown<=0f) {
+            dodgeTimer=.38f
+            dodgeCooldown=.82f
+        }
         val movedX=heroPosition.x-fantasyStart.x
         val movedZ=heroPosition.z-fantasyStart.z
         if (!combatStarted && sqrt(movedX*movedX+movedZ*movedZ)>1.25f) {
@@ -918,10 +951,20 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
         if (enemyHealth>0) {
             if (doAttack && attackCooldown<=0f) {
                 attackCooldown=.52f
+                val towardEnemy = if (distanceToEnemy > .001f) {
+                    Vector3(dx / distanceToEnemy,0f,dz / distanceToEnemy)
+                } else Vector3.ZERO
+                val facing = Vector3(heroFacing.x,0f,heroFacing.z)
+                val facingDot = if (facing.lengthSquared() > .001f) facing.normalized().dot(towardEnemy) else -1f
                 if (distanceToEnemy >= 2.5f) {
                     showToast("Слишком далеко. Подойди к существу.")
+                } else if (facingDot < .15f) {
+                    showToast("Повернись к существу перед атакой.")
                 } else {
                     enemyHealth--
+                    attackEffectTimer=.18f
+                    attackEffectPosition=enemyPos
+                    enemyHitFlash=.16f
                 if (enemyHealth<=0) enemyTelegraph=0f
                 if (enemyHealth<=0 && !glitchTriggered) {
                     glitchTriggered=true; glitchTimer=1.2f
@@ -953,6 +996,8 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
                                 heroHealth=3; heroPosition=Vector3(0f,0f,1.8f)
                                 fantasyStart=heroPosition; combatStarted=false
                                 enemyHealth=3; enemyAttackTimer=2.2f; enemyTelegraph=0f
+                                dodgeTimer=0f; dodgeCooldown=0f; attackCooldown=0f
+                                attackEffectTimer=0f; enemyHitFlash=0f; enemyAnimationTime=0f
                                 glitchTriggered=false; glitchTimer=0f
                             }
                         } else {
