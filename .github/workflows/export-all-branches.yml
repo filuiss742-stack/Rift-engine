@@ -1,0 +1,37 @@
+name: Export all Git branches
+
+on:
+  push:
+    branches:
+      - tools/export-all-branches
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Fetch every remote branch and tag
+        run: |
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune --tags
+      - name: Create portable Git bundle
+        run: |
+          git bundle create Rift-engine-ALL-BRANCHES.bundle --all
+          git bundle verify Rift-engine-ALL-BRANCHES.bundle
+          zip -9 Rift-engine-ALL-BRANCHES.zip Rift-engine-ALL-BRANCHES.bundle
+          sha256sum Rift-engine-ALL-BRANCHES.zip > Rift-engine-ALL-BRANCHES.zip.sha256
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rift-engine-ALL-BRANCHES
+          path: |
+            Rift-engine-ALL-BRANCHES.zip
+            Rift-engine-ALL-BRANCHES.zip.sha256
+          retention-days: 30
+          if-no-files-found: error
