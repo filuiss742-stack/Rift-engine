@@ -852,8 +852,14 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
 
     private fun updateObjective() {
         when(phase) {
-            Phase.APARTMENT -> { objective.text="ЗЕМЛЯ • ДОМ ЛИЗЫ"; hint.text="Утро: телефон, завтрак и новости (" + apartmentTasks.size + "/3)." }
-            Phase.STREET -> { objective.text="ЗЕМЛЯ • ГОРОД"; hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." }
+            Phase.APARTMENT -> {
+                objective.text="ЗЕМЛЯ • ДОМ ЛИЗЫ"
+                hint.text="Утро: телефон, завтрак и новости (" + apartmentTasks.size + "/3)." + nearbyInteractionHint()
+            }
+            Phase.STREET -> {
+                objective.text="ЗЕМЛЯ • ГОРОД"
+                hint.text="Остановка и магазин (" + streetTasks.size + "/2), затем возвращайся домой." + nearbyInteractionHint()
+            }
             Phase.FANTASY_CAMP -> {
                 objective.text="НЕИЗВЕСТНЫЙ МИР • РУИНЫ"
                 combatStatus.text = "СОСТОЯНИЕ: $heroHealth / 3"
@@ -867,6 +873,34 @@ enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered &
         }
     }
 
+
+    /** Adds a short contextual control hint when an interactable is in reach. */
+    private fun nearbyInteractionHint(): String {
+        var nearest: Prop? = null
+        var nearestDistance = Float.POSITIVE_INFINITY
+        for (prop in props) {
+            val candidateDistance = distance(heroPosition,prop.position)
+            if (candidateDistance <= prop.radius && candidateDistance < nearestDistance) {
+                nearest = prop
+                nearestDistance = candidateDistance
+            }
+        }
+        val action = when (nearest?.id) {
+            "phone" -> "осмотреть телефон"
+            "fridge" -> "приготовить завтрак"
+            "tv" -> "посмотреть новости"
+            "bed" -> "лечь спать"
+            "exit" -> "выйти из дома"
+            "busstop" -> "осмотреть остановку"
+            "shop" -> "зайти в магазин"
+            "home" -> "вернуться домой"
+            "message" -> "прочитать объявление"
+            "bin" -> "осмотреть урну"
+            "utility" -> "осмотреть электрощиток"
+            else -> null
+        }
+        return if (action == null) "" else "  •  E / USE — $action"
+    }
 
     private fun startDialogue(lines: List<Pair<String, String>>, after: (() -> Unit)? = null) {
         dialogueLines = lines
