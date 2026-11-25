@@ -152,11 +152,28 @@ class HybridPrologueScene : Scene() {
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
         )
-        heroSpriteAnimation = heroTexture?.let { texture ->
-            DirectionalSpriteAnimation(
-                framesByDirection = SpriteDirection8.values().associateWith { listOf(texture) }
+        // Load only independently authored views. Missing directions are not
+        // mirrored or silently registered as copies of the legacy front sprite.
+        val authoredHeroFrames = mutableMapOf<SpriteDirection8, List<com.rift.engine.graphics.TextureResource>>()
+        SpriteDirection8.values().forEach { direction ->
+            val key = direction.name.lowercase()
+            val texture = assets?.loadTexture(
+                "prologue.heroine.idle.$key",
+                "prologue/characters/heroine/source/$key/idle/heroine_${key}_idle_000.png"
             )
+            if (texture != null) authoredHeroFrames[direction] = listOf(texture)
         }
+        // The old single image remains a clearly limited front-view fallback
+        // until the independently authored production sprite set is supplied.
+        if (SpriteDirection8.FRONT !in authoredHeroFrames && heroTexture != null) {
+            authoredHeroFrames[SpriteDirection8.FRONT] = listOf(heroTexture!!)
+        }
+        heroSpriteAnimation = if (authoredHeroFrames.isNotEmpty()) {
+            DirectionalSpriteAnimation(
+                framesByDirection = authoredHeroFrames,
+                fallbackDirection = SpriteDirection8.FRONT
+            )
+        } else null
         // The existing trial atlas contains a separate four-frame monster row.
         // Keep it as a 2D billboard in the 3D scene rather than a cuboid stand-in.
         enemySpriteTexture = assets?.loadTexture(
