@@ -82,6 +82,55 @@ class DirectionalSpriteActionControllerTest {
     }
 
     @Test
+    fun hitCanInterruptAnAttackButMovementCannotInterruptHit() {
+        val library = DirectionalSpriteLibrary(mapOf(
+            "idle" to clip(2),
+            "walk" to clip(3),
+            "attack" to clip(4, loop = false),
+            "hit" to clip(2, loop = false)
+        ))
+        val controller = DirectionalSpriteActionController(library)
+
+        assertTrue(controller.play("attack", 50))
+        controller.update(.1f)
+        assertTrue(controller.play("hit", 70))
+        assertEquals("hit", controller.currentAction)
+        assertFalse(controller.play("walk", 10))
+        assertEquals("hit", controller.currentAction)
+        controller.update(.21f)
+        assertEquals("idle", controller.currentAction)
+    }
+
+    @Test
+    fun explicitRestartResetsTheSameClipClock() {
+        val library = DirectionalSpriteLibrary(mapOf(
+            "idle" to clip(1),
+            "attack" to clip(5, loop = false)
+        ))
+        val controller = DirectionalSpriteActionController(library)
+
+        assertTrue(controller.play("attack", 50))
+        controller.update(.25f)
+        assertTrue(controller.play("attack", 50, restart = true))
+        assertEquals(0f, controller.elapsedSeconds, 0f)
+        assertEquals("attack", controller.currentAction)
+    }
+
+    @Test
+    fun loopClockRemainsFiniteAfterVeryLargeValidDelta() {
+        val library = DirectionalSpriteLibrary(mapOf(
+            "idle" to clip(2),
+            "walk" to clip(4)
+        ))
+        val controller = DirectionalSpriteActionController(library)
+
+        assertTrue(controller.play("walk", 10))
+        controller.update(Float.MAX_VALUE)
+        assertTrue(controller.elapsedSeconds.isFinite())
+        assertEquals("walk", controller.currentAction)
+    }
+
+    @Test
     fun resetReturnsToFallbackAndRejectsInvalidDelta() {
         val library = DirectionalSpriteLibrary(mapOf(
             "idle" to clip(1),
