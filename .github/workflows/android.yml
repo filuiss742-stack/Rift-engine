@@ -20,7 +20,7 @@ on:
 concurrency:
   # Keep push and pull_request checks independent; one event must not cancel the other.
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
