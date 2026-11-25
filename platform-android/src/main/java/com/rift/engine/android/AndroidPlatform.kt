@@ -17,7 +17,11 @@ import com.rift.engine.input.PointerEventType
 import com.rift.engine.storage.SaveStore
 import java.util.concurrent.locks.LockSupport
 
-class AndroidRenderContext(private val canvas: Canvas) : RenderContext {
+class AndroidRenderContext(private var canvas: Canvas) : RenderContext {
+    fun attachCanvas(next: Canvas) {
+        check(saveCounts.isEmpty()) { "Cannot replace the frame canvas while render state is pushed." }
+        canvas = next
+    }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val saveCounts = mutableListOf<Int>()
     // Reuse scratch objects and texture shaders across the many triangles in a 3D frame.
@@ -251,6 +255,7 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
  private val audio=AudioManager(AndroidAudioLoader(context),diagnostics)
  private val engine=GameEngine(AndroidSaveStore(context),diagnostics,assets,audio)
  private val clock=FixedStepAccumulator()
+ private var frameRenderContext:AndroidRenderContext?=null
  @Volatile private var running=false;private var thread:Thread?=null
  init{holder.addCallback(this);isFocusable=true;isFocusableInTouchMode=true;engine.scenes.setInitialScene(game.createInitialScene());requestFocus()}
  override fun surfaceCreated(h:SurfaceHolder){resume()}
@@ -261,7 +266,7 @@ class RiftSurfaceView(context:Context,private val game:RiftGame):SurfaceView(con
   while(running&&!Thread.currentThread().isInterrupted){val start=System.nanoTime()
    try{val dt=((start-prev)/1e9).toFloat();prev=start;clock.advance(dt){engine.update(it)}
     var c:Canvas?=null;try{if(holder.surface.isValid){c=holder.lockCanvas();if(c!=null){
-     val baseContext=AndroidRenderContext(c)
+     val baseContext=frameRenderContext?.also{it.attachCanvas(c)} ?: AndroidRenderContext(c).also{frameRenderContext=it}
      val viewport=ViewportTransform(game.viewportWidth,game.viewportHeight,baseContext.width,baseContext.height)
      val renderContext=ViewportRenderContext(baseContext,viewport)
      try{engine.render(renderContext)}finally{renderContext.close()}
