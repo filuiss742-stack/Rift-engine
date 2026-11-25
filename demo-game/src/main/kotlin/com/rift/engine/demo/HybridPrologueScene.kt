@@ -64,6 +64,7 @@ class HybridPrologueScene : Scene() {
     private val streetTasks = linkedSetOf<String>()
     private var props = emptyList<Prop>()
     private var meshes = emptyList<Mesh3D>()
+    private var fantasyBaseMeshes: List<Mesh3D> = emptyList()
     private var heroPosition = Vector3(-2.2f, 0f, 1.4f)
     private val heroSpeed = 3.1f
     private val worldCamera = Camera3D(
@@ -126,6 +127,7 @@ class HybridPrologueScene : Scene() {
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
         )
+        fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
         playWorldMusic("world.thea", "procedural:thea")
@@ -501,9 +503,7 @@ class HybridPrologueScene : Scene() {
         context.drawText("Нажми или E, чтобы начать",centerX-135f,context.height-36f,0xFFBBAEC9.toInt(),15f)
     }
 
-    private fun renderFantasyWake(context:RenderContext) {
-        context.clear(0xFF171824.toInt())
-        val wakeCamera=Camera3D(Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f),Vector3(heroPosition.x,1f,heroPosition.z-.8f),verticalFovRadians=Math.toRadians(55.0).toFloat(),aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1),near=.08f,far=80f)
+    private fun buildFantasyBaseMeshes(): List<Mesh3D> {
         val ruin = mutableListOf<Mesh3D>()
         val groundTexture = mossyRockTexture
         val wallTexture = stoneTexture
@@ -535,6 +535,16 @@ class HybridPrologueScene : Scene() {
         ruin += cuboidMesh(Vector3(-1.6f,.18f,.3f),Vector3(.18f,.3f,1.1f),0xFF65462F.toInt())
         ruin += cuboidMesh(Vector3(-1.6f,.55f,.3f),Vector3(.36f,.75f,.36f),0xFFE66C35.toInt())
         ruin += cuboidMesh(Vector3(-1.6f,.95f,.3f),Vector3(.22f,.5f,.22f),0xFFFFC05A.toInt())
+        return ruin
+    }
+
+    private fun renderFantasyWake(context:RenderContext) {
+        context.clear(0xFF171824.toInt())
+        worldCamera.aspectRatio=context.width.toFloat()/context.height.coerceAtLeast(1)
+        worldCamera.position=Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f)
+        worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
+        val wakeCamera=worldCamera
+        val ruin = fantasyBaseMeshes.toMutableList()
         if (phase == Phase.FANTASY_CAMP && combatStarted && enemyHealth > 0) {
             ruin += cuboidMesh(Vector3(2.4f,.72f,-1.5f),Vector3(.9f,1.44f,.8f),0xFF292633.toInt(),0xFF7D263B.toInt(),0xFF17151D.toInt())
             ruin += cuboidMesh(Vector3(2.4f,1.55f,-1.5f),Vector3(.52f,.32f,.48f),0xFF9E3447.toInt())
@@ -553,7 +563,7 @@ class HybridPrologueScene : Scene() {
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
             val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
-                val radius = (1f - (enemyTelegraph / .75f).coerceIn(0f,1f)) * 18f + 22f
+                val radius = (1f - (enemyTelegraph / .78f).coerceIn(0f,1f)) * 18f + 22f
                 var px = marker.first + radius
                 var py = marker.second
                 for (i in 1..32) {
@@ -653,9 +663,6 @@ class HybridPrologueScene : Scene() {
         val speed = if (dodgeTimer>0f) 7.5f else 3.1f
         val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
         if (kotlin.math.abs(candidate.x)<6.2f && kotlin.math.abs(candidate.z)<5.2f) heroPosition=candidate
-        worldCamera.position=Vector3(heroPosition.x+.2f,5f,heroPosition.z+8f)
-        worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
-
         val doDodge=input.wasPressed("dodge") || touchDodge
         val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
         val doUse=input.wasPressed("use") || showUse
@@ -694,11 +701,11 @@ class HybridPrologueScene : Scene() {
                 }
             }
             enemyAttackTimer-=delta
-            if (enemyAttackTimer<=0f && distanceToEnemy<3.6f && enemyTelegraph<=0f) {
+            if (enemyHealth>0 && enemyAttackTimer<=0f && distanceToEnemy<3.6f && enemyTelegraph<=0f) {
                 enemyWindupTarget=heroPosition
                 enemyTelegraph=.78f
             }
-            if (enemyTelegraph>0f) {
+            if (enemyHealth>0 && enemyTelegraph>0f) {
                 enemyTelegraph-=delta
                 if (enemyTelegraph<=0f) {
                     val caught=distance(heroPosition,enemyWindupTarget)<=1.25f
