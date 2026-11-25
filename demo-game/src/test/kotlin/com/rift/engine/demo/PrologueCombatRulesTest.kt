@@ -4,6 +4,7 @@ import com.rift.engine.graphics3d.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class PrologueCombatRulesTest {
@@ -60,5 +61,21 @@ class PrologueCombatRulesTest {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             PrologueCombatRules.wouldTriggerDefeat(1, -1)
         }
+    }
+    
+    @Test
+    fun ruinMovementRespectsBoundsAndSolidGeometry() {
+        val obstacles = listOf(HorizontalObstacle(-2f, -3f, .5f, 1.5f))
+        assertTrue(PrologueCombatRules.isWalkableInRuins(0f, 0f, 6f, 5f, .3f, obstacles))
+        assertFalse(PrologueCombatRules.isWalkableInRuins(-2f, -3f, 6f, 5f, .3f, obstacles))
+        assertFalse(PrologueCombatRules.isWalkableInRuins(-2.65f, -3f, 6f, 5f, .3f, obstacles))
+        assertFalse(PrologueCombatRules.isWalkableInRuins(5.8f, 0f, 6f, 5f, .3f, obstacles))
+    }
+
+    @Test
+    fun ruinCollisionUsesRoundedCornersInsteadOfExpandedSquare() {
+        val obstacles = listOf(HorizontalObstacle(0f, 0f, 1f, 1f))
+        assertTrue(PrologueCombatRules.isWalkableInRuins(1.25f, 1.25f, 5f, 5f, .3f, obstacles))
+        assertFalse(PrologueCombatRules.isWalkableInRuins(1.1f, 1.1f, 5f, 5f, .3f, obstacles))
     }
 }

@@ -40,6 +40,16 @@ class HybridPrologueScene : Scene() {
     )
 
     private val renderer = Software3DRenderer()
+    private val fantasyObstacles = listOf(
+        HorizontalObstacle(-4f, -4f, .18f, 4f),
+        HorizontalObstacle(4f, -4f, .18f, 4f),
+        HorizontalObstacle(-2.2f, -3.2f, .18f, .18f),
+        HorizontalObstacle(2.8f, -4.8f, .2f, .2f),
+        HorizontalObstacle(-3.1f, 1.8f, .78f, .34f),
+        HorizontalObstacle(3.3f, 2.1f, .58f, .42f),
+        HorizontalObstacle(-1.6f, .3f, .11f, .56f),
+        HorizontalObstacle(0f, 0f, 1.42f, 1.12f)
+    )
     private var phase = Phase.INTRO
     private var introTime = 0f
     private var fade = 0f
@@ -966,7 +976,9 @@ class HybridPrologueScene : Scene() {
         if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val speed = if (dodgeTimer>0f) 7.5f else 3.1f
         val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
-        if (kotlin.math.abs(candidate.x)<6.2f && kotlin.math.abs(candidate.z)<5.2f) heroPosition=candidate
+        if (PrologueCombatRules.isWalkableInRuins(
+                candidate.x, candidate.z, 6.2f, 5.2f, .28f, fantasyObstacles
+            )) heroPosition=candidate
         val doDodge=input.wasPressed("dodge") || touchDodge
         val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
         val doUse=input.wasPressed("use") || showUse
