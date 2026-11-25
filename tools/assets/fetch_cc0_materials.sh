@@ -12,8 +12,22 @@ fetch() {
   local asset="$1"
   local filename="$2"
   local map="$3"
-  local url="$BASE/$asset/${asset}_${map}_1k.png"
-  curl --fail --location --retry 3 --silent --show-error "$url" --output "$TMP/$filename"
+  local url=""
+  local candidate
+  local candidates=("$map")
+  if [[ "$map" == "diff" ]]; then candidates+=("diffuse"); else candidates+=("diff"); fi
+  local downloaded=false
+  for candidate in "${candidates[@]}"; do
+    url="$BASE/$asset/${asset}_${candidate}_1k.png"
+    if curl --fail --location --retry 2 --silent --show-error "$url" --output "$TMP/$filename"; then
+      downloaded=true
+      break
+    fi
+  done
+  if [[ "$downloaded" != true ]]; then
+    echo "Could not download a diffuse PNG map for $asset" >&2
+    exit 1
+  fi
   local signature
   signature="$(od -An -tx1 -N8 "$TMP/$filename" | tr -d ' \n')"
   if [[ "$signature" != "89504e470d0a1a0a" ]]; then
