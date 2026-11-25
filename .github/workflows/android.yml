@@ -1,4 +1,4 @@
-name: Android APK
+name: Android APK and Emulator AutoTest
 
 on:
   push:
@@ -27,6 +27,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,6 +67,35 @@ jobs:
         run: gradle :platform-android:lintDebug :app:lintDebug
       - name: Build debug APK
         run: gradle :app:assembleDebug
+      - name: Run APK on Android emulator (launch, render, screenshot, frame metrics)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: |
+            set +e
+            gradle :app:connectedDebugAndroidTest
+            test_status=$?
+            mkdir -p build/autotest
+            adb logcat -d -v threadtime > build/autotest/logcat.txt
+            adb shell dumpsys gfxinfo com.rift.engine.demo framestats > build/autotest/gfxinfo-framestats.txt
+            adb shell dumpsys meminfo com.rift.engine.demo > build/autotest/meminfo.txt
+            adb pull /sdcard/Android/data/com.rift.engine.demo/files/rift-autotest/prologue-launch.png build/autotest/prologue-launch.png || true
+            exit $test_status
+      - name: Upload Android AutoTest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rift-android-autotest
+          path: |
+            build/autotest/
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: warn
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
