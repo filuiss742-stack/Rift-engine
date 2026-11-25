@@ -2,6 +2,9 @@ package com.rift.engine.demo
 
 import com.rift.engine.graphics.RenderContext
 import com.rift.engine.graphics3d.Camera3D
+import com.rift.engine.graphics3d.DirectionalSpriteAnimation
+import com.rift.engine.graphics3d.DirectionalSpriteRenderer
+import com.rift.engine.graphics3d.SpriteDirection8
 import com.rift.engine.graphics3d.Software3DRenderer
 import com.rift.engine.graphics3d.Vector3
 import com.rift.engine.graphics3d.Mesh3D
@@ -76,6 +79,9 @@ class HybridPrologueScene : Scene() {
         far = 120f
     )
     private var heroTexture: com.rift.engine.graphics.TextureResource? = null
+    private var heroSpriteAnimation: DirectionalSpriteAnimation? = null
+    private var heroFacing = Vector3(0f,0f,1f)
+    private var heroAnimationTime = 0f
     private var woodFloorTexture: com.rift.engine.graphics.TextureResource? = null
     private var asphaltTexture: com.rift.engine.graphics.TextureResource? = null
     private var brickTexture: com.rift.engine.graphics.TextureResource? = null
@@ -127,6 +133,11 @@ class HybridPrologueScene : Scene() {
             "prologue.heroine.legacy-idle",
             "prologue/characters/heroine/heroine_idle.png"
         )
+        heroSpriteAnimation = heroTexture?.let { texture ->
+            DirectionalSpriteAnimation(
+                framesByDirection = SpriteDirection8.values().associateWith { listOf(texture) }
+            )
+        }
         fantasyBaseMeshes = buildFantasyBaseMeshes()
         buildApartment()
         phase = Phase.INTRO
@@ -145,6 +156,7 @@ class HybridPrologueScene : Scene() {
     }
 
     override fun update(deltaSeconds: Float) {
+        heroAnimationTime += deltaSeconds
         if (phase == Phase.INTRO) {
             introTime += deltaSeconds
             if (input.wasPressed("skip") || input.wasPressed("use") || introTime >= 5.5f) beginApartment()
@@ -193,6 +205,7 @@ class HybridPrologueScene : Scene() {
         val length = sqrt(ix * ix + iz * iz)
         val nx = if (length > 1f) ix / length else ix
         val nz = if (length > 1f) iz / length else iz
+        if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val candidate = Vector3(
             heroPosition.x + nx * heroSpeed * deltaSeconds,
             0f,
@@ -226,8 +239,11 @@ class HybridPrologueScene : Scene() {
             }
             else -> {
                 worldCamera.aspectRatio = context.width.toFloat() / context.height.coerceAtLeast(1)
-                renderer.render(context, worldCamera, meshes)
-                drawHeroBillboard(context)
+                val frameMeshes = meshes.toMutableList()
+                val heroMesh = buildHeroSpriteMesh(worldCamera)
+                if (heroMesh != null) frameMeshes += heroMesh
+                renderer.render(context, worldCamera, frameMeshes)
+                if (heroMesh == null) drawHeroBillboard(context)
                 if (dialogueOpen) context.drawRoundRect(28f, 400f, context.width - 28f, context.height - 22f, 14f, 0xEE171421.toInt())
                 super.render(context)
             }
@@ -451,6 +467,19 @@ class HybridPrologueScene : Scene() {
         return props.none { distance(p,it.position) < .82f && it.id !in setOf("phone","message","exit","home") }
     }
 
+    private fun buildHeroSpriteMesh(camera: Camera3D): Mesh3D? {
+        val animation = heroSpriteAnimation ?: return null
+        return DirectionalSpriteRenderer.buildMesh(
+            position = heroPosition,
+            facingDirection = heroFacing,
+            camera = camera,
+            animation = animation,
+            elapsedSeconds = heroAnimationTime,
+            worldWidth = .8f,
+            worldHeight = 1.75f
+        ).mesh
+    }
+
     private fun drawHeroBillboard(context:RenderContext, camera: Camera3D = worldCamera) {
         val bottom = renderer.project(Vector3(heroPosition.x,0f,heroPosition.z),camera,context.width,context.height) ?: return
         val top = renderer.project(Vector3(heroPosition.x,1.75f,heroPosition.z),camera,context.width,context.height) ?: return
@@ -553,8 +582,11 @@ class HybridPrologueScene : Scene() {
             ruin += cuboidMesh(Vector3(-2.8f,1.35f,-2.8f),Vector3(.07f,2.7f,.12f),0xFFFF244F.toInt(),0xFF8C1536.toInt(),0xFFFF6B86.toInt())
             ruin += cuboidMesh(Vector3(-2.86f,1.35f,-2.8f),Vector3(.035f,2.45f,.14f),0xFFFFA0B0.toInt())
         }
+        val showHero = phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE
+        val heroMesh = if (showHero) buildHeroSpriteMesh(wakeCamera) else null
+        if (heroMesh != null) ruin += heroMesh
         renderer.render(context,wakeCamera,ruin)
-        if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
+        if (showHero && heroMesh == null) drawHeroBillboard(context,wakeCamera)
         context.drawText(when (phase) {
             Phase.FANTASY_CAMP -> "РУИНЫ • КОСТЁР"
             Phase.COMPLETE -> "РАЗЛОМ • ПЕРВЫЙ КОНТАКТ"
@@ -660,6 +692,7 @@ class HybridPrologueScene : Scene() {
         val length = sqrt(ix*ix+iz*iz)
         val nx = if (length>1f) ix/length else ix
         val nz = if (length>1f) iz/length else iz
+        if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val speed = if (dodgeTimer>0f) 7.5f else 3.1f
         val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
         if (kotlin.math.abs(candidate.x)<6.2f && kotlin.math.abs(candidate.z)<5.2f) heroPosition=candidate
