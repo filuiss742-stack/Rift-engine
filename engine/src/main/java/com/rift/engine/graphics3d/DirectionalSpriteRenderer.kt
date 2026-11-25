@@ -46,11 +46,14 @@ data class DirectionalSpriteAnimation(
         val count = framesByDirection[direction]?.size
             ?: framesByDirection.getValue(fallbackDirection).size
         val duration = frameDurationSeconds.toDouble()
-        val framePosition = elapsedSeconds.toDouble() / duration
-        if (!loop) return framePosition.toInt().coerceIn(0, count - 1)
-        val cycleSeconds = duration * count
-        val cyclePosition = elapsedSeconds.toDouble() % cycleSeconds
-        return (cyclePosition / duration).toInt().coerceIn(0, count - 1)
+        val completedFrames = kotlin.math.floor(elapsedSeconds.toDouble() / duration)
+        if (!loop) return completedFrames.toInt().coerceIn(0, count - 1)
+
+        // Work in frame space rather than taking a remainder of elapsed seconds.
+        // This avoids precision drift at long-running loop boundaries and avoids
+        // narrowing the absolute frame counter to Int before wrapping it.
+        val wrappedFrame = completedFrames % count.toDouble()
+        return wrappedFrame.toInt().coerceIn(0, count - 1)
     }
 
     fun isFinished(elapsedSeconds: Float, direction: SpriteDirection8 = fallbackDirection): Boolean {
