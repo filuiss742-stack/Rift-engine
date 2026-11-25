@@ -772,7 +772,8 @@ class HybridPrologueScene : Scene() {
         worldCamera.target=Vector3(heroPosition.x,1f,heroPosition.z-.8f)
         val wakeCamera=worldCamera
         val ruin = fantasyBaseMeshes.toMutableList()
-enemy cuboid removal        if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
+        // The defeated creature is removed before the first distortion mark appears.
+        if (phase == Phase.FANTASY_CAMP && glitchTriggered && enemyHealth <= 0) {
             ruin += cuboidMesh(Vector3(-2.8f,1.35f,-2.8f),Vector3(.07f,2.7f,.12f),0xFFFF244F.toInt(),0xFF8C1536.toInt(),0xFFFF6B86.toInt())
             ruin += cuboidMesh(Vector3(-2.86f,1.35f,-2.8f),Vector3(.035f,2.45f,.14f),0xFFFFA0B0.toInt())
         }
