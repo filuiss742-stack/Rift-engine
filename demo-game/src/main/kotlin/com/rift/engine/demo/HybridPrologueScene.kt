@@ -177,7 +177,10 @@ class HybridPrologueScene : Scene() {
             updateFantasyCombat(deltaSeconds)
             return
         }
-        if (phase == Phase.COMPLETE) return
+        if (phase == Phase.COMPLETE) {
+            fade = (fade - deltaSeconds * .72f).coerceAtLeast(0f)
+            return
+        }
         if (fade > 0f) fade = (fade - deltaSeconds * 1.4f).coerceAtLeast(0f)
         if (toastTimer > 0f) { toastTimer = (toastTimer - deltaSeconds).coerceAtLeast(0f); toast.visible = toastTimer > 0f }
 
@@ -542,7 +545,11 @@ class HybridPrologueScene : Scene() {
         }
         renderer.render(context,wakeCamera,ruin)
         if (phase == Phase.FANTASY_CAMP || phase == Phase.COMPLETE) drawHeroBillboard(context,wakeCamera)
-        context.drawText(if (phase == Phase.FANTASY_CAMP) "РУИНЫ • КОСТЁР" else "...",context.width*.5f-90f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
+        context.drawText(when (phase) {
+            Phase.FANTASY_CAMP -> "РУИНЫ • КОСТЁР"
+            Phase.COMPLETE -> "РАЗЛОМ • ПЕРВЫЙ КОНТАКТ"
+            else -> "..."
+        },context.width*.5f-115f,context.height-28f,0xFFFFFFFF.toInt(),15f,true)
         if (enemyTelegraph > 0f && phase == Phase.FANTASY_CAMP && enemyHealth > 0) {
             val marker = renderer.project(Vector3(enemyWindupTarget.x,.05f,enemyWindupTarget.z),wakeCamera,context.width,context.height)
             if (marker != null) {
@@ -676,6 +683,7 @@ class HybridPrologueScene : Scene() {
                     showToast("Слишком далеко. Подойди к существу.")
                 } else {
                     enemyHealth--
+                if (enemyHealth<=0) enemyTelegraph=0f
                 if (enemyHealth<=0 && !glitchTriggered) {
                     glitchTriggered=true; glitchTimer=1.2f
                     startDialogue(listOf(
@@ -725,9 +733,10 @@ class HybridPrologueScene : Scene() {
                 "Лиза" to "Трещина в воздухе. Нет... не в воздухе. Будто сам мир на секунду забыл, каким должен быть.",
                 "Лиза" to "Я просто хотела проснуться. Почему это происходит со мной?"
             )) {
-                phase=Phase.COMPLETE
+                phase=Phase.COMPLETE; fade=1f
                 joystick.visible=false; useButton.visible=false; attackButton.visible=false; dodgeButton.visible=false
-                objective.visible=false; hint.visible=false
+                objective.visible=false; combatStatus.visible=false
+                hint.text="ГЛАВА I • НУЛЕВАЯ ГРАНЬ"; hint.visible=true
                 endLabel.text="ПРОЛОГ ЗАВЕРШЁН"
                 endLabel.visible=true
             }
