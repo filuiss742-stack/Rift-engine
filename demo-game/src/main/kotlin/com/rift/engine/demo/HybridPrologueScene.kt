@@ -976,9 +976,16 @@ class HybridPrologueScene : Scene() {
         if (length > .001f) heroFacing = Vector3(nx,0f,nz)
         val speed = if (dodgeTimer>0f) 7.5f else 3.1f
         val candidate=Vector3(heroPosition.x+nx*speed*delta,0f,heroPosition.z+nz*speed*delta)
-        if (PrologueCombatRules.isWalkableInRuins(
-                candidate.x, candidate.z, 6.2f, 5.2f, .28f, fantasyObstacles
-            )) heroPosition=candidate
+        if (isFantasyWalkable(candidate)) {
+            heroPosition = candidate
+        } else {
+            // Resolve axes separately after a blocked diagonal step so the player
+            // can slide along a wall instead of sticking on its corner.
+            val candidateX = Vector3(candidate.x, 0f, heroPosition.z)
+            if (isFantasyWalkable(candidateX)) heroPosition = candidateX
+            val candidateZ = Vector3(heroPosition.x, 0f, candidate.z)
+            if (isFantasyWalkable(candidateZ)) heroPosition = candidateZ
+        }
         val doDodge=input.wasPressed("dodge") || touchDodge
         val doAttack=input.wasPressed("attack") || touchAttack || (input.wasPressed("use") && enemyHealth>0)
         val doUse=input.wasPressed("use") || showUse
@@ -1078,6 +1085,11 @@ class HybridPrologueScene : Scene() {
         }
         updateObjective()
     }
+
+    private fun isFantasyWalkable(position: Vector3): Boolean =
+        PrologueCombatRules.isWalkableInRuins(
+            position.x, position.z, 6.2f, 5.2f, .28f, fantasyObstacles
+        )
 
     private fun showToast(message:String) {
         toast.text=message; toast.visible=true; toastTimer=1.8f
